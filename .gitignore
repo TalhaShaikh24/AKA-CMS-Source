@@ -41,3 +41,4 @@ env/
 ## Project specific uploads
 uploads/*
 !uploads/.gitkeep
+AKA.CMS.API/uploads/*
