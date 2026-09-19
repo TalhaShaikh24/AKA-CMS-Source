@@ -1,0 +1,1558 @@
+{
+  "info": {
+    "name": "AKA-CMS API",
+    "_postman_id": "aka-cms-sprint10-handoff",
+    "description": "Happy-path collection for the AKA-CMS backend (Sprints 0-10).\n\nRun order: 01 Auth first (Login stores {{token}} and {{refreshToken}}), then the folders in order. Several requests store ids (caseId, rowVersion) as collection variables for later steps; others use {{placeholders}} you fill from earlier responses.\n\nBase URL and credentials live in collection variables \u2014 edit them, not every request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "memberId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "caseId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "rowVersion",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "referralId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "psychPlanId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "pharmPlanId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "prescriptionId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "sessionId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "followUpId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "closureId",
+      "value": "REPLACE_ME"
+    },
+    {
+      "key": "notificationId",
+      "value": "REPLACE_ME"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/auth/login"
+              ]
+            },
+            "description": "Sprint 0: returns accessToken + refreshToken; stores them as variables.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Dev@Admin#2026\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set(\"token\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refreshToken\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/auth/refresh"
+              ]
+            },
+            "description": "Sprint 0: exchanges the refresh token for a new pair.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set(\"token\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refreshToken\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/auth/logout"
+              ]
+            },
+            "description": "Sprint 0: revokes the refresh token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/health"
+              ]
+            },
+            "description": "Sprint 10: liveness probe, anonymous."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 Patients",
+      "item": [
+        {
+          "name": "Create community member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/patients/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/patients/members"
+              ]
+            },
+            "description": "Sprint 2: registers a community member.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Postman Test\",\n  \"gender\": \"Male\",\n  \"phone\": \"03009998888\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search patients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/patients/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/patients/search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "Postman"
+                }
+              ]
+            },
+            "description": "Sprint 2: search by MR / name / phone."
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve identity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/patients/resolve-identity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/patients/resolve-identity"
+              ]
+            },
+            "description": "Sprint 2: Yes/No MR logic \u2014 returns existing MR or a dummy MR from the facility block.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityMemberId\": \"{{memberId}}\",\n  \"facilityCode\": 1,\n  \"hasMr\": false\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Cases & Workflow",
+      "item": [
+        {
+          "name": "Create case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/cases"
+              ]
+            },
+            "description": "Sprint 3: registers a case in INTAKE; stores caseId + rowVersion.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityMemberId\": \"{{memberId}}\",\n  \"sourceType\": \"Community\",\n  \"priorityLevel\": \"High\",\n  \"notes\": \"Postman happy path\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set(\"caseId\", j.caseId);",
+                  "pm.collectionVariables.set(\"rowVersion\", j.rowVersion);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get case",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cases/{{caseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/cases/{{caseId}}"
+              ]
+            },
+            "description": "Sprint 3."
+          },
+          "response": []
+        },
+        {
+          "name": "Apply transition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cases/{{caseId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/cases/{{caseId}}/transitions"
+              ]
+            },
+            "description": "Sprint 3: state-machine transition with optimistic concurrency.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toState\": \"SCREENING\",\n  \"rowVersion\": \"{{rowVersion}}\",\n  \"notes\": \"Moved by Postman\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Allowed transitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cases/{{caseId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/cases/{{caseId}}/transitions"
+              ]
+            },
+            "description": "Sprint 3."
+          },
+          "response": []
+        },
+        {
+          "name": "Case history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cases/{{caseId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/cases/{{caseId}}/history"
+              ]
+            },
+            "description": "Sprint 3."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Screening",
+      "item": [
+        {
+          "name": "Submit PHQ-9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/screenings/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/screenings/submit"
+              ]
+            },
+            "description": "Sprint 4: server-side scoring + risk stratification; may auto-transition the case.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"toolCode\": \"PHQ9\",\n  \"itemScores\": [\n    2,\n    2,\n    2,\n    2,\n    2,\n    2,\n    2,\n    1,\n    1\n  ]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Screenings by case",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/screenings/case/{{caseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/screenings/case/{{caseId}}"
+              ]
+            },
+            "description": "Sprint 4."
+          },
+          "response": []
+        },
+        {
+          "name": "Screening tools",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/screenings/tools",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/screenings/tools"
+              ]
+            },
+            "description": "Sprint 4."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Care plans & Referrals",
+      "item": [
+        {
+          "name": "Create care plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/care-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/care-plans"
+              ]
+            },
+            "description": "Sprint 5.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"title\": \"Postman care plan\",\n  \"goals\": \"Stabilise and follow up\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Routing rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/care-plans/routing-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/care-plans/routing-rules"
+              ]
+            },
+            "description": "Sprint 5."
+          },
+          "response": []
+        },
+        {
+          "name": "Create referral",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/referrals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/referrals"
+              ]
+            },
+            "description": "Sprint 5.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"toFacility\": \"AKUH\",\n  \"reason\": \"Specialist review\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept referral",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/referrals/{{referralId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/referrals/{{referralId}}/status"
+              ]
+            },
+            "description": "Sprint 5: accept/reject; a reject creates a NEW referral row.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Accepted\",\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Treatment",
+      "item": [
+        {
+          "name": "Create PSYCH plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/treatment-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/treatment-plans"
+              ]
+            },
+            "description": "Sprint 6: PSYCH and PHARM are separate tracks (duplicate track -> 409).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"planTrack\": \"PSYCH\",\n  \"title\": \"CBT course\",\n  \"startDate\": \"2026-09-17\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Record therapy session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/psychological-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/psychological-sessions"
+              ]
+            },
+            "description": "Sprint 6.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatmentPlanId\": \"{{psychPlanId}}\",\n  \"sessionDate\": \"2026-09-17\",\n  \"modality\": \"CBT\",\n  \"notes\": \"Session 1\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create PHARM plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/treatment-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/treatment-plans"
+              ]
+            },
+            "description": "Sprint 6.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"planTrack\": \"PHARM\",\n  \"title\": \"Medication\",\n  \"startDate\": \"2026-09-17\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create prescription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/medications/prescriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/medications/prescriptions"
+              ]
+            },
+            "description": "Sprint 6: dictionary-limited; sequential Rx numbers.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatmentPlanId\": \"{{pharmPlanId}}\",\n  \"medicationId\": 1,\n  \"doseText\": \"10mg\",\n  \"frequency\": \"OD\",\n  \"durationDays\": 30\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dispense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/medications/prescriptions/{{prescriptionId}}/dispense",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/medications/prescriptions/{{prescriptionId}}/dispense"
+              ]
+            },
+            "description": "Sprint 6: dispensing audit trail.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 30,\n  \"dispensedBy\": \"Pharmacist\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Formulary dictionary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/medications/dictionary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/medications/dictionary"
+              ]
+            },
+            "description": "Sprint 6: the 9 provisional formulary medicines."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 Helpline & Crisis",
+      "item": [
+        {
+          "name": "Log helpline call (crisis)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/helpline/calls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/helpline/calls"
+              ]
+            },
+            "description": "Sprint 4b: crisis indicators auto-create a CrisisEvent + supervisor alert.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callerName\": \"Postman Caller\",\n  \"callerPhone\": \"03001234567\",\n  \"caseId\": \"{{caseId}}\",\n  \"indicators\": {\n    \"suicidalIntent\": true,\n    \"selfHarmRisk\": false,\n    \"psychosis\": false,\n    \"panicAttack\": false,\n    \"substanceCrisis\": false,\n    \"otherAcute\": false\n  },\n  \"callNotes\": \"Caller expressed suicidal intent.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Log helpline call (routine)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/helpline/calls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/helpline/calls"
+              ]
+            },
+            "description": "Sprint 4b.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"callerName\": \"Routine\",\n  \"caseId\": \"{{caseId}}\",\n  \"indicators\": {\n    \"suicidalIntent\": false,\n    \"selfHarmRisk\": false,\n    \"psychosis\": false,\n    \"panicAttack\": false,\n    \"substanceCrisis\": false,\n    \"otherAcute\": false\n  },\n  \"callNotes\": \"General enquiry.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crisis types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/crisis-events/types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/crisis-events/types"
+              ]
+            },
+            "description": "Sprint 4b."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 Awareness sessions",
+      "item": [
+        {
+          "name": "Create awareness session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/awareness-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/awareness-sessions"
+              ]
+            },
+            "description": "Sprint 3b.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman session\",\n  \"sessionDate\": \"2026-09-20\",\n  \"venue\": \"Community hall\",\n  \"topic\": \"Mental health basics\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register participant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/awareness-sessions/{{sessionId}}/participants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/awareness-sessions/{{sessionId}}/participants"
+              ]
+            },
+            "description": "Sprint 3b.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityMemberId\": \"{{memberId}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 Follow-up, LTFU, Closure",
+      "item": [
+        {
+          "name": "Schedule follow-up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/follow-ups/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/follow-ups/schedule"
+              ]
+            },
+            "description": "Sprint 7.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"followUpType\": \"Phone\",\n  \"scheduledDate\": \"2026-09-24\",\n  \"notes\": \"Check-in call\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Record outcome",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/follow-ups/{{followUpId}}/outcome",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/follow-ups/{{followUpId}}/outcome"
+              ]
+            },
+            "description": "Sprint 7.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"Completed\",\n  \"notes\": \"Doing well\",\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "LTFU evaluate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ltfu/cases/{{caseId}}/evaluate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/ltfu/cases/{{caseId}}/evaluate"
+              ]
+            },
+            "description": "Sprint 7: flags lost-to-follow-up after 1 missed visit (provisional threshold)."
+          },
+          "response": []
+        },
+        {
+          "name": "Request closure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/case-closures/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/case-closures/request"
+              ]
+            },
+            "description": "Sprint 7.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"closureReason\": \"Treatment complete\",\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve closure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/case-closures/{{closureId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/case-closures/{{closureId}}/approve"
+              ]
+            },
+            "description": "Sprint 7: supervisor approval.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"Approved\",\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Supervision log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/supervision/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/supervision/logs"
+              ]
+            },
+            "description": "Sprint 7.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supervisorId\": 1,\n  \"caseId\": \"{{caseId}}\",\n  \"sessionDate\": \"2026-09-17\",\n  \"notes\": \"Reviewed plan\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10 Notifications, Attachments, Sync",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Sprint 8: paginated envelope (items/page/pageSize/totalCount)."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark notification read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/notifications/{{notificationId}}/read"
+              ]
+            },
+            "description": "Sprint 8."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload attachment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/case-attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/case-attachments"
+              ]
+            },
+            "description": "Sprint 8: multipart form (caseId + file); 10MB provisional limit.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "caseId",
+                  "value": "{{caseId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/file.pdf"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sync push",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sync/push",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/sync/push"
+              ]
+            },
+            "description": "Sprint 8: idempotent; duplicate key -> 409 with existing record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotencyKey\": \"postman-001\",\n  \"deviceId\": \"postman-dev\",\n  \"entityType\": \"Case\",\n  \"entityId\": \"{{caseId}}\",\n  \"action\": \"UPDATE\",\n  \"payloadJson\": \"{\\\"notes\\\":\\\"postman\\\"}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sync pull",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sync/pull",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/sync/pull"
+              ],
+              "query": [
+                {
+                  "key": "since",
+                  "value": "2026-09-01T00:00:00Z"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Sprint 8: server-wins conflict strategy."
+          },
+          "response": []
+        },
+        {
+          "name": "Sync ack",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sync/ack",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/sync/ack"
+              ]
+            },
+            "description": "Sprint 8.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotencyKey\": \"postman-001\",\n  \"deviceId\": \"postman-dev\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Audit log query",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Sprint 8: paginated audit trail."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11 Lookups, Reports, Workflow config",
+      "item": [
+        {
+          "name": "Lookup: case sources",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/lookups/case-source-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/lookups/case-source-types"
+              ]
+            },
+            "description": "Sprint 9: generic lookup endpoint; 9 seeded types."
+          },
+          "response": []
+        },
+        {
+          "name": "Case summary report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/case-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/reports/case-summary"
+              ],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "2026-09-01"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2026-09-30"
+                }
+              ]
+            },
+            "description": "Sprint 9: aggregate report with date/unit filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Workflow states",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workflow/states",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api/workflow/states"
+              ]
+            },
+            "description": "Sprint 9 (read-only)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
