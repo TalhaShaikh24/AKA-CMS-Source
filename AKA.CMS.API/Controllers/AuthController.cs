@@ -47,4 +47,36 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         await authService.LogoutAsync(request);
         return NoContent();
     }
+
+    /// <summary>
+    /// Starts the forgot-password flow: e-mails a single-use reset link when the
+    /// e-mail belongs to an active account. Always returns success so accounts
+    /// cannot be enumerated.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ForgotPasswordResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<ForgotPasswordResponse>> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var requestIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var response = await authService.RequestPasswordResetAsync(request, requestIp);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Completes the forgot-password flow: sets a new password using the token
+    /// from the reset e-mail. The token is single-use and expires; all existing
+    /// sessions of the user are signed out.
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResetPasswordResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var response = await authService.ResetPasswordAsync(request);
+        return Ok(response);
+    }
 }

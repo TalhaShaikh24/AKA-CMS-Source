@@ -35,8 +35,10 @@ public sealed class UserService(
         if (existing is not null)
             throw new ConflictException($"Username '{request.Username}' already exists.");
 
+        await EnsureEmailAvailableAsync(request.Email, null);
+
         var userId = await userRepository.CreateAsync(
-            new User { Username = request.Username },
+            new User { Username = request.Username, Email = request.Email?.Trim() },
             passwordHasher.Hash(request.Password),
             performedBy);
 
@@ -54,12 +56,24 @@ public sealed class UserService(
         _ = await userRepository.GetByIdAsync(userId)
             ?? throw new NotFoundException($"User {userId} not found.");
 
+        await EnsureEmailAvailableAsync(request.Email, userId);
+
         var passwordHash = request.NewPassword is null
             ? null
             : passwordHasher.Hash(request.NewPassword);
 
-        await userRepository.UpdateAsync(userId, request.IsActive, request.IsLocked, passwordHash, performedBy);
+        await userRepository.UpdateAsync(userId, request.IsActive, request.IsLocked, passwordHash, request.Email?.Trim(), performedBy);
         return (await userRepository.GetByIdAsync(userId))!.ToDto();
+    }
+
+    private async Task EnsureEmailAvailableAsync(string? email, int? currentUserId)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return;
+
+        var holder = await authRepository.GetUserByEmailAsync(email.Trim());
+        if (holder is not null && holder.UserId != currentUserId)
+            throw new ConflictException($"E-mail '{email.Trim()}' is already in use.");
     }
 
     public async Task AssignRoleAsync(int userId, AssignRoleRequest request, int performedBy, string performedByName)

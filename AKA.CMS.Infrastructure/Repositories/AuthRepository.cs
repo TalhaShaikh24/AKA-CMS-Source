@@ -81,4 +81,39 @@ public sealed class AuthRepository(DapperContext context) : IAuthRepository
         await connection.ExecuteAsync(
             StoredProcedures.AuthRevokeRefreshToken, parameters, commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<User?> GetUserByEmailAsync(string email)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@Email", email);
+        using var multi = await connection.QueryMultipleAsync(
+            StoredProcedures.AuthGetUserByEmail, parameters, commandType: CommandType.StoredProcedure);
+        var user = await multi.ReadSingleOrDefaultAsync<User>();
+        if (user is null) return null;
+        user.Roles = (await multi.ReadAsync<string>()).ToList();
+        return user;
+    }
+
+    public async Task CreatePasswordResetAsync(int userId, string tokenHash, DateTime expiresAtUtc, string? requestIp)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@UserId", userId);
+        parameters.Add("@TokenHash", tokenHash);
+        parameters.Add("@ExpiresAtUtc", expiresAtUtc);
+        parameters.Add("@RequestIp", requestIp);
+        await connection.ExecuteAsync(
+            StoredProcedures.PasswordResetCreate, parameters, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<PasswordResetToken?> CompletePasswordResetAsync(string tokenHash, string passwordHash)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@TokenHash", tokenHash);
+        parameters.Add("@PasswordHash", passwordHash);
+        return await connection.QuerySingleOrDefaultAsync<PasswordResetToken>(
+            StoredProcedures.PasswordResetComplete, parameters, commandType: CommandType.StoredProcedure);
+    }
 }

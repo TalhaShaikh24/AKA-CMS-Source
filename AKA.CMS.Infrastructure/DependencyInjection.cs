@@ -14,6 +14,10 @@ public static class DependencyInjection
     {
         services.AddSingleton(configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
             ?? throw new InvalidOperationException("Jwt settings are missing."));
+        services.AddSingleton(configuration.GetSection(SmtpOptions.SectionName).Get<SmtpOptions>()
+            ?? new SmtpOptions());
+        services.AddSingleton(configuration.GetSection(PasswordResetOptions.SectionName).Get<PasswordResetOptions>()
+            ?? new PasswordResetOptions());
 
         services.AddSingleton<DapperContext>();
 
@@ -85,6 +89,7 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddScoped<IEmailSender, Email.SmtpEmailSender>();
 
         return services;
     }

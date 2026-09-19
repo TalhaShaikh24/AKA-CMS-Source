@@ -16,6 +16,7 @@ BEGIN
 
     SELECT  u.[USERID]      AS [UserId],
             u.[USERNAME]    AS [Username],
+            u.[EMAIL]       AS [Email],
             u.[CREATEDBY]   AS [CreatedBy],
             u.[CREATEDDATE] AS [CreatedDate],
             u.[IPADDRESS]   AS [IpAddress],
@@ -44,6 +45,7 @@ BEGIN
 
     SELECT  u.[USERID]      AS [UserId],
             u.[USERNAME]    AS [Username],
+            u.[EMAIL]       AS [Email],
             u.[CREATEDBY]   AS [CreatedBy],
             u.[CREATEDDATE] AS [CreatedDate],
             u.[IPADDRESS]   AS [IpAddress],
@@ -69,6 +71,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_User_Create]
     @Username VARCHAR(100),
     @PasswordHash VARCHAR(255),
     @CreatedBy INT,
+    @Email VARCHAR(255) = NULL,
     @NewUserId INT OUTPUT
 AS
 BEGIN
@@ -81,9 +84,9 @@ BEGIN
         FROM [dbo].[USERS] WITH (UPDLOCK, HOLDLOCK);
 
         INSERT INTO [dbo].[USERS]
-            ([USERID], [USERNAME], [CREATEDBY], [CREATEDDATE], [IPADDRESS], [LOCK], [ACTIVE], [ADUSER], [ADMIN])
+            ([USERID], [USERNAME], [EMAIL], [CREATEDBY], [CREATEDDATE], [IPADDRESS], [LOCK], [ACTIVE], [ADUSER], [ADMIN])
         VALUES
-            (@NewUserId, @Username, CAST(@CreatedBy AS VARCHAR(50)), CAST(SYSUTCDATETIME() AS DATE), '0.0.0.0', 0, 1, 0, 0);
+            (@NewUserId, @Username, @Email, CAST(@CreatedBy AS VARCHAR(50)), CAST(SYSUTCDATETIME() AS DATE), '0.0.0.0', 0, 1, 0, 0);
 
         INSERT INTO [dbo].[CMS_UserCredentials] ([UserId], [PasswordHash])
         VALUES (@NewUserId, @PasswordHash);
@@ -106,6 +109,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_User_Update]
     @IsActive BIT = NULL,
     @IsLocked BIT = NULL,
     @PasswordHash VARCHAR(255) = NULL,
+    @Email VARCHAR(255) = NULL,
     @PerformedBy INT
 AS
 BEGIN
@@ -116,7 +120,8 @@ BEGIN
 
         UPDATE [dbo].[USERS]
         SET [ACTIVE] = ISNULL(@IsActive, [ACTIVE]),
-            [LOCK]   = ISNULL(@IsLocked, [LOCK])
+            [LOCK]   = ISNULL(@IsLocked, [LOCK]),
+            [EMAIL]  = ISNULL(@Email, [EMAIL])
         WHERE [USERID] = @UserId;
 
         IF @PasswordHash IS NOT NULL

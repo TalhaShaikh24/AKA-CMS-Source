@@ -6,11 +6,14 @@ public static class StoredProcedures
 
     public const string AuthGetUserByUsername = "sp_CMS_Auth_GetUserByUsername";
     public const string AuthGetUserById = "sp_CMS_Auth_GetUserById";
+    public const string AuthGetUserByEmail = "sp_CMS_Auth_GetUserByEmail";
     public const string AuthGetUserPermissions = "sp_CMS_Auth_GetUserPermissions";
     public const string AuthGetAllPermissions = "sp_CMS_Auth_GetAllPermissions";
     public const string AuthSaveRefreshToken = "sp_CMS_Auth_SaveRefreshToken";
     public const string AuthGetRefreshToken = "sp_CMS_Auth_GetRefreshToken";
     public const string AuthRevokeRefreshToken = "sp_CMS_Auth_RevokeRefreshToken";
+    public const string PasswordResetCreate = "sp_CMS_PasswordReset_Create";
+    public const string PasswordResetComplete = "sp_CMS_PasswordReset_Complete";
 
     public const string UserGetById = "sp_CMS_User_GetById";
     public const string UserGetAll = "sp_CMS_User_GetAll";

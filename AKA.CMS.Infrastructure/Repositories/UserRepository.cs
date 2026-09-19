@@ -40,13 +40,14 @@ public sealed class UserRepository(DapperContext context) : IUserRepository
         parameters.Add("@Username", user.Username);
         parameters.Add("@PasswordHash", passwordHash);
         parameters.Add("@CreatedBy", performedBy);
+        parameters.Add("@Email", user.Email);
         parameters.Add("@NewUserId", dbType: DbType.Int32, direction: ParameterDirection.Output);
         await connection.ExecuteAsync(
             StoredProcedures.UserCreate, parameters, commandType: CommandType.StoredProcedure);
         return parameters.Get<int>("@NewUserId");
     }
 
-    public async Task UpdateAsync(int userId, bool? isActive, bool? isLocked, string? passwordHash, int performedBy)
+    public async Task UpdateAsync(int userId, bool? isActive, bool? isLocked, string? passwordHash, string? email, int performedBy)
     {
         using var connection = context.CreateConnection();
         var parameters = new DynamicParameters();
@@ -54,6 +55,7 @@ public sealed class UserRepository(DapperContext context) : IUserRepository
         parameters.Add("@IsActive", isActive);
         parameters.Add("@IsLocked", isLocked);
         parameters.Add("@PasswordHash", passwordHash);
+        parameters.Add("@Email", email);
         parameters.Add("@PerformedBy", performedBy);
         await connection.ExecuteAsync(
             StoredProcedures.UserUpdate, parameters, commandType: CommandType.StoredProcedure);

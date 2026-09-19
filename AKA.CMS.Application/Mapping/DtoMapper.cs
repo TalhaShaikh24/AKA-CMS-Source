@@ -8,6 +8,7 @@ public static class DtoMapper
     public static UserDto ToDto(this User user) => new(
         user.UserId,
         user.Username,
+        user.Email,
         user.IsActive,
         user.IsLocked,
         user.IsAdmin,
