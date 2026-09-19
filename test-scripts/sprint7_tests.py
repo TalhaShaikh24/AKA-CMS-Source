@@ -10,13 +10,13 @@ validation (400), auth gating (401/403), supervision logging, the
 DB-driven due-follow-up list, and audit logging. Existing CO-HIS tables
 are NOT touched.
 """
-import json, urllib.request, urllib.error, subprocess, time
+import json, urllib.request, urllib.error, subprocess, time, os
 from datetime import datetime, timezone, timedelta
 
 BASE = "http://localhost:5000"
 with open("AKA.CMS.API/appsettings.Development.json") as f:
     CS = json.load(f)["ConnectionStrings"]["DefaultConnection"]
-SAPW = CS.split("Password=")[1].split(";")[0]
+SAPW = CS.split("Password=")[1].split(";")[0] if "Password=" in CS else os.environ.get("SA_PASSWORD", "")
 passed, failed = [], []
 RUNID = str(int(time.time()))[-5:]
 

@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 BASE = "http://localhost:5000"
 with open("AKA.CMS.API/appsettings.Development.json") as f:
     CS = json.load(f)["ConnectionStrings"]["DefaultConnection"]
-SAPW = CS.split("Password=")[1].split(";")[0]
+SAPW = CS.split("Password=")[1].split(";")[0] if "Password=" in CS else os.environ.get("SA_PASSWORD", "")
 passed, failed = [], []
 RUNID = str(int(time.time()))[-5:]
 

@@ -8,6 +8,10 @@
    - Administrator (role 1) already has all permissions from
      03_CMS_Seed.sql and the per-sprint seeds; not repeated here.
    ============================================================= */
+/* NOTE: QUOTED_IDENTIFIER must be ON below — this seed writes to [dbo].[USERS], which carries the filtered index [UX_USERS_EMAIL] (sqlcmd defaults OFF). */
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
 GO
 /* Role 2: Supervisor — Supervises case workers; approves case closures; reviews LTFU and crisis escalations. */
 IF NOT EXISTS (SELECT 1 FROM [dbo].[ROLES] WHERE [ROLEID] = 2)
