@@ -13,8 +13,10 @@ public sealed class SubmitScreeningRequestValidator : AbstractValidator<SubmitSc
             .NotEmpty()
             .WithMessage("At least one item score is required.");
         RuleForEach(x => x.ItemScores)
-            .InclusiveBetween(0, 3)
-            .WithMessage("Each item score must be between 0 and 3.");
+            .InclusiveBetween(0, 5)
+            .WithMessage("Each item score must be between 0 and 5. " +
+                "Per-tool item ranges (e.g. SBQ-R 1-4/1-5/1-3/1-4, C-SSRS 0-1) " +
+                "are enforced server-side by the screening stored procedure.");
         RuleFor(x => x.ItemScores.Count)
             .LessThanOrEqualTo(30)
             .WithMessage("Too many item scores.");

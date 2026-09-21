@@ -11,6 +11,7 @@ public sealed class Screening
     public int RawScore { get; set; }
     public string RiskLevel { get; set; } = string.Empty;
     public string? RiskLevelName { get; set; }
+    public string? SubscaleScoresJson { get; set; }
     public bool MentalHealthSynced { get; set; }
     public string? MentalHealthCode { get; set; }
     public int ScreenedBy { get; set; }

@@ -64,6 +64,10 @@ public static class StoredProcedures
     public const string ReferralGetByCase = "sp_CMS_Referral_GetByCase";
     public const string CaseCommentAdd = "sp_CMS_CaseComment_Add";
     public const string CaseCommentGetByCase = "sp_CMS_CaseComment_GetByCase";
+    public const string CarerAdd = "sp_CMS_Carer_Add";
+    public const string CarerUpdate = "sp_CMS_Carer_Update";
+    public const string CarerDeactivate = "sp_CMS_Carer_Deactivate";
+    public const string CarerGetByCase = "sp_CMS_Carer_GetByCase";
 
     public const string HelplineCallLog = "sp_CMS_HelplineCall_Log";
     public const string HelplineCallGetById = "sp_CMS_HelplineCall_GetById";

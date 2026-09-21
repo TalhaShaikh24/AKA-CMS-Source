@@ -263,6 +263,23 @@ BEGIN
            AND NOT EXISTS (SELECT 1 FROM [dbo].[USERS] WHERE [USERID] = @AssignedToUserId AND [ACTIVE] = 1)
             THROW 50008, 'User not found.', 1;
 
+        /* Gap 4 — workflow S16: a case manager may only be assigned
+           after the case-management supervisor has reviewed the case
+           (SubmitSupervisorReview stamps SupervisorReviewedAt). */
+        IF @ActionCode = 'AssignCaseManager'
+           AND NOT EXISTS (SELECT 1 FROM [dbo].[CMS_Cases]
+                           WHERE [CaseId] = @CaseId AND [SupervisorReviewedAt] IS NOT NULL)
+            THROW 50006, 'Supervisor review is required before assigning a case manager.', 1;
+
+        /* Gap 4 — record the supervisor review (self-loop on TRIAGE). */
+        IF @ActionCode = 'SubmitSupervisorReview'
+        BEGIN
+            UPDATE [dbo].[CMS_Cases]
+            SET [SupervisorReviewedAt] = SYSUTCDATETIME(),
+                [SupervisorReviewedBy] = @PerformedBy
+            WHERE [CaseId] = @CaseId;
+        END
+
         UPDATE [dbo].[CMS_Cases]
         SET [Status] = @ToState,
             [CurrentStep] = @ActionCode,
@@ -280,6 +297,15 @@ BEGIN
         INSERT INTO [dbo].[CMS_AuditLogs] ([TableName], [RecordId], [Action], [PerformedBy], [Details])
         VALUES ('CMS_Cases', CAST(@CaseId AS VARCHAR(50)), 'TRANSITION', @PerformedBy,
                 @FromState + ' -> ' + @ToState + ' (' + @ActionCode + ')');
+
+        /* Gap 5 — workflow S5a-S5d: auto-create the no-consent
+           re-engagement checklist (idempotent; at most one active
+           NO_CONSENT plan per case). */
+        IF @ActionCode = 'MarkNoConsent'
+        BEGIN
+            EXEC [dbo].[sp_CMS_NoConsentChecklist_Create]
+                @CaseId = @CaseId, @CreatedBy = @PerformedBy, @IpAddress = @IpAddress;
+        END
 
         COMMIT TRAN;
 

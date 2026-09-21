@@ -52,6 +52,7 @@ BEGIN
 
     SELECT s.[ScreeningId], s.[CaseId], s.[CommunityMemberId], s.[ToolCode],
            t.[ToolName], s.[ItemScores], s.[RawScore], s.[RiskLevel],
+           s.[SubscaleScoresJson],
            b.[BandName] AS [RiskLevelName], s.[MentalHealthSynced],
            s.[MentalHealthCode], s.[ScreenedBy],
            u.[USERNAME] AS [ScreenedByUsername],
@@ -78,6 +79,7 @@ BEGIN
 
     SELECT s.[ScreeningId], s.[CaseId], s.[CommunityMemberId], s.[ToolCode],
            t.[ToolName], s.[ItemScores], s.[RawScore], s.[RiskLevel],
+           s.[SubscaleScoresJson],
            b.[BandName] AS [RiskLevelName], s.[MentalHealthSynced],
            s.[MentalHealthCode], s.[ScreenedBy],
            u.[USERNAME] AS [ScreenedByUsername],
@@ -161,16 +163,120 @@ BEGIN
                @RawScore = SUM([Score])
         FROM @Items;
 
-        /* ---- Server-side risk stratification ---- */
-        DECLARE @RiskLevel VARCHAR(30), @RiskLevelName NVARCHAR(100);
+        /* ---- Tool-specific item validation (heterogeneous ranges) ---- */
+        IF @ToolCode = 'SBQR'
+        BEGIN
+            /* SBQ-R per-item ranges: item1 1-4, item2 1-5, item3 1-3, item4 1-4. */
+            IF EXISTS (SELECT 1 FROM @Items
+                       WHERE ([Idx] = 0 AND ([Score] < 1 OR [Score] > 4))
+                          OR ([Idx] = 1 AND ([Score] < 1 OR [Score] > 5))
+                          OR ([Idx] = 2 AND ([Score] < 1 OR [Score] > 3))
+                          OR ([Idx] = 3 AND ([Score] < 1 OR [Score] > 4)))
+                THROW 50009, 'SBQ-R items must use their published per-item ranges (1-4, 1-5, 1-3, 1-4).', 1;
+        END
 
-        SELECT @RiskLevel = [BandCode], @RiskLevelName = [BandName]
-        FROM [dbo].[CMS_ScreeningRiskBands]
-        WHERE [ToolCode] = @ToolCode AND [IsActive] = 1
-          AND @RawScore BETWEEN [MinScore] AND [MaxScore];
+        /* ---- Server-side risk stratification ----
+           PHQ-9 / GAD-7: generic band lookup on the summed score.
+           DASS-21: per-subscale published cutoffs; overall risk is the
+           worst subscale band; subscale scores persisted as JSON.
+           SBQ-R: band on the 3-18 total per published thresholds.
+           C-SSRS: risk derived from the highest endorsed tier
+           (ideation < intent/plan < behavior). */
+        DECLARE @RiskLevel VARCHAR(30), @RiskLevelName NVARCHAR(100),
+                @SubscaleScoresJson NVARCHAR(500) = NULL;
 
-        IF @RiskLevel IS NULL
-            THROW 50009, 'No risk band covers the computed score.', 1;
+        IF @ToolCode = 'DASS21'
+        BEGIN
+            /* DASS-21 item map (1-indexed): Depression 3,5,10,13,16,17,21;
+               Anxiety 2,4,7,9,15,19,20; Stress 1,6,8,11,12,14,18. */
+            DECLARE @DepScore INT, @AnxScore INT, @StressScore INT;
+
+            SELECT @DepScore = SUM(CASE WHEN [Idx] IN (2,4,9,12,15,16,20) THEN [Score] ELSE 0 END),
+                   @AnxScore = SUM(CASE WHEN [Idx] IN (1,3,6,8,14,18,19) THEN [Score] ELSE 0 END),
+                   @StressScore = SUM(CASE WHEN [Idx] IN (0,5,7,10,11,13,17) THEN [Score] ELSE 0 END)
+            FROM @Items;
+
+            /* Published DASS cutoffs (raw 0-21 subscale scale). */
+            DECLARE @DepBand VARCHAR(30) = CASE
+                    WHEN @DepScore <= 4 THEN 'MINIMAL' WHEN @DepScore <= 6 THEN 'MILD'
+                    WHEN @DepScore <= 10 THEN 'MODERATE' WHEN @DepScore <= 13 THEN 'MOD_SEVERE'
+                    ELSE 'SEVERE' END,
+                    @AnxBand VARCHAR(30) = CASE
+                    WHEN @AnxScore <= 3 THEN 'MINIMAL' WHEN @AnxScore <= 5 THEN 'MILD'
+                    WHEN @AnxScore <= 7 THEN 'MODERATE' WHEN @AnxScore <= 9 THEN 'MOD_SEVERE'
+                    ELSE 'SEVERE' END,
+                    @StressBand VARCHAR(30) = CASE
+                    WHEN @StressScore <= 7 THEN 'MINIMAL' WHEN @StressScore <= 9 THEN 'MILD'
+                    WHEN @StressScore <= 12 THEN 'MODERATE' WHEN @StressScore <= 16 THEN 'MOD_SEVERE'
+                    ELSE 'SEVERE' END;
+
+            /* Worst band wins (severity order, not alphabetical). */
+            DECLARE @WorstSeverity INT;
+
+            SELECT @WorstSeverity = MAX([Severity])
+            FROM (VALUES ('MINIMAL', 1), ('MILD', 2), ('MODERATE', 3),
+                         ('MOD_SEVERE', 4), ('SEVERE', 5)) AS sev ([BandCode], [Severity])
+            WHERE [BandCode] IN (@DepBand, @AnxBand, @StressBand);
+
+            SELECT @RiskLevel = [BandCode]
+            FROM (VALUES ('MINIMAL', 1), ('MILD', 2), ('MODERATE', 3),
+                         ('MOD_SEVERE', 4), ('SEVERE', 5)) AS sev ([BandCode], [Severity])
+            WHERE [Severity] = @WorstSeverity;
+
+            SET @SubscaleScoresJson = N'{"Depression":' + CAST(@DepScore AS VARCHAR(3)) +
+                                      N',"Anxiety":' + CAST(@AnxScore AS VARCHAR(3)) +
+                                      N',"Stress":' + CAST(@StressScore AS VARCHAR(3)) + N'}';
+        END
+        ELSE IF @ToolCode = 'SBQR'
+        BEGIN
+            /* SBQ-R total 3-18; published thresholds >=7 (general), >=8 (clinical). */
+            SET @RiskLevel = CASE
+                WHEN @RawScore <= 6 THEN 'MINIMAL'
+                WHEN @RawScore <= 8 THEN 'MODERATE'
+                ELSE 'SEVERE' END;
+        END
+        ELSE IF @ToolCode = 'CSSRS'
+        BEGIN
+            /* C-SSRS screener tiers: Q6 behavior > Q4/Q5 intent-plan >
+               Q3 method > Q1/Q2 ideation. Highest endorsed tier wins. */
+            DECLARE @I1 INT, @I2 INT, @I3 INT, @I4 INT, @I5 INT, @I6 INT;
+
+            SELECT @I1 = MAX(CASE WHEN [Idx] = 0 THEN [Score] END),
+                   @I2 = MAX(CASE WHEN [Idx] = 1 THEN [Score] END),
+                   @I3 = MAX(CASE WHEN [Idx] = 2 THEN [Score] END),
+                   @I4 = MAX(CASE WHEN [Idx] = 3 THEN [Score] END),
+                   @I5 = MAX(CASE WHEN [Idx] = 4 THEN [Score] END),
+                   @I6 = MAX(CASE WHEN [Idx] = 5 THEN [Score] END)
+            FROM @Items;
+
+            SET @RiskLevel = CASE
+                WHEN @I6 = 1 THEN 'SEVERE'
+                WHEN @I4 = 1 OR @I5 = 1 THEN 'MOD_SEVERE'
+                WHEN @I3 = 1 THEN 'MODERATE'
+                WHEN @I1 = 1 OR @I2 = 1 THEN 'MILD'
+                ELSE 'MINIMAL' END;
+        END
+        ELSE
+        BEGIN
+            SELECT @RiskLevel = [BandCode], @RiskLevelName = [BandName]
+            FROM [dbo].[CMS_ScreeningRiskBands]
+            WHERE [ToolCode] = @ToolCode AND [IsActive] = 1
+              AND @RawScore BETWEEN [MinScore] AND [MaxScore];
+
+            IF @RiskLevel IS NULL
+                THROW 50009, 'No risk band covers the computed score.', 1;
+        END
+
+        /* Resolve the display name for tool-specific bands. */
+        IF @RiskLevelName IS NULL
+        BEGIN
+            SELECT @RiskLevelName = [BandName]
+            FROM [dbo].[CMS_ScreeningRiskBands]
+            WHERE [ToolCode] = @ToolCode AND [BandCode] = @RiskLevel AND [IsActive] = 1;
+
+            IF @RiskLevelName IS NULL
+                THROW 50009, 'No risk band covers the computed score.', 1;
+        END
 
         /* ---- Resolve the clinical MR number for this member ---- */
         DECLARE @MrNo VARCHAR(20) = NULL;
@@ -242,11 +348,13 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_Screenings]
             ([CaseId], [CommunityMemberId], [ToolCode], [ItemScores],
-             [RawScore], [RiskLevel], [MentalHealthSynced], [MentalHealthCode],
+             [RawScore], [RiskLevel], [SubscaleScoresJson],
+             [MentalHealthSynced], [MentalHealthCode],
              [ScreenedBy], [IpAddress])
         VALUES
             (@CaseId, @CommunityMemberId, @ToolCode, @ItemScoresJson,
-             @RawScore, @RiskLevel, @MentalHealthSynced, @MentalHealthCode,
+             @RawScore, @RiskLevel, @SubscaleScoresJson,
+             @MentalHealthSynced, @MentalHealthCode,
              @PerformedBy, @IpAddress);
 
         SET @NewScreeningId = SCOPE_IDENTITY();

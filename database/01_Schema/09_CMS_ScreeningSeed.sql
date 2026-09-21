@@ -8,6 +8,16 @@
    15-19 Moderately severe, 20-27 Severe.
    GAD-7 bands (standard): 0-4 Minimal, 5-9 Mild, 10-14 Moderate,
    15-21 Severe.
+   DASS-21 bands below are reference ranges on the WORST-SUBSCALE
+   metric (0-21); the submit SP computes each subscale against its
+   own published cutoffs and takes the worst band as the overall
+   RiskLevel, so the persisted band always matches the max subscale
+   severity.
+   SBQ-R bands: 3-6 below threshold (Minimal), 7-8 at/above threshold
+   (Moderate), 9-18 high risk (Severe).
+   C-SSRS bands are a display reference on the 0-6 item sum; the
+   actual risk is derived per-item by the submit SP (ideation <
+   intent/plan < behavior).
    Safe to re-run (guarded by MERGE / NOT EXISTS).
    ============================================================ */
 SET ANSI_NULLS ON;
@@ -23,7 +33,16 @@ USING (VALUES
      9, 3, 0, 27),
     ('GAD7', 'Generalized Anxiety Disorder-7',
      'Anxiety screening: 7 items scored 0-3, total 0-21. Item 8 (functional difficulty) is not scored.',
-     7, 3, 0, 21)
+     7, 3, 0, 21),
+    ('DASS21', 'Depression Anxiety Stress Scales-21',
+     'DASS-21: 21 items scored 0-3. Three subscales (Depression items 3,5,10,13,16,17,21; Anxiety items 2,4,7,9,15,19,20; Stress items 1,6,8,11,12,14,18), each 0-21. RawScore is the 0-63 total; RiskLevel is the worst subscale band per published DASS cutoffs; subscale scores are persisted in SubscaleScoresJson.',
+     21, 3, 0, 63),
+    ('SBQR', 'Suicide Behaviors Questionnaire-Revised',
+     'SBQ-R: 4 items with per-item ranges (item1: 1-4, item2: 1-5, item3: 1-3, item4: 1-4), total 3-18. Published risk thresholds: >=7 (general population), >=8 (clinical).',
+     4, 5, 3, 18),
+    ('CSSRS', 'Columbia-Suicide Severity Rating Scale (Screener)',
+     'C-SSRS screener: 6 yes/no items (0/1) — wish to be dead, suicidal thoughts, method considered, some intent, specific plan/intent, suicidal behavior. Risk is derived from the highest endorsed tier (ideation < intent/plan < behavior) per published screener logic; RawScore is the 0-6 item sum for display.',
+     6, 1, 0, 6)
 ) AS s ([ToolCode], [ToolName], [Description], [ItemCount], [MaxItemScore], [MinScore], [MaxScore])
 ON t.[ToolCode] = s.[ToolCode]
 WHEN MATCHED THEN
@@ -46,7 +65,20 @@ USING (VALUES
     ('GAD7', 'MINIMAL',   'Minimal',           0,  4, 10),
     ('GAD7', 'MILD',      'Mild',              5,  9, 20),
     ('GAD7', 'MODERATE',  'Moderate',         10, 14, 30),
-    ('GAD7', 'SEVERE',    'Severe',           15, 21, 40)
+    ('GAD7', 'SEVERE',    'Severe',           15, 21, 40),
+    ('DASS21', 'MINIMAL',   'Minimal',           0,  4, 10),
+    ('DASS21', 'MILD',      'Mild',              5,  6, 20),
+    ('DASS21', 'MODERATE',  'Moderate',          7, 10, 30),
+    ('DASS21', 'MOD_SEVERE','Moderately severe',11, 13, 40),
+    ('DASS21', 'SEVERE',    'Severe',           14, 21, 50),
+    ('SBQR', 'MINIMAL',   'Minimal (below risk threshold)', 3, 6, 10),
+    ('SBQR', 'MODERATE',  'Moderate (at/above risk threshold)', 7, 8, 30),
+    ('SBQR', 'SEVERE',    'Severe (high risk)', 9, 18, 50),
+    ('CSSRS', 'MINIMAL',   'Minimal (no endorsement)', 0, 0, 10),
+    ('CSSRS', 'MILD',      'Mild (ideation only)', 1, 2, 20),
+    ('CSSRS', 'MODERATE',  'Moderate (method considered)', 3, 3, 30),
+    ('CSSRS', 'MOD_SEVERE','Moderately severe (intent/plan)', 4, 4, 40),
+    ('CSSRS', 'SEVERE',    'Severe (behavior)', 5, 6, 50)
 ) AS s ([ToolCode], [BandCode], [BandName], [MinScore], [MaxScore], [SortOrder])
 ON t.[ToolCode] = s.[ToolCode] AND t.[BandCode] = s.[BandCode]
 WHEN MATCHED THEN

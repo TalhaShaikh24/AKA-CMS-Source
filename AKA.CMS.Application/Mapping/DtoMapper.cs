@@ -130,6 +130,7 @@ public static class DtoMapper
         screening.RawScore,
         screening.RiskLevel,
         screening.RiskLevelName,
+        screening.SubscaleScoresJson,
         screening.MentalHealthSynced,
         screening.MentalHealthCode,
         screening.ScreenedBy,
@@ -193,6 +194,18 @@ public static class DtoMapper
         comment.CreatedBy,
         comment.CreatedByUsername,
         comment.CreatedAt);
+
+    public static CarerDto ToDto(this Carer carer) => new(
+        carer.CarerId,
+        carer.CaseId,
+        carer.FullName,
+        carer.Relationship,
+        carer.Phone,
+        carer.IsPrimary,
+        carer.CreatedBy,
+        carer.CreatedByUsername,
+        carer.CreatedAt,
+        carer.RowVersion);
 
     public static QueueEntryDto ToDto(this CaseAssignmentQueueEntry entry) => new(
         entry.QueueId,

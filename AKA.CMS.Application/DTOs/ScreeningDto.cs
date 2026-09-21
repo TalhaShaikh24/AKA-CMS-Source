@@ -10,6 +10,7 @@ public sealed record ScreeningDto(
     int RawScore,
     string RiskLevel,
     string? RiskLevelName,
+    string? SubscaleScoresJson,
     bool MentalHealthSynced,
     string? MentalHealthCode,
     int ScreenedBy,
