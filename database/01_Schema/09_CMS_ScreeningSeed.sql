@@ -38,8 +38,8 @@ USING (VALUES
      'DASS-21: 21 items scored 0-3. Three subscales (Depression items 3,5,10,13,16,17,21; Anxiety items 2,4,7,9,15,19,20; Stress items 1,6,8,11,12,14,18), each 0-21. RawScore is the 0-63 total; RiskLevel is the worst subscale band per published DASS cutoffs; subscale scores are persisted in SubscaleScoresJson.',
      21, 3, 0, 63),
     ('SBQR', 'Suicide Behaviors Questionnaire-Revised',
-     'SBQ-R: 4 items with per-item ranges (item1: 1-4, item2: 1-5, item3: 1-3, item4: 1-4), total 3-18. Published risk thresholds: >=7 (general population), >=8 (clinical).',
-     4, 5, 3, 18),
+     'SBQ-R: 4 items with per-item ranges (item1: 1-4, item2: 1-5, item3: 1-3, item4: 0-6), total 3-18. Published risk thresholds: >=7 (general population), >=8 (clinical).',
+     4, 6, 3, 18),
     ('CSSRS', 'Columbia-Suicide Severity Rating Scale (Screener)',
      'C-SSRS screener: 6 yes/no items (0/1) — wish to be dead, suicidal thoughts, method considered, some intent, specific plan/intent, suicidal behavior. Risk is derived from the highest endorsed tier (ideation < intent/plan < behavior) per published screener logic; RawScore is the 0-6 item sum for display.',
      6, 1, 0, 6)

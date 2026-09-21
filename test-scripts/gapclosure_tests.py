@@ -132,15 +132,23 @@ check("SBQ-R item3=4 rejected -> 400", s == 400, f"status={s}")
 s, _ = submit(cid, "SBQR", [0, 1, 1, 1])
 check("SBQ-R item1=0 rejected -> 400", s == 400, f"status={s}")
 
-# SBQ-R: high [4,5,3,4] -> total 16 -> SEVERE (separate case: auto-escalates)
+# SBQ-R: high [4,5,3,6] -> total 18 -> SEVERE (separate case: auto-escalates)
 cid, _ = new_case("sbqr-sev")
 s, b = api("POST", "/api/screenings/submit", admin,
-           {"caseId": cid, "toolCode": "SBQR", "itemScores": [4, 5, 3, 4]})
+           {"caseId": cid, "toolCode": "SBQR", "itemScores": [4, 5, 3, 6]})
 sc = (b or {}).get("screening") or {}
-check("SBQ-R total=16 -> SEVERE", s == 201 and sc.get("riskLevel") == "SEVERE",
+check("SBQ-R total=18 -> SEVERE", s == 201 and sc.get("riskLevel") == "SEVERE",
       f"{s}/{sc.get('riskLevel')}")
 check("SBQ-R severe auto-escalation noted", b.get("autoTransitionApplied") in (True, False),
       f"applied={b.get('autoTransitionApplied')}")
+
+# SBQ-R: Q4 zero-based range (published 0-6)
+cid, _ = new_case("sbqr-q4zero")
+s, sc = submit(cid, "SBQR", [1, 1, 1, 0])
+check("SBQ-R Q4=0 accepted -> MINIMAL", s == 201 and sc.get("riskLevel") == "MINIMAL",
+      f"{s}/{sc.get('riskLevel')}")
+s, _ = submit(cid, "SBQR", [1, 1, 1, 7])
+check("SBQ-R Q4=7 rejected -> 400", s == 400, f"status={s}")
 
 # C-SSRS tiers
 tiers = [
@@ -212,6 +220,27 @@ s, b = transition(cid2, "CompleteRiskAssessment", rv2)
 s, allowed = api("GET", f"/api/cases/{cid2}/allowed-transitions", admin)
 acts = [a.get("actionCode") for a in (allowed or [])]
 check("allowed lists SubmitSupervisorReview", "SubmitSupervisorReview" in acts, f"{acts}")
+
+# permission-level: supervisor (has Supervision:Write) can review;
+# caseworker (lacks it) gets 403
+supervisor = login("supervisor", "Dev@Admin#2026")
+caseworker = login("caseworker", "Dev@Admin#2026")
+check("supervisor login", bool(supervisor))
+check("caseworker login", bool(caseworker))
+s, allowed = api("GET", f"/api/cases/{cid2}/allowed-transitions", supervisor)
+sacts = [a.get("actionCode") for a in (allowed or [])]
+check("supervisor allowed includes SubmitSupervisorReview",
+      "SubmitSupervisorReview" in sacts, f"{sacts}")
+s, b = api("POST", f"/api/cases/{cid2}/transitions", supervisor,
+           {"action": "SubmitSupervisorReview", "comment": "reviewed",
+            "assignedToUserId": None, "rowVersion": rv2})
+check("supervisor SubmitSupervisorReview -> 200",
+      s == 200 and b.get("status") == "TRIAGE", f"status={s}")
+rv2 = b["rowVersion"]
+s, b = api("POST", f"/api/cases/{cid2}/transitions", caseworker,
+           {"action": "SubmitSupervisorReview", "comment": "x",
+            "assignedToUserId": None, "rowVersion": rv2})
+check("caseworker SubmitSupervisorReview -> 403", s == 403, f"status={s}")
 
 # ============ GAP 3: carers ============
 cid, _ = new_case("carer")

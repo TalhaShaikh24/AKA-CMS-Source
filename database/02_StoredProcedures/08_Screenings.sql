@@ -166,13 +166,13 @@ BEGIN
         /* ---- Tool-specific item validation (heterogeneous ranges) ---- */
         IF @ToolCode = 'SBQR'
         BEGIN
-            /* SBQ-R per-item ranges: item1 1-4, item2 1-5, item3 1-3, item4 1-4. */
+            /* SBQ-R per-item ranges: item1 1-4, item2 1-5, item3 1-3, item4 0-6. */
             IF EXISTS (SELECT 1 FROM @Items
                        WHERE ([Idx] = 0 AND ([Score] < 1 OR [Score] > 4))
                           OR ([Idx] = 1 AND ([Score] < 1 OR [Score] > 5))
                           OR ([Idx] = 2 AND ([Score] < 1 OR [Score] > 3))
-                          OR ([Idx] = 3 AND ([Score] < 1 OR [Score] > 4)))
-                THROW 50009, 'SBQ-R items must use their published per-item ranges (1-4, 1-5, 1-3, 1-4).', 1;
+                          OR ([Idx] = 3 AND ([Score] < 0 OR [Score] > 6)))
+                THROW 50009, 'SBQ-R items must use their published per-item ranges (1-4, 1-5, 1-3, 0-6).', 1;
         END
 
         /* ---- Server-side risk stratification ----

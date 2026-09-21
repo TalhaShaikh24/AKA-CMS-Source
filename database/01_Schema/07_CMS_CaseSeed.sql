@@ -47,7 +47,7 @@ USING (VALUES
     ('NO_CONSENT',      'ReEngage',              'Re-engage',               'INTAKE',          'Cases:Write', 10),
     ('RISK_ASSESSMENT', 'FlagEmergency',         'Flag Emergency',          'EMERGENCY',       'Cases:Write', 10),
     ('RISK_ASSESSMENT', 'CompleteRiskAssessment','Complete Risk Assessment','TRIAGE',          'Cases:Write', 20),
-    ('TRIAGE',          'SubmitSupervisorReview','Submit Supervisor Review','TRIAGE',        'Cases:Write', 5),
+    ('TRIAGE',          'SubmitSupervisorReview','Submit Supervisor Review','TRIAGE',        'Supervision:Write', 5),
     ('EMERGENCY',       'Stabilize',             'Stabilize - Return to Clinical Pathway', 'TRIAGE', 'Cases:Write', 10),
     ('EMERGENCY',       'CloseEmergencyCare',    'Close Emergency Care',    'CLOSED',          'Cases:Close', 20),
     ('TRIAGE',          'AssignCaseManager',     'Assign Case Manager',     'ASSIGNED',        'Cases:Write', 10),
