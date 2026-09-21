@@ -9,7 +9,7 @@ Flow under test:
 Run the API first with stdout/stderr redirected to the log file passed as
 argv[1] (default /tmp/aka-api.log).
 """
-import json, re, sys, urllib.request, urllib.error
+import json, re, sys, time, urllib.request, urllib.error
 
 BASE = "http://localhost:5000"
 LOG = sys.argv[1] if len(sys.argv) > 1 else "/tmp/aka-api.log"
@@ -57,20 +57,21 @@ if s != 200:
     print(f"TOTAL: {len(passed)} passed, {len(failed)} failed"); sys.exit(1)
 
 # --- create a test user WITH an e-mail ---
-uname = "pwreset_tester"
+uname = f"pwreset_tester_{int(time.time()) % 100000}"
+uemail = f"pwreset.tester.{int(time.time()) % 100000}@example.local"
 s, u = req("POST", "/api/users",
     {"username": uname, "password": "OldPass@123",
-     "email": "pwreset.tester@example.local", "roleIds": [2]}, admin_tok)
+     "email": uemail, "roleIds": [2]}, admin_tok)
 check("create user with email 201", s == 201, f"({(u or {}).get('userId')})")
 if s == 201:
     uid = u["userId"]
 else:
     s, users = req("GET", "/api/users", token=admin_tok)
     uid = next(x["userId"] for x in users if x["username"] == uname)
-check("user dto carries email", u.get("email") == "pwreset.tester@example.local")
+check("user dto carries email", u.get("email") == uemail)
 
 s, g = req("GET", f"/api/users/{uid}", token=admin_tok)
-check("get user shows email", s == 200 and g.get("email") == "pwreset.tester@example.local")
+check("get user shows email", s == 200 and g.get("email") == uemail)
 
 # login as the test user -> active session to prove revocation later
 s, _, old_refresh = login(uname, "OldPass@123")
@@ -78,12 +79,12 @@ check("test user login with old password 200", s == 200)
 
 # --- forgot-password: valid e-mail ---
 s, d = req("POST", "/api/auth/forgot-password",
-    {"email": "pwreset.tester@example.local"})
+    {"email": uemail})
 check("forgot-password known email 200", s == 200)
 check("forgot-password generic message", s == 200 and
       "reset" in (d.get("message") or "").lower())
 
-raw_token = token_from_log("pwreset.tester@example.local")
+raw_token = token_from_log(uemail)
 check("reset link logged with token", raw_token is not None)
 
 # --- forgot-password: unknown e-mail must NOT reveal absence ---
@@ -130,7 +131,7 @@ check("reset-password short password 400", s == 400)
 # --- duplicate e-mail must conflict ---
 s, _ = req("POST", "/api/users",
     {"username": "pwreset_dup", "password": "Dup@12345",
-     "email": "pwreset.tester@example.local", "roleIds": [2]}, admin_tok)
+     "email": uemail, "roleIds": [2]}, admin_tok)
 check("create user with duplicate email -> 409", s == 409)
 
 print(f"TOTAL: {len(passed)} passed, {len(failed)} failed")

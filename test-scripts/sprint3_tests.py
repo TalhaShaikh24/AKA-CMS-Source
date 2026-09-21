@@ -150,8 +150,8 @@ check("assign stale rowVersion -> 409", s == 409)
 # --- history trail of full lifecycle ---
 s, h = req("GET", f"/api/cases/{case1}/history", token=admin)
 hist_actions = [x["actionCode"] for x in h]
-check("history trail complete (register + 12 transitions)",
-      s == 200 and len(h) == 13 and hist_actions[0] == "RegisterCase", str(hist_actions))
+check("history trail complete (register + 13 transitions)",
+      s == 200 and len(h) == 14 and hist_actions[0] == "RegisterCase", str(hist_actions))
 
 # --- 401 / 403 ---
 s, _ = req("GET", f"/api/cases/{case4}")
@@ -165,7 +165,7 @@ if s == 201:
     role_id = r["roleId"]
 else:
     s, roles = req("GET", "/api/roles", token=admin)
-    role_id = next(x["roleId"] for x in roles if x["name"] == "Clinician")
+    role_id = next(x["roleId"] for x in roles if x.get("description") == "test")
 for pid in (90009, 90010, 90044):  # Read, Write, Supervision:Write — deliberately NOT 90011 (Close)
     s2, _ = req("POST", f"/api/roles/{role_id}/permissions", {"controllerActionId": pid}, admin)
     assert s2 in (204, 409), s2  # 409 = already assigned on re-runs
