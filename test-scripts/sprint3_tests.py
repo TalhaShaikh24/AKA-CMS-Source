@@ -165,10 +165,10 @@ if s == 201:
     role_id = r["roleId"]
 else:
     s, roles = req("GET", "/api/roles", token=admin)
-    role_id = next(x["roleId"] for x in roles if x["roleId"] != 1)
+    role_id = next(x["roleId"] for x in roles if x["name"] == "Clinician")
 for pid in (90009, 90010, 90044):  # Read, Write, Supervision:Write — deliberately NOT 90011 (Close)
     s2, _ = req("POST", f"/api/roles/{role_id}/permissions", {"controllerActionId": pid}, admin)
-    assert s2 == 204, s2
+    assert s2 in (204, 409), s2  # 409 = already assigned on re-runs
 s, u2 = req("POST", "/api/users",
     {"username": "clinician1", "password": "Clin@1234", "unitCode": 1}, admin)
 if s == 201:
