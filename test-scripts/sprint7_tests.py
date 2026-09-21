@@ -70,6 +70,7 @@ def make_case(name, priority="High", walk_to_treatment=True):
     if not walk_to_treatment:
         return cid, rv
     walk = [("SubmitScreening", None), ("CompleteRiskAssessment", None),
+            ("SubmitSupervisorReview", None),
             ("AssignCaseManager", 1), ("BeginIntervention", None),
             ("SendReferral", None), ("AcceptReferral", None)]
     for action, assign in walk:

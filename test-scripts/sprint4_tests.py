@@ -70,7 +70,7 @@ check("transition to RISK_ASSESSMENT", s == 200 and b2["status"] == "RISK_ASSESS
 # --- tools catalog ---
 s, tools = api("GET", "/api/screenings/tools", admin)
 codes = {t["toolCode"]: t for t in (tools or [])}
-check("GET tools", s == 200 and set(codes) == {"PHQ9", "GAD7"}, f"status={s}")
+check("GET tools", s == 200 and set(codes) == {"PHQ9", "GAD7", "DASS21", "SBQR", "CSSRS"}, f"status={s}")
 check("PHQ9 bands", [x["bandCode"] for x in codes["PHQ9"]["bands"]] ==
       ["MINIMAL", "MILD", "MODERATE", "MOD_SEVERE", "SEVERE"])
 check("GAD7 bands", [x["bandCode"] for x in codes["GAD7"]["bands"]] ==

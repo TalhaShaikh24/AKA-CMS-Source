@@ -62,7 +62,11 @@ s, u = req("POST", "/api/users",
     {"username": uname, "password": "OldPass@123",
      "email": "pwreset.tester@example.local", "roleIds": [2]}, admin_tok)
 check("create user with email 201", s == 201, f"({(u or {}).get('userId')})")
-uid = u["userId"]
+if s == 201:
+    uid = u["userId"]
+else:
+    s, users = req("GET", "/api/users", token=admin_tok)
+    uid = next(x["userId"] for x in users if x["username"] == uname)
 check("user dto carries email", u.get("email") == "pwreset.tester@example.local")
 
 s, g = req("GET", f"/api/users/{uid}", token=admin_tok)

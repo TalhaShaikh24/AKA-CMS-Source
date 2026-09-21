@@ -68,6 +68,7 @@ def make_case(name):
 # ---------- setup: case walked to IN_TREATMENT ----------
 case_tx, rv = make_case("Sprint6 TX Patient 0001")
 walk = [("SubmitScreening", None), ("CompleteRiskAssessment", None),
+        ("SubmitSupervisorReview", None),
         ("AssignCaseManager", 1), ("BeginIntervention", None),
         ("SendReferral", None), ("AcceptReferral", None)]
 for action, assign in walk:

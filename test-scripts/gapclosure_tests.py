@@ -216,7 +216,7 @@ check("assign AFTER review -> 200 ASSIGNED",
 # allowed-actions endpoint should list the new self-loop on a fresh TRIAGE case
 cid2, rv2 = new_case("suprev2")
 s, b = transition(cid2, "SubmitScreening", rv2); rv2 = b["rowVersion"]
-s, b = transition(cid2, "CompleteRiskAssessment", rv2)
+s, b = transition(cid2, "CompleteRiskAssessment", rv2); rv2 = b["rowVersion"]
 s, allowed = api("GET", f"/api/cases/{cid2}/allowed-transitions", admin)
 acts = [a.get("actionCode") for a in (allowed or [])]
 check("allowed lists SubmitSupervisorReview", "SubmitSupervisorReview" in acts, f"{acts}")
@@ -297,7 +297,7 @@ check("MarkNoConsent -> 200 NO_CONSENT",
 s, plans = api("GET", f"/api/care-plans/case/{cid}", admin)
 nc = [p for p in (plans or []) if p.get("riskCategory") == "NO_CONSENT"]
 check("no-consent checklist created", len(nc) == 1, f"plans={len(plans or [])}")
-steps = json.loads((nc[0] or {}).get("stepsJson") or "[]") if nc else []
+steps = (nc[0] or {}).get("steps") or [] if nc else []
 step_codes = [st.get("stepCode") for st in steps]
 check("checklist has S5a-S5d",
       step_codes == ["S5a", "S5b", "S5c", "S5d"], f"{step_codes}")

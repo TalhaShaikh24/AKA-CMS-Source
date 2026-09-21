@@ -79,14 +79,14 @@ check("lookups: medications 9 dictionary rows",
       s == 200 and len(b or []) == 9, f"status={s} n={len(b or [])}")
 
 s, b = api("GET", "/api/lookups/risk-bands", admin)
-check("lookups: risk-bands 9 rows with tool code",
-      s == 200 and len(b or []) == 9 and all((i or {}).get("extra") for i in (b or [])),
+check("lookups: risk-bands 22 rows with tool code",
+      s == 200 and len(b or []) == 22 and all((i or {}).get("extra") for i in (b or [])),
       f"status={s} n={len(b or [])}")
 
 s, b = api("GET", "/api/lookups/screening-tools", admin)
 tcodes = [(i or {}).get("code") for i in (b or [])]
-check("lookups: screening-tools PHQ9+GAD7",
-      s == 200 and set(tcodes) == {"PHQ9", "GAD7"}, f"status={s} {tcodes}")
+check("lookups: screening-tools PHQ9+GAD7+DASS21+SBQR+CSSRS",
+      s == 200 and set(tcodes) == {"PHQ9", "GAD7", "DASS21", "SBQR", "CSSRS"}, f"status={s} {tcodes}")
 
 s, b = api("GET", "/api/lookups/case-sources", admin)
 check("lookups: case-sources 8 rows",
@@ -275,6 +275,7 @@ def transition(cid, action, rv, assign=None):
 s, b = api("GET", f"/api/cases/{case_id}", admin)
 rv = (b or {}).get("rowVersion")
 for action, assign in [("SubmitScreening", None), ("CompleteRiskAssessment", None),
+                       ("SubmitSupervisorReview", None),
                        ("AssignCaseManager", 1), ("BeginIntervention", None),
                        ("SendReferral", None), ("AcceptReferral", None)]:
     s, t = transition(case_id, action, rv, assign)

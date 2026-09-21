@@ -72,6 +72,7 @@ def transition(cid, action, token, rv, comment=None, assign=None):
 walk = [
     ("SubmitScreening", "RISK_ASSESSMENT", None),
     ("CompleteRiskAssessment", "TRIAGE", None),
+    ("SubmitSupervisorReview", "TRIAGE", None),
     ("AssignCaseManager", "ASSIGNED", 1),
     ("BeginIntervention", "INTERVENTION", None),
     ("SendReferral", "REFERRAL_SENT", None),
@@ -165,7 +166,7 @@ if s == 201:
 else:
     s, roles = req("GET", "/api/roles", token=admin)
     role_id = next(x["roleId"] for x in roles if x["roleId"] != 1)
-for pid in (90009, 90010):  # Read, Write — deliberately NOT 90011 (Close)
+for pid in (90009, 90010, 90044):  # Read, Write, Supervision:Write — deliberately NOT 90011 (Close)
     s2, _ = req("POST", f"/api/roles/{role_id}/permissions", {"controllerActionId": pid}, admin)
     assert s2 == 204, s2
 s, u2 = req("POST", "/api/users",
@@ -183,6 +184,7 @@ s, cc = req("POST", "/api/cases",
 ccid, crv = cc["caseId"], cc["rowVersion"]
 for action, expect in [("SubmitScreening", "RISK_ASSESSMENT"),
                        ("CompleteRiskAssessment", "TRIAGE"),
+                       ("SubmitSupervisorReview", "TRIAGE"),
                        ("AssignCaseManager", "ASSIGNED"),
                        ("BeginIntervention", "INTERVENTION"),
                        ("SendReferral", "REFERRAL_SENT"),
