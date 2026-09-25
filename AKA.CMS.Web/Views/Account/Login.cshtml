@@ -1,21 +1,21 @@
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     Layout = null;
     ViewData["Title"] = "Sign In";
-    var tokens = Antiforgery.GetAndStoreTokens(Context);
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="@tokens.RequestToken">
 <title>CMS · Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="~/css/style.css" asp-append-version="true">
 </head>
 <body class="auth-page">
+@* Web API base URL for the global cmsAjax helper. *@
+<script>window.CMS_API_BASE_URL = "@Configuration["ApiBaseUrl"]";</script>
 <div class="auth-wrap">
   <div class="auth-brand">
     <div class="auth-brand-inner">

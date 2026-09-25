@@ -1,6 +1,7 @@
 /* Roles & Permissions — role list, permission catalog and grant/revoke
-   toggles, all through the global cmsAjax helper. */
+   toggles, DIRECTLY from the Web API through the global cmsAjax helper. */
 $(function () {
+  if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
   CMS.initSelect2(document);
   CMS.initValidation(document);
@@ -16,7 +17,7 @@ $(function () {
 
   function loadRoles(selectId) {
     cmsAjax({
-      url: '/Roles/List', method: 'GET',
+      url: '/api/roles', method: 'GET',
       fallbackMsg: 'Could not load roles.',
       success: function (res) {
         roles = res || [];
@@ -35,7 +36,7 @@ $(function () {
 
   function loadCatalog() {
     cmsAjax({
-      url: '/Roles/Catalog', method: 'GET',
+      url: '/api/permissions', method: 'GET',
       error: function () { return true; },
       success: function (res) { catalog = res || []; renderPerms(); }
     });
@@ -48,7 +49,7 @@ $(function () {
     var r = roles.filter(function (x) { return x.roleId === id; })[0];
     $('#permTitle').text('Permissions — ' + (r ? r.description : ''));
     cmsAjax({
-      url: '/Roles/Permissions/' + id, method: 'GET',
+      url: '/api/roles/' + id + '/permissions', method: 'GET',
       fallbackMsg: 'Could not load role permissions.',
       success: function (res) {
         assigned = {};
@@ -83,7 +84,7 @@ $(function () {
     var $box = $(this);
     if (grant) {
       cmsAjax({
-        url: '/Roles/AssignPermission/' + selectedRoleId, method: 'POST', json: true,
+        url: '/api/roles/' + selectedRoleId + '/permissions', method: 'POST', json: true,
         data: { controllerActionId: pid },
         fallbackMsg: 'Could not grant permission.',
         success: function () { assigned[pid] = true; CMS.toast('Permission granted.', 'success'); },
@@ -91,7 +92,7 @@ $(function () {
       });
     } else {
       cmsAjax({
-        url: '/Roles/RemovePermission/' + selectedRoleId + '?controllerActionId=' + pid, method: 'DELETE',
+        url: '/api/roles/' + selectedRoleId + '/permissions/' + pid, method: 'DELETE',
         fallbackMsg: 'Could not revoke permission.',
         success: function () { delete assigned[pid]; CMS.toast('Permission revoked.', 'success'); },
         error: function () { $box.prop('checked', true); return false; }
@@ -107,7 +108,7 @@ $(function () {
   $('#roleForm').cmsValidate({
     onValid: function () {
       cmsAjax({
-        url: '/Roles/Create', method: 'POST', json: true,
+        url: '/api/roles', method: 'POST', json: true,
         data: { description: $.trim($('#nrDesc').val()) },
         fallbackMsg: 'Could not create role.',
         success: function (res) {
