@@ -1,0 +1,93 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var tokens = Antiforgery.GetAndStoreTokens(Context);
+    var activePage = (string?)ViewData["ActivePage"] ?? "";
+    var username = User.Identity?.Name ?? "";
+    var roles = string.Join(", ", User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+    string NavCls(string key) => key == activePage ? "nav-link active" : "nav-link";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="@tokens.RequestToken">
+<title>@(ViewData["Title"] ?? "CMS") · CMS — Integrated Mental Health Programme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link rel="stylesheet" href="~/css/style.css" asp-append-version="true">
+@await RenderSectionAsync("Styles", required: false)
+</head>
+<body data-page="@activePage">
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="flower" width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(0 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(45 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(90 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(135 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(180 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(225 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(270 50 50)"/>
+        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(315 50 50)"/>
+        <circle cx="50" cy="50" r="10" fill="#DCE88A"/>
+        <circle cx="50" cy="50" r="4.5" fill="#2E3D62"/>
+      </svg>
+      <div><strong>Integrated Mental Health</strong><span>Case Management System</span></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">System</div>
+      <a href="@Url.Action("Index", "Users")" class="@NavCls("users")" data-key="users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.8a3.5 3.5 0 0 1 0 6.4M17.5 14.5a6.5 6.5 0 0 1 4 5.5"/></svg>
+        <span>Users</span>
+      </a>
+      <a href="@Url.Action("Index", "Roles")" class="@NavCls("roles")" data-key="roles">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3m-4 2 3 3"/></svg>
+        <span>Roles &amp; Permissions</span>
+      </a>
+    </nav>
+    <div class="role-badge"><strong>@username</strong>@(string.IsNullOrEmpty(roles) ? "Team member" : roles)</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn nav-toggle" id="navToggle" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="search">
+        <span class="search-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <input type="text" id="globalSearch" placeholder="Search users, roles…">
+      </div>
+      <div class="topbar-actions">
+        <div class="profile">
+          <div class="avatar">@(username.Length >= 2 ? username.Substring(0, 2).ToUpper() : "?")</div>
+          <div><strong>@username</strong><span>@(string.IsNullOrEmpty(roles) ? "" : roles.Split(',')[0].Trim())</span></div>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" style="display:inline">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="icon-btn" title="Sign out" aria-label="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+          </button>
+        </form>
+      </div>
+    </header>
+    <div class="content" id="contentSlot">
+      <main class="content" id="pageContent">
+        @RenderBody()
+      </main>
+    </div>
+  </div>
+  <div class="overlay" id="navOverlay"></div>
+</div>
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="loader" id="loader"><div class="spinner"></div></div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="~/js/script.js" asp-append-version="true"></script>
+<script src="~/js/ajax.js" asp-append-version="true"></script>
+<script src="~/js/validation.js" asp-append-version="true"></script>
+<script src="~/js/filters.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

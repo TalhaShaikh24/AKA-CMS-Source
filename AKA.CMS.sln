@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKA.CMS.Infrastructure", "A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKA.CMS.API", "AKA.CMS.API\AKA.CMS.API.csproj", "{0E767687-0D32-46EA-80AE-C80966261B50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKA.CMS.Web", "AKA.CMS.Web\AKA.CMS.Web.csproj", "{C5995F2A-5BC7-45C0-93E4-1755DDD18FB0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{0E767687-0D32-46EA-80AE-C80966261B50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E767687-0D32-46EA-80AE-C80966261B50}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E767687-0D32-46EA-80AE-C80966261B50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5995F2A-5BC7-45C0-93E4-1755DDD18FB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5995F2A-5BC7-45C0-93E4-1755DDD18FB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5995F2A-5BC7-45C0-93E4-1755DDD18FB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5995F2A-5BC7-45C0-93E4-1755DDD18FB0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

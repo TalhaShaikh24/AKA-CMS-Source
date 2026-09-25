@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Users";
+    ViewData["ActivePage"] = "users";
+}
+<style>
+  .u-cell{display:flex;align-items:center;gap:12px}
+  .row-actions{white-space:nowrap}
+  .row-actions .btn{margin-right:6px}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:#eef2ff;color:#3b5bdb;margin:1px 2px}
+  .st-active{color:#1e7e34;font-weight:600}
+  .st-inactive{color:#999;font-weight:600}
+  .st-locked{color:#c0392b;font-weight:600}
+  .modal{max-width:560px}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Users</h1>
+    <p class="sub">Manage team members and roles</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-ghost filter-toggle-btn" id="filterToggle" type="button" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>
+      Filters
+      <span class="filter-count" id="filterCount" hidden>0</span>
+    </button>
+    <button class="btn btn-primary" id="addUserBtn" type="button">+ Add User</button>
+  </div>
+</div>
+
+<div class="kpi-grid k4">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Users</div>
+    <div class="kpi-value" id="kpiTotal">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Active</div>
+    <div class="kpi-value" id="kpiActive">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Locked</div>
+    <div class="kpi-value" id="kpiLocked">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Administrators</div>
+    <div class="kpi-value" id="kpiAdmins">—</div>
+  </div>
+</div>
+
+<div class="filter-panel" id="userFilterPanel" hidden>
+  <div class="filters-bar" id="userFilters"></div>
+  <div class="filter-panel-foot">
+    <button class="btn btn-ghost btn-sm" id="userClearFilters" type="button">Clear</button>
+    <button class="btn btn-primary btn-sm" id="userApplyFilters" type="button">Apply Filters</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Team Members</h3>
+    <span class="hint" id="userCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="userTable">
+      <thead>
+        <tr><th>User</th><th>Roles</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="userTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="userModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="userModalTitle">Add User</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <form id="userForm" data-validate novalidate>
+      <input type="hidden" id="editUserId">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field" id="fUsername">
+            <label>Username <span class="req">*</span></label>
+            <input class="input" id="nuUsername" required placeholder="e.g. fieldworker2" autocomplete="off">
+            <span class="field-error"></span>
+          </div>
+          <div class="field" id="fPassword">
+            <label>Password <span class="req">*</span></label>
+            <input class="input" id="nuPassword" type="password" required placeholder="••••••••" autocomplete="new-password">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input class="input" id="nuEmail" type="email" placeholder="user@example.org">
+            <span class="field-error"></span>
+          </div>
+          <div class="field" id="fRoles">
+            <label>Roles</label>
+            <select class="input select2" id="nuRoles" multiple></select>
+          </div>
+          <div class="field" id="fActive" hidden>
+            <label class="check-row"><input type="checkbox" id="euActive" checked><span class="check-label">Active</span></label>
+          </div>
+          <div class="field" id="fLocked" hidden>
+            <label class="check-row"><input type="checkbox" id="euLocked"><span class="check-label">Locked</span></label>
+          </div>
+          <div class="field" id="fNewPass" hidden>
+            <label>New Password <span class="hint-inline">(leave blank to keep)</span></label>
+            <input class="input" id="euNewPass" type="password" placeholder="••••••••" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="userFormSubmit">Add User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="roleModal">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <h3>Roles — <span id="roleModalUser"></span></h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="roleList"></div>
+      <div class="form-grid" style="margin-top:14px">
+        <div class="field">
+          <label>Assign role</label>
+          <select class="input select2" id="assignRoleSel"></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Close</button>
+      <button class="btn btn-primary" id="assignRoleBtn" type="button">Assign</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/users.js" asp-append-version="true"></script>
+}
