@@ -1,6 +1,7 @@
-/* Users — loads team members through the global cmsAjax helper.
-   All endpoints are MVC JSON actions backed directly by IUserService. */
+/* Users — loads team members through the global cmsAjax helper,
+   DIRECTLY from the Web API. Razor never touches the backend. */
 $(function () {
+  if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
   CMS.initSelect2(document);
   CMS.initValidation(document);
@@ -38,12 +39,12 @@ $(function () {
   /* ---------- load ---------- */
   function load() {
     cmsAjax({
-      url: '/Users/List', method: 'GET',
+      url: '/api/users', method: 'GET',
       fallbackMsg: 'Could not load users.',
       success: function (res) { allUsers = res || []; render(); }
     });
     cmsAjax({
-      url: '/Users/Roles', method: 'GET',
+      url: '/api/roles', method: 'GET',
       error: function () { return true; },
       success: function (res) {
         allRoles = (res || []).filter(function (r) { return r.isActive; });
@@ -130,7 +131,7 @@ $(function () {
       var id = $('#editUserId').val();
       if (id) {
         cmsAjax({
-          url: '/Users/Update/' + id, method: 'PUT', json: true,
+          url: '/api/users/' + id, method: 'PUT', json: true,
           data: {
             email: $.trim($('#nuEmail').val()) || null,
             isActive: $('#euActive').is(':checked'),
@@ -147,7 +148,7 @@ $(function () {
       } else {
         var roleIds = ($('#nuRoles').val() || []).map(Number);
         cmsAjax({
-          url: '/Users/Create', method: 'POST', json: true,
+          url: '/api/users', method: 'POST', json: true,
           data: {
             username: $.trim($('#nuUsername').val()),
             password: $('#nuPassword').val(),
@@ -189,7 +190,7 @@ $(function () {
     var rid = Number($('#assignRoleSel').val());
     if (!rid || !roleUserId) { CMS.toast('Choose a role first.', 'error'); return; }
     cmsAjax({
-      url: '/Users/AssignRole/' + roleUserId, method: 'POST', json: true,
+      url: '/api/users/' + roleUserId + '/roles', method: 'POST', json: true,
       data: { roleId: rid, unitCode: 0 },
       fallbackMsg: 'Could not assign role.',
       success: function () { CMS.toast('Role assigned.', 'success'); load(); $('#roleModal').removeClass('open'); }
@@ -201,7 +202,7 @@ $(function () {
     var rid = $(this).data('unassign');
     if (!rid || !roleUserId) return;
     cmsAjax({
-      url: '/Users/RemoveRole/' + roleUserId + '?roleId=' + rid, method: 'DELETE',
+      url: '/api/users/' + roleUserId + '/roles/' + rid, method: 'DELETE',
       fallbackMsg: 'Could not remove role.',
       success: function () { CMS.toast('Role removed.', 'success'); load(); $('#roleModal').removeClass('open'); }
     });

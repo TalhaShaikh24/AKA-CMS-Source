@@ -1,29 +1,39 @@
-/* Login — posts credentials as JSON through the global cmsAjax helper.
-   The server validates via the shared IAuthService and issues an auth cookie. */
+/* Login — posts credentials as JSON through the global cmsAjax helper,
+   DIRECTLY to the Web API (POST /api/auth/login). The returned JWT pair is
+   kept in browser storage; cmsAjax attaches it as a Bearer token on every
+   later API call. Razor never sees the credentials. */
 $(function () {
-  $('#loginForm').cmsValidate({
-    onValid: function () {
-      cmsAjax({
-        url: '/Account/Login',
-        method: 'POST',
-        json: true,
-        data: {
-          username: $.trim($('#loginUser').val()),
-          password: $('#loginPass').val(),
-          rememberMe: $('#rememberMe').is(':checked')
-        },
-        success: function (res) {
-          CMS.toast('Welcome back! Signed in successfully.', 'success');
-          setTimeout(function () { location.href = (res && res.redirectUrl) || '/Users'; }, 700);
-        },
-        error: function (xhr) {
-          if (xhr.status === 401) {
-            CMS.toast('Invalid username or password.', 'error');
-            return true;
-          }
-          return false;
-        }
-      });
+    // Already signed in? Skip the login page.
+    if (window.cmsAuth && window.cmsAuth.isLoggedIn()) {
+        window.location.href = '/Users';
+        return;
     }
-  });
+
+    $('#loginForm').cmsValidate({
+        onValid: function () {
+            var username = $.trim($('#loginUser').val());
+            var password = $('#loginPass').val();
+            var remember = $('#rememberMe').is(':checked');
+            var $btn = $('#loginForm').find('button[type="submit"]');
+
+            $btn.prop('disabled', true).text('Signing in…');
+
+            cmsAjax({
+                url: '/api/auth/login',
+                method: 'POST',
+                json: true,
+                auth: false, // no token yet
+                data: { username: username, password: password },
+                fallbackMsg: 'Sign in failed.',
+                success: function (resp) {
+                    window.cmsAuth.save(resp, remember);
+                    window.location.href = '/Users';
+                },
+                error: function () {
+                    $btn.prop('disabled', false).text('Sign in');
+                    return false; // keep the default error toast
+                }
+            });
+        }
+    });
 });
