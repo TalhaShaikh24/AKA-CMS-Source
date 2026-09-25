@@ -1,9 +1,7 @@
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
-    var tokens = Antiforgery.GetAndStoreTokens(Context);
     var activePage = (string?)ViewData["ActivePage"] ?? "";
-    var username = User.Identity?.Name ?? "";
-    var roles = string.Join(", ", User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+    var hideChrome = ViewData["HideChrome"] as bool? == true;
     string NavCls(string key) => key == activePage ? "nav-link active" : "nav-link";
 }
 <!DOCTYPE html>
@@ -11,7 +9,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="@tokens.RequestToken">
 <title>@(ViewData["Title"] ?? "CMS") · CMS — Integrated Mental Health Programme</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,14 +17,18 @@
 @await RenderSectionAsync("Styles", required: false)
 </head>
 <body data-page="@activePage">
+@* The Web API base URL comes from appsettings ("ApiBaseUrl").
+   The global cmsAjax helper prefixes every /api/... call with it. *@
+<script>window.CMS_API_BASE_URL = "@Configuration["ApiBaseUrl"]";</script>
 <div class="app" id="app">
+  @if (!hideChrome)
+  {
   <aside class="sidebar">
     <div class="brand">
       <svg class="flower" width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(0 50 50)"/>
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(45 50 50)"/>
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(90 50 50)"/>
-        <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(135 50 50)"/>
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(180 50 50)"/>
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#A9BEE0" transform="rotate(225 50 50)"/>
         <ellipse cx="50" cy="26" rx="9" ry="19" fill="#DCE88A" transform="rotate(270 50 50)"/>
@@ -48,9 +49,12 @@
         <span>Roles &amp; Permissions</span>
       </a>
     </nav>
-    <div class="role-badge"><strong>@username</strong>@(string.IsNullOrEmpty(roles) ? "Team member" : roles)</div>
+    <div class="role-badge"><strong id="cmsUserName">…</strong><span id="cmsUserRoles">Team member</span></div>
   </aside>
+  }
   <div class="main">
+    @if (!hideChrome)
+    {
     <header class="topbar">
       <button class="icon-btn nav-toggle" id="navToggle" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -61,17 +65,15 @@
       </div>
       <div class="topbar-actions">
         <div class="profile">
-          <div class="avatar">@(username.Length >= 2 ? username.Substring(0, 2).ToUpper() : "?")</div>
-          <div><strong>@username</strong><span>@(string.IsNullOrEmpty(roles) ? "" : roles.Split(',')[0].Trim())</span></div>
+          <div class="avatar" id="cmsUserAvatar">?</div>
+          <div><strong id="cmsUserNameTop">…</strong><span id="cmsUserRoleTop"></span></div>
         </div>
-        <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" style="display:inline">
-          @Html.AntiForgeryToken()
-          <button type="submit" class="icon-btn" title="Sign out" aria-label="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
-          </button>
-        </form>
+        <button type="button" class="icon-btn" id="logoutBtn" title="Sign out" aria-label="Sign out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
       </div>
     </header>
+    }
     <div class="content" id="contentSlot">
       <main class="content" id="pageContent">
         @RenderBody()
@@ -88,6 +90,26 @@
 <script src="~/js/ajax.js" asp-append-version="true"></script>
 <script src="~/js/validation.js" asp-append-version="true"></script>
 <script src="~/js/filters.js" asp-append-version="true"></script>
+<script>
+// Fills the user chip from the JWT login session stored by cmsAuth.
+(function () {
+    var user = window.cmsAuth && window.cmsAuth.getUser ? window.cmsAuth.getUser() : null;
+    var name = (user && (user.username || user.userName)) || 'Team member';
+    var roles = (user && user.roles && user.roles.length) ? user.roles.join(', ') : 'Team member';
+    ['cmsUserName', 'cmsUserNameTop'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = name;
+    });
+    var r = document.getElementById('cmsUserRoles');
+    if (r) r.textContent = roles;
+    var rt = document.getElementById('cmsUserRoleTop');
+    if (rt) rt.textContent = (user && user.roles && user.roles[0]) || '';
+    var av = document.getElementById('cmsUserAvatar');
+    if (av) av.textContent = name.length >= 2 ? name.substring(0, 2).toUpperCase() : '?';
+    var lb = document.getElementById('logoutBtn');
+    if (lb) lb.addEventListener('click', function () { window.cmsAuth.logout(); });
+})();
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -54,6 +54,17 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization();
 
+// CORS for the web UI (AKA.CMS.Web): the browser calls this API directly
+// through the cmsAjax helper, so the web origin must be allowed here.
+// Configure via "Cors:AllowedOrigins" in appsettings.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? [];
+builder.Services.AddCors(options =>
+    options.AddPolicy("WebApp", policy => policy
+        .WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -125,6 +136,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRateLimiter();
+app.UseCors("WebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
