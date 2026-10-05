@@ -168,4 +168,17 @@ public sealed class CaseRepository(DapperContext context) : ICaseRepository
             throw new NotFoundException($"Case {caseId} not found.");
         }
     }
+
+    public async Task<IReadOnlyList<CaseListItem>> ListAsync(string? search, int page, int pageSize)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@Search", search);
+        parameters.Add("@Page", page);
+        parameters.Add("@PageSize", pageSize);
+        var items = await connection.QueryAsync<CaseListItem>(
+            StoredProcedures.CaseList, parameters,
+            commandType: CommandType.StoredProcedure);
+        return items.ToList();
+    }
 }

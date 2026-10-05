@@ -41,6 +41,7 @@ public static class StoredProcedures
 
     public const string CaseCreate = "sp_CMS_Case_Create";
     public const string CaseGetById = "sp_CMS_Case_GetById";
+    public const string CaseList = "sp_CMS_Case_List";
     public const string CaseUpdateDetails = "sp_CMS_Case_UpdateDetails";
     public const string CaseAssign = "sp_CMS_Case_Assign";
     public const string WorkflowTransitionApply = "sp_CMS_WorkflowTransition_Apply";

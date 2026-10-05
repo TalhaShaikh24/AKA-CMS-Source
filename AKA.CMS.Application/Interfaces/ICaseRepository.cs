@@ -10,6 +10,8 @@ public interface ICaseRepository
 
     Task<Case?> GetByIdAsync(int caseId);
 
+    Task<IReadOnlyList<CaseListItem>> ListAsync(string? search, int page, int pageSize);
+
     Task<Case> UpdateDetailsAsync(
         int caseId, string? priorityLevel, string? notes, byte[] rowVersion,
         int performedBy, string ipAddress);

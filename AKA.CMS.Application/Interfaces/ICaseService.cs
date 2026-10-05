@@ -14,4 +14,5 @@ public interface ICaseService
     Task<IReadOnlyList<AllowedTransitionDto>> GetAllowedTransitionsAsync(
         int caseId, Func<string, bool> hasPermission);
     Task<IReadOnlyList<CaseHistoryDto>> GetHistoryAsync(int caseId);
+    Task<CaseListResponse> ListAsync(string? search, int page, int pageSize);
 }

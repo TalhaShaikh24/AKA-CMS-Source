@@ -100,4 +100,16 @@ public sealed class CaseService(
         var history = await caseRepository.GetHistoryAsync(caseId);
         return history.Select(h => h.ToDto()).ToList();
     }
+
+    public async Task<CaseListResponse> ListAsync(string? search, int page, int pageSize)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 100) pageSize = 20;
+        var items = await caseRepository.ListAsync(search, page, pageSize);
+        var dtos = items.Select(i => new CaseListItemDto(
+            i.CaseId, i.CaseNumber, i.MemberName, i.MemberMrNo,
+            i.Status, i.StatusName, i.PriorityLevel, i.CreatedAt)).ToList();
+        var total = items.Count > 0 ? items[0].TotalCount : 0;
+        return new CaseListResponse(dtos, total, page, pageSize);
+    }
 }

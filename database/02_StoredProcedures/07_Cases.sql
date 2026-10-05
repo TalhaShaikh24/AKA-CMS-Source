@@ -375,3 +375,47 @@ BEGIN
     ORDER BY h.[HistoryId];
 END
 GO
+
+/* ---- sp_CMS_Case_List ----
+   Paged, searchable list of active cases for pickers and queues.
+   @Search matches case number, member name, or MR number.
+   Every row carries TotalCount for client-side paging. */
+CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_Case_List]
+    @Search   NVARCHAR(100) = NULL,
+    @Page     INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@Page < 1) SET @Page = 1;
+    IF (@PageSize < 1 OR @PageSize > 100) SET @PageSize = 20;
+
+    DECLARE @Offset INT = (@Page - 1) * @PageSize;
+
+    ;WITH Filtered AS (
+        SELECT  c.[CaseId],
+                c.[CaseNumber],
+                c.[CommunityMemberId],
+                cm.[FullName] AS [MemberName],
+                cm.[MrNo]     AS [MemberMrNo],
+                c.[Status],
+                s.[StateName] AS [StatusName],
+                c.[PriorityLevel],
+                c.[CreatedAt]
+        FROM [dbo].[CMS_Cases] c
+        INNER JOIN [dbo].[CMS_WorkflowStates] s ON s.[StateCode] = c.[Status]
+        LEFT JOIN [dbo].[CMS_CommunityMembers] cm ON cm.[MemberId] = c.[CommunityMemberId]
+        WHERE c.[IsActive] = 1
+          AND (@Search IS NULL OR @Search = ''
+               OR c.[CaseNumber] LIKE '%' + @Search + '%'
+               OR cm.[FullName]  LIKE '%' + @Search + '%'
+               OR cm.[MrNo]      LIKE '%' + @Search + '%')
+    )
+    SELECT  f.*,
+            COUNT(*) OVER() AS [TotalCount]
+    FROM Filtered f
+    ORDER BY f.[CaseId] DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO

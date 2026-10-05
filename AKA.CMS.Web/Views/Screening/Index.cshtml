@@ -36,11 +36,10 @@
 <div class="card" style="margin-bottom:18px">
   <div class="card-body">
     <div class="case-picker">
-      <div class="field">
-        <label for="caseIdInput">Case ID <span class="req">*</span></label>
-        <input class="input" id="caseIdInput" type="number" min="1" placeholder="e.g. 12">
+      <div class="field" style="flex:1;min-width:280px;max-width:520px">
+        <label for="caseSelect">Case <span class="req">*</span></label>
+        <select class="input select2" id="caseSelect" style="width:100%"></select>
       </div>
-      <button class="btn btn-primary" id="loadCaseBtn" type="button">Load Screenings</button>
       <span class="hint" id="caseHint"></span>
     </div>
   </div>
@@ -59,7 +58,7 @@
         <tr><th>Tool</th><th>Score</th><th>Severity</th><th>Date</th><th>By</th></tr>
       </thead>
       <tbody>
-        <tr><td colspan="5" class="hint" style="text-align:center">Enter a Case ID and press “Load Screenings”.</td></tr>
+        <tr><td colspan="5" class="hint" style="text-align:center">Select a case above to view its screenings.</td></tr>
       </tbody>
     </table>
   </div>

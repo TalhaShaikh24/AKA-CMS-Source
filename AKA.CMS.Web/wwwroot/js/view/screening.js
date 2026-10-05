@@ -140,7 +140,7 @@ $(function () {
     return 'badge-low';
   }
   function caseId() {
-    var v = parseInt($('#caseIdInput').val(), 10);
+    var v = parseInt($('#caseSelect').val(), 10);
     return v > 0 ? v : 0;
   }
 
@@ -290,8 +290,8 @@ $(function () {
     if (!currentTool) return;
     var id = caseId();
     if (!id) {
-      CMS.toast('Please enter a Case ID on the page before submitting.', 'error');
-      $('#caseIdInput').focus();
+      CMS.toast('Please select a case from the picker first.', 'error');
+      $caseSelect.select2('open');
       return;
     }
     var c = collectAnswers();
@@ -336,8 +336,8 @@ $(function () {
   function loadCaseScreenings() {
     var id = caseId();
     if (!id) {
-      CMS.toast('Enter a Case ID first.', 'error');
-      $('#caseIdInput').focus();
+      CMS.toast('Select a case from the picker first.', 'error');
+      $caseSelect.select2('open');
       return;
     }
     cmsAjax({
@@ -367,9 +367,46 @@ $(function () {
     });
   }
 
-  $('#loadCaseBtn').on('click', loadCaseScreenings);
-  $('#caseIdInput').on('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); loadCaseScreenings(); }
+  /* ------------------------------------------------------------------ *
+   * Case picker — GET /api/cases (paged, searchable)
+   * ------------------------------------------------------------------ */
+  var $caseSelect = $('#caseSelect');
+  $caseSelect.select2({
+    placeholder: 'Search case by number, patient name, or MR…',
+    minimumInputLength: 0,
+    width: '100%',
+    ajax: {
+      transport: function (params, success, failure) {
+        cmsAjax({
+          url: '/api/cases',
+          method: 'GET',
+          data: { search: params.data.term || '', page: params.data.page || 1, pageSize: 20 },
+          fallbackMsg: 'Could not load cases.',
+          success: success,
+          error: function (xhr) { failure(xhr); }
+        });
+      },
+      processResults: function (res, params) {
+        params.page = params.page || 1;
+        var items = (res && res.items) || [];
+        return {
+          results: items.map(function (c) {
+            return {
+              id: c.caseId,
+              text: (c.caseNumber || ('#' + c.caseId)) + ' · ' +
+                    (c.memberName || 'Unknown patient') +
+                    (c.memberMrNo ? ' (' + c.memberMrNo + ')' : '') +
+                    ' — ' + (c.statusName || c.status)
+            };
+          }),
+          pagination: { more: (params.page * 20) < ((res && res.totalCount) || 0) }
+        };
+      }
+    }
+  });
+
+  $caseSelect.on('change', function () {
+    if (caseId()) loadCaseScreenings();
   });
 
   /* ------------------------------------------------------------------ *

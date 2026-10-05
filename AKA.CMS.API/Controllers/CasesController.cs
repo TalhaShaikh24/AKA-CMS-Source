@@ -35,6 +35,16 @@ public sealed class CasesController(ICaseService caseService, ICurrentUser curre
     public async Task<ActionResult<CaseDto>> GetById(int id)
         => Ok(await caseService.GetByIdAsync(id));
 
+    /// <summary>List (paged, searchable) — for pickers and queues.</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CaseListResponse))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    [HttpGet]
+    [Authorize(Policy = PermissionPolicies.CasesRead)]
+    public async Task<ActionResult<CaseListResponse>> List(
+        [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await caseService.ListAsync(search, page, pageSize));
+
     /// <summary>Update details.</summary>
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CaseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
