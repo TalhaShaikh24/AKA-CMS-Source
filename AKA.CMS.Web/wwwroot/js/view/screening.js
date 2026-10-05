@@ -147,6 +147,19 @@ $(function () {
   var toolsByCode = {};
   var currentTool = null;
 
+  function bandColor(code) {
+    switch (String(code || '').toUpperCase()) {
+      case 'MINIMAL':
+      case 'MILD': return 'var(--green)';
+      case 'MODERATE': return 'var(--amber)';
+      case 'MOD_SEVERE': return 'var(--orange)';
+      case 'SEVERE': return 'var(--red)';
+      default: return 'var(--muted)';
+    }
+  }
+
+  var TOOL_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a3 3 0 0 1 6 0M9.5 13l2 2 3.5-4"/></svg>';
+
   /* ------------------------------------------------------------------ *
    * Tool cards — GET /api/screenings/tools
    * ------------------------------------------------------------------ */
@@ -166,17 +179,21 @@ $(function () {
           var code = String(t.toolCode || '').toUpperCase();
           toolsByCode[code] = t;
           var bands = (t.bands || []).map(function (b) {
-            return b.minScore + '–' + b.maxScore + ' ' + b.bandName;
-          }).join(' · ');
+            return '<span class="tband"><i style="background:' + bandColor(b.bandCode) + '"></i>' +
+              esc(b.bandName) + ' <b>' + b.minScore + '–' + b.maxScore + '</b></span>';
+          }).join('');
           var hasQuestions = !!QUESTIONS[code];
           $grid.append(
             '<div class="card tool-card"><div class="card-body">' +
-            '<h3>' + esc(t.toolName || code) + '</h3>' +
-            (t.description ? '<p class="hint">' + esc(t.description) + '</p>' : '') +
-            '<p class="hint">' + t.itemCount + ' items · ' + t.minScore + '–' + t.maxScore + '</p>' +
-            (bands ? '<p class="hint bands">' + esc(bands) + '</p>' : '') +
+            '<div class="tool-top">' +
+            '<span class="tool-ic">' + TOOL_ICON + '</span>' +
+            '<div class="tool-id"><h3>' + esc(code) + '</h3>' +
+            '<p class="hint">' + esc(t.toolName || '') + '</p></div>' +
+            '<span class="tool-items">' + t.itemCount + ' items</span>' +
+            '</div>' +
+            (bands ? '<div class="tool-bands">' + bands + '</div>' : '') +
             (hasQuestions
-              ? '<button type="button" class="btn btn-primary btn-sm" data-open-tool="' + esc(code) + '">Open Assessment</button>'
+              ? '<button type="button" class="btn btn-primary btn-sm btn-block" data-open-tool="' + esc(code) + '">Start Assessment</button>'
               : '<p class="hint">Questionnaire not available for this tool yet.</p>') +
             '</div></div>'
           );
