@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Treatment Plan";
+    ViewData["ActivePage"] = "treatment-plan";
+}
+<style>
+  .dyn-row{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
+  .dyn-row .input{flex:1;min-width:150px}
+  .chip-list{margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .chip{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 8px 8px 14px;font-size:13px;color:var(--text)}
+  .chip-x{border:0;background:var(--navy);color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sec-sub{margin:14px 0 4px;font-size:14px;font-weight:700;color:var(--navy)}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Treatment Plan</h1>
+    <p class="sub">Goals, interventions, medication, and reviews</p>
+  </div>
+  <div class="page-actions">
+    <select class="input select2" id="tpPatient" style="min-width:220px"></select>
+    <button class="btn btn-primary" id="tpSave" type="button">Save Plan</button>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head">
+      <h3>Diagnosis &amp; Goals</h3>
+      <span class="hint" id="tpSavedHint"></span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Primary Diagnosis</label>
+        <select class="input select2" id="tpDiagnosis"></select>
+      </div>
+      <h4 class="sec-sub">Therapy Goals</h4>
+      <div class="dyn-row">
+        <input class="input" id="tpGoalText" placeholder="Goal description">
+        <input class="input cms-date" id="tpGoalDate" placeholder="Target date" autocomplete="off">
+        <button class="btn btn-accent btn-sm" id="tpGoalAdd" type="button">Add</button>
+      </div>
+      <div class="chip-list" id="tpGoalList"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>Interventions</h3></div>
+    <div class="card-body">
+      <table class="table" id="tpIntTable">
+        <thead><tr><th>Intervention</th><th>Frequency</th><th>Provider</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tpIntTbody"></tbody>
+      </table>
+      <div class="dyn-row">
+        <input class="input" id="tpIntName" placeholder="Intervention">
+        <select class="input" id="tpIntFreq">
+          <option>Weekly</option>
+          <option>Biweekly</option>
+          <option>Monthly</option>
+        </select>
+        <input class="input" id="tpIntProv" placeholder="Provider">
+        <select class="input" id="tpIntStatus">
+          <option>Planned</option>
+          <option>Active</option>
+          <option>On hold</option>
+          <option>Completed</option>
+        </select>
+        <button class="btn btn-accent btn-sm" id="tpIntAdd" type="button">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h3>Medication &amp; Reviews</h3></div>
+  <div class="card-body">
+    <table class="table" id="tpMedTable">
+      <thead><tr><th>Medication</th><th>Dose</th><th>Frequency</th><th></th></tr></thead>
+      <tbody id="tpMedTbody"></tbody>
+    </table>
+    <div class="dyn-row">
+      <input class="input" id="tpMedName" placeholder="Medication">
+      <input class="input" id="tpMedDose" placeholder="Dose (e.g. 50 mg)">
+      <input class="input" id="tpMedFreq" placeholder="Frequency (e.g. Once daily)">
+      <button class="btn btn-accent btn-sm" id="tpMedAdd" type="button">Add</button>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Next Review Date</label>
+        <input class="input cms-date" id="tpReviewDate" placeholder="Select date" autocomplete="off">
+      </div>
+      <div class="field full">
+        <label>Progress Notes</label>
+        <textarea class="input" id="tpNotes" rows="4" placeholder="Session progress, response to treatment, next steps..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/treatment-plan.js" asp-append-version="true"></script>
+}

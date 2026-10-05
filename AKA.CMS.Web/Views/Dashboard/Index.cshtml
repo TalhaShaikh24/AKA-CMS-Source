@@ -1,0 +1,88 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["ActivePage"] = "dashboard";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Dashboard</h1>
+    <p class="sub">Welcome back &mdash; here's what's happening. <span id="todayDate"></span></p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-ghost" id="exportBtn" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="12" x2="12" y2="15"/></svg>
+      Export
+    </button>
+    <a class="btn btn-primary" href="@Url.Action("Add", "Cases")">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Case
+    </a>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <span class="kpi-ic tint-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+    <div><div class="kpi-label">Total Cases</div><div class="kpi-value">248</div><div class="delta up">+12.4% vs last month</div></div>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-ic tint-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+    <div><div class="kpi-label">Active Cases</div><div class="kpi-value">132</div><div class="delta up">+4.1% vs last month</div></div>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-ic tint-lime"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+    <div><div class="kpi-label">New This Week</div><div class="kpi-value">18</div><div class="delta up">+8.3% vs last week</div></div>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-ic tint-amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+    <div><div class="kpi-label">Follow-ups Due</div><div class="kpi-value">24</div><div class="delta down">-6.2% vs last week</div></div>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-ic tint-red"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+    <div><div class="kpi-label">High-Risk Cases</div><div class="kpi-value">31</div><div class="delta up">+2 this week</div></div>
+  </div>
+  <div class="kpi-card">
+    <span class="kpi-ic tint-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+    <div><div class="kpi-label">Screening Completion</div><div class="kpi-value">86%</div><div class="delta up">+3.1% vs last month</div></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>Cases &amp; Screenings Trend</h3><span class="card-note">Last 6 months</span></div>
+    <div class="card-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Risk Distribution</h3><span class="card-note">Active caseload</span></div>
+    <div class="card-body"><div class="chart-box"><canvas id="riskChart"></canvas></div></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h3>Recent Cases</h3><a class="link" href="@Url.Action("Index", "Cases")">View all</a></div>
+    <div class="card-body flush">
+      <div class="table-wrap">
+        <table class="table" id="recentCasesTable">
+          <thead><tr><th>Case ID</th><th>Patient</th><th>Location</th><th>Risk</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h3>Upcoming Appointments</h3><a class="link" href="@Url.Action("Index", "Appointments")">View all</a></div>
+      <div class="card-body flush"><div id="apptList"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Follow-ups Due</h3><a class="link" href="@Url.Action("Index", "Cases")">View all</a></div>
+      <div class="card-body flush"><div id="followupList"></div></div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="~/js/view/dashboard.js" asp-append-version="true"></script>
+}

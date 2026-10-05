@@ -1,0 +1,115 @@
+@{
+    ViewData["Title"] = "Case Details";
+    ViewData["ActivePage"] = "cases";
+}
+
+<a class="link back-link" href="@Url.Action("Index", "Cases")">&larr; Back to cases</a>
+
+<div id="caseDetailsWrap">
+  <div class="card case-header-card">
+    <div class="card-body case-header">
+      <span class="avatar lg" id="cdAvatar"></span>
+      <div class="case-header-info">
+        <h2 id="cdName"></h2>
+        <span class="pid" id="cdId"></span>
+        <div class="case-badges" id="cdBadges"></div>
+      </div>
+      <div class="case-header-actions">
+        <a class="btn btn-ghost" href="@Url.Action("Index", "Appointments")">Book Appointment</a>
+        <button class="btn btn-primary" id="editCaseBtn" type="button">Edit Case</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="caseTabs">
+    <button class="tab active" data-tab="overview" type="button">Overview</button>
+    <button class="tab" data-tab="clinical" type="button">Clinical Assessment</button>
+    <button class="tab" data-tab="screenings" type="button">Screenings</button>
+    <button class="tab" data-tab="referrals" type="button">Referrals</button>
+    <button class="tab" data-tab="timeline" type="button">Timeline</button>
+  </div>
+
+  <div class="tab-panel active" data-panel="overview">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Patient Information</h3></div>
+        <div class="card-body"><div class="kv-grid" id="cdKv"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Risk Summary</h3></div>
+        <div class="card-body" id="cdRiskSummary"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="clinical">
+    <div class="card">
+      <div class="card-head"><h3>Clinical Notes</h3></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="clinicalNotes">Assessment notes</label>
+          <textarea class="input" id="clinicalNotes" rows="6" placeholder="Write clinical observations, formulation and plan&hellip;"></textarea>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" id="saveNotesBtn" type="button">Save Notes</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="screenings">
+    <div class="card">
+      <div class="card-head"><h3>Screening History</h3></div>
+      <div class="card-body flush">
+        <div class="table-wrap">
+          <table class="table" id="screeningTable">
+            <thead><tr><th>Tool</th><th>Score</th><th>Severity</th><th>Date</th><th>By</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="referrals">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h3>Referrals</h3></div>
+        <div class="card-body"><div id="referralList" class="ref-list"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Add Referral</h3></div>
+        <div class="card-body">
+          <form id="referralForm" data-validate novalidate>
+            <div class="field">
+              <label for="refTo">Referred to <span class="req">*</span></label>
+              <select class="input select2" id="refTo" required>
+                <option value="">Select&hellip;</option>
+                <option>Psychiatrist — District HQ</option>
+                <option>Clinical Psychologist</option>
+                <option>Community Health Worker</option>
+                <option>Substance Use Service</option>
+                <option>Social Welfare</option>
+              </select>
+              <span class="field-error"></span>
+            </div>
+            <div class="field">
+              <label for="refNotes">Notes</label>
+              <textarea class="input" id="refNotes" rows="3" placeholder="Reason for referral&hellip;"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Add Referral</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="timeline">
+    <div class="card">
+      <div class="card-head"><h3>Case Timeline</h3></div>
+      <div class="card-body"><div class="timeline" id="caseTimeline"></div></div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/case-details.js" asp-append-version="true"></script>
+}
