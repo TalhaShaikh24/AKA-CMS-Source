@@ -4,7 +4,7 @@ namespace AKA.CMS.Web.Controllers;
 
 public sealed class HomeController : Controller
 {
-    public IActionResult Index() => RedirectToAction("Login", "Account");
+    public IActionResult Index() => RedirectToAction("Index", "Dashboard");
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error() => View();

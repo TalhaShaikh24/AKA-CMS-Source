@@ -1,0 +1,109 @@
+@{
+    ViewData["Title"] = "Safety Plan";
+    ViewData["ActivePage"] = "safety-plan";
+}
+<style>
+  .plan-sec{padding:18px 0;border-bottom:1px solid var(--border)}
+  .plan-sec:first-child{padding-top:0}
+  .plan-sec:last-child{border-bottom:0;padding-bottom:0}
+  .plan-sec h4{margin:0 0 4px;display:flex;align-items:center;gap:10px}
+  .sec-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700}
+  .dyn-row{display:flex;gap:10px;margin:10px 0;flex-wrap:wrap}
+  .dyn-row .input{flex:1;min-width:160px}
+  .dyn-row.cols-3 .input,.dyn-row.cols-4 .input{flex:1}
+  .chip-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+  .chip-list div.chip-list-inner{display:contents}
+  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 8px 6px 14px;font-size:13px;font-weight:500;color:var(--text)}
+  .chip-x{border:0;background:var(--navy);color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+  .pro-list{list-style:none;margin:10px 0;padding:0}
+  .prow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed var(--border)}
+  .prow:last-child{border-bottom:0}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Safety Plan</h1>
+    <p class="sub">Collaborative crisis safety plan — complete together with the patient</p>
+  </div>
+  <div class="page-actions">
+    <select class="input select2" id="spPatient" style="min-width:220px"></select>
+    <button class="btn btn-primary" id="spSave" type="button">Save Plan</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Plan Details</h3>
+    <span class="hint" id="spSavedHint"></span>
+  </div>
+  <div class="card-body">
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">1</span> Warning Signs</h4>
+      <p class="hint">Thoughts, feelings, behaviours, or situations that signal a crisis may be developing.</p>
+      <div class="field"><textarea class="input" id="spWarnText" rows="2" placeholder="Describe early warning signs in the patient's own words"></textarea></div>
+      <div class="dyn-row">
+        <input class="input" id="spWarnInput" placeholder="Add a warning sign and press Enter">
+        <button class="btn btn-accent btn-sm" id="spWarnAdd" type="button">Add</button>
+      </div>
+      <ul class="chip-list" id="spWarnList"></ul>
+    </div>
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">2</span> Coping Strategies</h4>
+      <p class="hint">Things the patient can do on their own to feel better, without contacting anyone.</p>
+      <div class="dyn-row">
+        <input class="input" id="spCopeInput" placeholder="Add a coping strategy and press Enter">
+        <button class="btn btn-accent btn-sm" id="spCopeAdd" type="button">Add</button>
+      </div>
+      <ul class="chip-list" id="spCopeList"></ul>
+    </div>
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">3</span> Supportive Contacts</h4>
+      <p class="hint">Family members or friends the patient can reach out to for help.</p>
+      <div class="dyn-row cols-4">
+        <input class="input" id="spCName" placeholder="Name">
+        <input class="input" id="spCPhone" placeholder="Phone">
+        <input class="input" id="spCRel" placeholder="Relationship">
+        <button class="btn btn-accent btn-sm" id="spCAdd" type="button">Add</button>
+      </div>
+      <table class="table" id="spCTable">
+        <thead><tr><th>Name</th><th>Phone</th><th>Relationship</th><th></th></tr></thead>
+        <tbody id="spCTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">4</span> Professional Contacts</h4>
+      <p class="hint">Services and professionals to contact during a crisis.</p>
+      <ul class="pro-list" id="spProfList"></ul>
+      <div class="dyn-row cols-3">
+        <input class="input" id="spProfName" placeholder="Service / professional name">
+        <input class="input" id="spProfPhone" placeholder="Phone">
+        <button class="btn btn-accent btn-sm" id="spProfAdd" type="button">Add</button>
+      </div>
+    </div>
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">5</span> Making the Environment Safe</h4>
+      <p class="hint">Steps to reduce access to means of harm.</p>
+      <label class="check-row env-check"><span>Remove or lock away excess medication</span><input type="checkbox" value="meds"></label>
+      <label class="check-row env-check"><span>Store sharp objects out of reach</span><input type="checkbox" value="sharps"></label>
+      <label class="check-row env-check"><span>Give a spare house key to a trusted person</span><input type="checkbox" value="keys"></label>
+      <label class="check-row env-check"><span>Avoid alcohol and non-prescribed drugs</span><input type="checkbox" value="substances"></label>
+      <label class="check-row env-check"><span>Keep crisis numbers saved in the phone</span><input type="checkbox" value="numbers"></label>
+    </div>
+
+    <div class="plan-sec">
+      <h4><span class="sec-num">6</span> Reasons for Living</h4>
+      <p class="hint">The most important things worth living for, in the patient's own words.</p>
+      <div class="field"><textarea class="input" id="spReasons" rows="3" placeholder="e.g. My children, my faith, my garden..."></textarea></div>
+    </div>
+
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/safety-plan.js" asp-append-version="true"></script>
+}

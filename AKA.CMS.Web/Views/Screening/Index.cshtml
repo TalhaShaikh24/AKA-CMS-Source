@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Screening Tools";
+    ViewData["ActivePage"] = "screening";
+}
+<style>
+  .tool-card h3{margin:0 0 4px}
+  .tool-card .bands{margin:8px 0 14px}
+  .tool-body{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
+  .tool-actions{margin:6px 0 14px}
+  .score-num{font-size:32px;font-weight:800;color:var(--navy)}
+  .score-num span{font-size:15px;font-weight:600;color:var(--muted)}
+  .score-badges{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .screen-q{margin:0 0 18px}
+  .screen-q>p{font-weight:600;margin:0 0 8px}
+  .screen-q .qn{display:inline-block;min-width:34px;color:var(--muted);font-weight:700}
+  .screen-q.unanswered>p{color:#c0392b}
+  .opt-rows{display:flex;flex-direction:column;gap:6px}
+  .opt-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px}
+  .opt-row.sel{border-color:var(--navy);background:#f2f5ff}
+  .opt-row .ov{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;background:var(--bg);border:1px solid var(--border);font-weight:700;font-size:12px}
+  .screen-subscales{display:flex;gap:12px;margin-top:14px}
+  .screen-subscales .sub{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+  .screen-subscales .sub strong{display:block;font-size:18px}
+  .screen-subscales .sub span{font-size:12px;color:var(--muted)}
+  .case-picker{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+  .case-picker .field{margin:0;min-width:220px}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Screening Tools</h1>
+    <p class="sub">Standardized assessments with automatic server-side scoring</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-body">
+    <div class="case-picker">
+      <div class="field">
+        <label for="caseIdInput">Case ID <span class="req">*</span></label>
+        <input class="input" id="caseIdInput" type="number" min="1" placeholder="e.g. 12">
+      </div>
+      <button class="btn btn-primary" id="loadCaseBtn" type="button">Load Screenings</button>
+      <span class="hint" id="caseHint"></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid-3" id="toolGrid"></div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Case Screenings</h3>
+    <span class="hint" id="screenCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="screenTable">
+      <thead>
+        <tr><th>Tool</th><th>Score</th><th>Severity</th><th>Date</th><th>By</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" class="hint" style="text-align:center">Enter a Case ID and press “Load Screenings”.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="screenModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div>
+        <h3 id="smTitle">Assessment</h3>
+        <p class="hint" id="smSub" style="margin:2px 0 0"></p>
+      </div>
+      <button class="modal-x" data-modal-close type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="smQuestions"></div>
+      <div id="smResult"></div>
+    </div>
+    <div class="modal-foot" id="smFoot"></div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/screening.js" asp-append-version="true"></script>
+}

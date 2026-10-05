@@ -1,0 +1,151 @@
+@{
+    ViewData["Title"] = "Settings";
+    ViewData["ActivePage"] = "settings";
+}
+<style>
+  .profile-top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  .form-actions{margin-top:16px}
+  .check-row .hint{display:block}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Settings</h1>
+    <p class="sub">Manage your account and workspace preferences</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="profile" type="button">Profile</button>
+  <button class="tab" data-tab="notif" type="button">Notifications</button>
+  <button class="tab" data-tab="system" type="button">System</button>
+</div>
+
+<div class="tab-panel active" id="panel-profile">
+  <div class="card">
+    <div class="card-head"><h3>Profile</h3></div>
+    <div class="card-body">
+      <div class="profile-top">
+        <div class="avatar lg">AR</div>
+        <div>
+          <div class="cell-main">Ayesha Rahman</div>
+          <div class="hint">Program Manager · Gilgit-Baltistan programme</div>
+        </div>
+      </div>
+      <form id="profileForm" data-validate novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label>Full Name <span class="req">*</span></label>
+            <input class="input" id="pfName" required value="Ayesha Rahman">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input class="input" id="pfEmail" type="email" required value="ayesha.rahman@cmhs.pk">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" id="pfPhone" value="+92 300 0000000">
+          </div>
+          <div class="field">
+            <label>Role</label>
+            <input class="input" value="Program Manager" disabled>
+          </div>
+          <div class="field">
+            <label>Region</label>
+            <select class="input select2" id="pfRegion">
+              <option>Skardu</option>
+              <option>Gojal</option>
+              <option>Hunza</option>
+              <option selected>Gilgit</option>
+              <option>Ghizer</option>
+              <option>Booni</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Bio</label>
+            <textarea class="input" id="pfBio" rows="3">Program manager for the Integrated Mental Health Programme across Gilgit-Baltistan.</textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="tab-panel" id="panel-notif">
+  <div class="card">
+    <div class="card-head"><h3>Notification Preferences</h3></div>
+    <div class="card-body">
+      <label class="check-row">
+        <span><b>Email alerts</b><span class="hint">New high-risk cases, referrals, and mentions</span></span>
+        <span class="switch"><input type="checkbox" id="ntEmail" checked><span class="sl"></span></span>
+      </label>
+      <label class="check-row">
+        <span><b>SMS reminders</b><span class="hint">Appointment and follow-up reminders to patients</span></span>
+        <span class="switch"><input type="checkbox" id="ntSms" checked><span class="sl"></span></span>
+      </label>
+      <label class="check-row">
+        <span><b>Follow-up digests</b><span class="hint">Weekly summary of due and overdue follow-ups</span></span>
+        <span class="switch"><input type="checkbox" id="ntDigest"><span class="sl"></span></span>
+      </label>
+      <label class="check-row">
+        <span><b>Crisis alerts</b><span class="hint">Immediate alerts for crisis-risk screenings</span></span>
+        <span class="switch"><input type="checkbox" id="ntCrisis" checked><span class="sl"></span></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="tab-panel" id="panel-system">
+  <div class="card">
+    <div class="card-head"><h3>System</h3></div>
+    <div class="card-body">
+      <form id="systemForm" data-validate novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label>Default Region</label>
+            <select class="input select2" id="sysRegion">
+              <option value="">All Regions</option>
+              <option>Skardu</option>
+              <option>Gojal</option>
+              <option>Hunza</option>
+              <option>Gilgit</option>
+              <option>Ghizer</option>
+              <option>Booni</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Session Timeout</label>
+            <select class="input" id="sysTimeout">
+              <option value="15">15 minutes</option>
+              <option value="30" selected>30 minutes</option>
+              <option value="60">60 minutes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Data Retention (months)</label>
+            <input class="input" id="sysRetention" type="number" min="1" value="24">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Danger Zone</h3></div>
+    <div class="card-body">
+      <p class="hint">Remove all locally stored CMS data (safety plans, treatment plans, and preferences) from this browser. This cannot be undone.</p>
+      <button class="btn btn-danger" id="clearData" type="button">Clear Local Data</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/settings.js" asp-append-version="true"></script>
+}
