@@ -9,11 +9,6 @@
     <p class="sub">Manage all registered cases across regions</p>
   </div>
   <div class="page-actions">
-    <button class="btn btn-ghost filter-toggle-btn" id="filterToggle" type="button" aria-expanded="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>
-      Filters
-      <span class="filter-count" id="filterCount" hidden>0</span>
-    </button>
     <button class="btn btn-ghost" id="exportCsvBtn" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="12" x2="12" y2="15"/></svg>
       Export CSV
@@ -22,14 +17,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Case
     </a>
-  </div>
-</div>
-
-<div class="filter-panel" id="caseFilterPanel" hidden>
-  <div class="filters-bar" id="caseFilters"></div>
-  <div class="filter-panel-foot">
-    <button class="btn btn-ghost btn-sm" id="caseClearFilters" type="button">Clear</button>
-    <button class="btn btn-primary btn-sm" id="caseApplyFilters" type="button">Apply Filters</button>
   </div>
 </div>
 
@@ -47,9 +34,7 @@
       <table class="table" id="casesTable">
         <thead>
           <tr>
-            <th class="th-check"><input type="checkbox" id="selectAll" aria-label="Select all cases"></th>
-            <th>Case ID</th><th>Patient</th><th>Age / Gender</th><th>Location</th>
-            <th>Risk</th><th>Status</th><th>Assignee</th><th>Updated</th>
+            <th>Case ID</th><th>Patient</th><th>Status</th><th>Priority</th><th>Created</th>
           </tr>
         </thead>
         <tbody></tbody>

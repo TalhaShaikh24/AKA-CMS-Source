@@ -430,4 +430,23 @@ $(function () {
    * init
    * ------------------------------------------------------------------ */
   loadTools();
+
+  // Preselect a case when arriving from Register New Case (?caseId=).
+  (function preselectCase() {
+    var preset = parseInt(new URLSearchParams(window.location.search).get('caseId'), 10);
+    if (!preset) return;
+    cmsAjax({
+      url: '/api/cases/' + preset,
+      method: 'GET',
+      success: function (c) {
+        var label = (c.caseNumber || ('#' + c.caseId)) + ' · ' +
+          (c.memberName || 'Unknown patient') +
+          (c.memberMrNo ? ' (' + c.memberMrNo + ')' : '') +
+          ' — ' + (c.statusName || c.status);
+        var opt = new Option(label, c.caseId, true, true);
+        $caseSelect.append(opt).trigger('change');
+      },
+      error: function () { return true; } // stay silent; user can pick manually
+    });
+  })();
 });

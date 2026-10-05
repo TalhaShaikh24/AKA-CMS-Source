@@ -6,7 +6,7 @@
 <div class="page-head">
   <div class="page-title">
     <h1>Register New Case</h1>
-    <p class="sub">Complete the steps below to register a new case</p>
+    <p class="sub">Register the patient, create the case, then continue to screening</p>
   </div>
 </div>
 
@@ -14,7 +14,7 @@
   <div class="card-body">
     <div class="stepper" id="wizardStepper">
       <div class="step active" data-step="1"><span class="n">1</span><span class="t">Personal Information</span></div>
-      <div class="step" data-step="2"><span class="n">2</span><span class="t">Screening</span></div>
+      <div class="step" data-step="2"><span class="n">2</span><span class="t">Case Information</span></div>
       <div class="step" data-step="3"><span class="n">3</span><span class="t">Review &amp; Submit</span></div>
     </div>
 
@@ -22,40 +22,51 @@
       <div class="wizard-step active" id="s1">
         <div class="form-grid">
           <div class="field"><label for="fName">Full name <span class="req">*</span></label><input class="input" id="fName" name="fullName" placeholder="Patient's full name" required><span class="field-error"></span></div>
-          <div class="field"><label for="fAge">Age <span class="req">*</span></label><select class="input select2" id="fAge" name="age" required><option value="">Select&hellip;</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fPhone">Phone</label><input class="input" id="fPhone" name="phone" placeholder="03XX-XXXXXXX" data-validate="phone"><span class="field-error"></span></div>
+          <div class="field"><label for="fFather">Father name</label><input class="input" id="fFather" name="fatherName" placeholder="Father's name"><span class="field-error"></span></div>
           <div class="field"><label for="fGender">Gender</label><select class="input select2" id="fGender" name="gender"><option value="">Select&hellip;</option><option>Male</option><option>Female</option><option>Other</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fRegion">Region council</label><select class="input select2" id="fRegion" name="region"><option value="">Select&hellip;</option><option>Skardu</option><option>Gojal</option><option>Hunza</option><option>Ghizer</option><option>Booni</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fLocal">Local council</label><select class="input select2" id="fLocal" name="localCouncil"><option value="">Select&hellip;</option><option>Central</option><option>North</option><option>South</option><option>East</option><option>West</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fVillage">Village</label><select class="input select2" id="fVillage" name="village"><option value="">Select&hellip;</option><option>Karimabad</option><option>Gulmit</option><option>Passu</option><option>Sost</option><option>Khaplu</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fLang">Language</label><select class="input select2" id="fLang" name="language"><option value="">Select&hellip;</option><option>Burushaski</option><option>Wakhi</option><option>Shina</option><option>Balti</option><option>Urdu</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fEmp">Employment</label><select class="input select2" id="fEmp" name="employment"><option value="">Select&hellip;</option><option>Employed</option><option>Self-employed</option><option>Student</option><option>Unemployed</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fMarital">Marital status</label><select class="input select2" id="fMarital" name="marital"><option value="">Select&hellip;</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fChildren">Children</label><input class="input" id="fChildren" name="children" type="number" min="0" placeholder="0"><span class="field-error"></span></div>
-          <div class="field"><label for="fInsurance">Health insurance</label><select class="input select2" id="fInsurance" name="insurance"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fGp">GP</label><input class="input" id="fGp" name="gp" placeholder="GP name / facility"><span class="field-error"></span></div>
-          <div class="field"><label for="fPrior">Prior MH treatment</label><select class="input select2" id="fPrior" name="priorTreatment"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fConnected">Connected to MH care</label><select class="input select2" id="fConnected" name="connectedCare"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fDob">Date of birth</label><input class="input" id="fDob" name="dateOfBirth" type="date"><span class="field-error"></span></div>
+          <div class="field"><label for="fCnic">CNIC</label><input class="input" id="fCnic" name="cnic" placeholder="35202-XXXXXXX-X"><span class="field-error"></span></div>
+          <div class="field"><label for="fPhone">Phone</label><input class="input" id="fPhone" name="phone" placeholder="03XX-XXXXXXX" data-validate="phone"><span class="field-error"></span></div>
+          <div class="field full"><label for="fAddress">Address</label><input class="input" id="fAddress" name="address" placeholder="Home address"><span class="field-error"></span></div>
         </div>
       </div>
 
       <div class="wizard-step" id="s2">
-        <h3 class="step-h">Screening tools completed</h3>
-        <p class="sub">Tick the tools administered and enter the completed scores.</p>
-        <div id="screeningTools"></div>
-        <h3 class="step-h">Risk level <span class="req">*</span></h3>
-        <div class="risk-pills" id="riskPills" role="radiogroup" aria-label="Risk level">
-          <label class="badge badge-low risk-pill"><input type="radio" name="risk" value="low" required>Low</label>
-          <label class="badge badge-moderate risk-pill"><input type="radio" name="risk" value="moderate">Moderate</label>
-          <label class="badge badge-high risk-pill"><input type="radio" name="risk" value="high">High</label>
-          <label class="badge badge-crisis risk-pill"><input type="radio" name="risk" value="crisis">Crisis</label>
+        <div class="form-grid">
+          <div class="field">
+            <label for="fSource">Case source <span class="req">*</span></label>
+            <select class="input select2" id="fSource" name="sourceType" required>
+              <option value="">Select&hellip;</option>
+              <option value="WalkIn">Walk-in</option>
+              <option value="Referral">Referral</option>
+              <option value="Helpline">Helpline</option>
+              <option value="AwarenessSession">Awareness session</option>
+              <option value="Screening">Community screening</option>
+              <option value="Community">Community</option>
+            </select>
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label for="fPriority">Priority</label>
+            <select class="input select2" id="fPriority" name="priorityLevel">
+              <option value="">Select&hellip;</option>
+              <option>High</option>
+              <option>Moderate</option>
+              <option>Low</option>
+            </select>
+            <span class="field-error"></span>
+          </div>
+          <div class="field full">
+            <label for="fNotes">Notes</label>
+            <textarea class="input" id="fNotes" name="notes" rows="3" placeholder="Reason for registration, presenting concerns&hellip;"></textarea>
+            <span class="field-error"></span>
+          </div>
         </div>
-        <span class="field-error" id="riskError"></span>
       </div>
 
       <div class="wizard-step" id="s3">
         <h3 class="step-h">Review &amp; submit</h3>
-        <p class="sub">Please review the information before registering the case.</p>
+        <p class="sub">Please review the information before registering the case. After registration you will continue to the Screening page.</p>
         <div id="reviewBox" class="review-box"></div>
         <div class="field consent-field">
           <label class="check-row">
@@ -69,7 +80,7 @@
       <div class="wizard-foot">
         <button class="btn btn-ghost" id="wizBack" type="button">Back</button>
         <button class="btn btn-primary" id="wizNext" type="button">Next</button>
-        <button class="btn btn-accent" id="wizSubmit" type="button" hidden>Submit Case</button>
+        <button class="btn btn-accent" id="wizSubmit" type="button" hidden>Register Case</button>
       </div>
     </form>
   </div>

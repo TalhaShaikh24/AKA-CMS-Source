@@ -1,150 +1,157 @@
-/* Add Case — demo-only port of the template view script — no API calls. Wizard validation + review run locally; final submit is a demo toast only. */
+/* ==========================================================================
+   CMS · Register New Case — js/view/add-case.js
+   API-wired (no demo data) — matches the real backend flow:
+     1. POST /api/patients/members  → register the community member
+     2. POST /api/cases              → create the case for that member
+     3. redirect → /Screening?caseId={id} for the actual screening
+   Screening is NOT collected here: the API scores screenings
+   server-side after the case exists.
+   ========================================================================== */
 $(function () {
+  'use strict';
+
   CMS.initSelect2($('#wizardForm'));
 
-  var step = 1, totalSteps = 3;
-  var $steps = $('.wizard-step');
-  var $stepperSteps = $('#wizardStepper .step');
+  var step = 1;
 
-  // ---- Age options ----
-  var ageOpts = '<option value="">Select&hellip;</option>';
-  for (var a = 10; a <= 90; a++) ageOpts += '<option>' + a + '</option>';
-  $('#fAge').html(ageOpts).trigger('change');
-
-  // ---- Screening tools with score inputs ----
-  var tools = [
-    { tool: 'PHQ-9', max: 27 },
-    { tool: 'GAD-7', max: 21 },
-    { tool: 'DASS-21', max: 63 },
-    { tool: 'SBQ-R', max: 23 },
-    { tool: 'C-SSRS', max: 6 }
-  ];
-  var $toolsWrap = $('#screeningTools').empty();
-  $.each(tools, function (i, t) {
-    var $row = $(
-      '<div class="check-row screen-tool">' +
-        '<input type="checkbox" id="tool_' + i + '" data-tool="' + t.tool + '">' +
-        '<span class="check-label"><strong>' + t.tool + '</strong></span>' +
-        '<input class="input score-input" type="number" min="0" max="' + t.max + '" placeholder="Score (0–' + t.max + ')" disabled hidden>' +
-      '</div>'
-    );
-    $toolsWrap.append($row);
-  });
-  $toolsWrap.on('change', 'input[type=checkbox]', function () {
-    var $row = $(this).closest('.screen-tool');
-    var on = $(this).is(':checked');
-    $row.find('.score-input').prop({ disabled: !on, hidden: !on }).val('');
-  });
-
-  // ---- Risk pills selection state ----
-  $('#riskPills').on('change', 'input[name=risk]', function () {
-    $('#riskPills .risk-pill').removeClass('selected');
-    $(this).closest('.risk-pill').addClass('selected');
-    $('#riskError').text('');
-  });
-
-  // ---- Step navigation ----
   function showStep(n) {
-    step = Math.max(1, Math.min(totalSteps, n));
-    $steps.removeClass('active');
-    $('#s' + step).addClass('active');
-    $stepperSteps.each(function () {
-      var s = +$(this).data('step');
-      $(this).toggleClass('active', s === step).toggleClass('done', s < step);
+    step = n;
+    $('.wizard-step').removeClass('active');
+    $('#s' + n).addClass('active');
+    $('#wizardStepper .step').each(function () {
+      $(this).toggleClass('active', parseInt($(this).data('step'), 10) <= n);
     });
-    $('#wizBack').toggle(step > 1);
-    $('#wizNext').prop('hidden', step === totalSteps);
-    $('#wizSubmit').prop('hidden', step !== totalSteps);
-    if (step === 3) renderReview();
+    $('#wizBack').prop('hidden', n === 1);
+    $('#wizNext').prop('hidden', n === 3);
+    $('#wizSubmit').prop('hidden', n !== 3);
+    if (n === 3) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ---- Per-step validation (visible step only) ----
-  function setError($el, msg) {
-    var $field = $el.closest('.field');
-    var $err = $field.find('.field-error');
-    if ($err.length) $err.text(msg);
-    $el.addClass('invalid');
+  function fieldVal(id) { return $.trim($('#' + id).val() || ''); }
+  function fieldText(id) {
+    var $el = $('#' + id);
+    var v = $el.val();
+    if ($el.is('select')) {
+      var t = $el.find('option:selected').text();
+      return $.trim(t) && v ? $.trim(t) : '';
+    }
+    return $.trim(v || '');
   }
-  function clearError($el) {
-    $el.removeClass('invalid');
-    var $err = $el.closest('.field').find('.field-error');
-    if ($err.length) $err.text('');
+  function markInvalid($f, msg) {
+    $f.addClass('invalid');
+    $f.closest('.field').find('.field-error').text(msg || 'This field is required.');
   }
-  function validPhone(v) {
-    return !v || /^[+\d][\d\s\-()]{6,}$/.test(v.trim());
+  function clearInvalid(scope) {
+    $(scope).find('.invalid').removeClass('invalid');
+    $(scope).find('.field-error').text('');
   }
+
   function validateStep(n) {
     var ok = true;
+    clearInvalid('#s' + n);
     $('#s' + n).find('[required]').each(function () {
-      var $el = $(this);
-      clearError($el);
-      var type = $el.attr('type');
-      if (type === 'checkbox') {
-        if (!$el.is(':checked')) { setError($el, 'This field is required.'); ok = false; }
-      } else if (type === 'radio') {
-        // handled once per group below
-      } else {
-        var v = $.trim($el.val() || '');
-        if (!v) { setError($el, 'This field is required.'); ok = false; }
-        else if ($el.attr('data-minlength') && v.length < +$el.attr('data-minlength')) {
-          setError($el, 'Must be at least ' + $el.attr('data-minlength') + ' characters.'); ok = false;
-        }
-        else if ($el.data('validate') === 'phone' || $el.attr('data-validate') === 'phone') {
-          if (!validPhone(v)) { setError($el, 'Enter a valid phone number.'); ok = false; }
-        }
-      }
+      var $f = $(this);
+      var valid = true;
+      if ($f.is(':checkbox')) valid = $f.is(':checked');
+      else valid = $.trim($f.val() || '') !== '';
+      if (!valid) { markInvalid($f); ok = false; }
     });
-    // radio groups (risk pills) — one check per group
-    $('#s' + n).find('input[type=radio][required]').each(function () {
-      var name = $(this).attr('name');
-      if (!$('input[name="' + name + '"]:checked').length) {
-        $('#riskError').text('Please select a risk level.');
-        ok = false;
-        return false;
-      }
-    });
+    // Phone format check (shared validator attribute).
+    var phone = fieldVal('fPhone');
+    if (phone && window.CMS && typeof CMS.validatePhone === 'function' && !CMS.validatePhone(phone)) {
+      markInvalid($('#fPhone'), 'Enter a valid phone number.');
+      ok = false;
+    }
     return ok;
   }
 
-  $('#wizardForm').on('input change', '[required]', function () { clearError($(this)); });
-  $('#wizBack').on('click', function () { showStep(step - 1); });
   $('#wizNext').on('click', function () {
-    if (validateStep(step)) showStep(step + 1);
+    if (validateStep(step)) showStep(Math.min(3, step + 1));
+  });
+  $('#wizBack').on('click', function () {
+    showStep(Math.max(1, step - 1));
+  });
+  $('#wizardStepper').on('click', '.step', function () {
+    var n = parseInt($(this).data('step'), 10);
+    if (n < step) showStep(n);
   });
 
-  // ---- Review ----
-  function row(k, v) {
-    return '<div class="kv"><span class="k">' + $('<div>').text(k).html() + '</span><span class="v">' +
-      $('<div>').text(v || '—').html() + '</span></div>';
+  function reviewRow(k, v) {
+    if (!v) return '';
+    var d = document.createElement('div');
+    d.textContent = v;
+    return '<div class="rev-row"><span>' + k + '</span><strong>' + d.innerHTML + '</strong></div>';
   }
-  function renderReview() {
-    var done = [];
-    $('#screeningTools input[type=checkbox]:checked').each(function () {
-      var $row = $(this).closest('.screen-tool');
-      var score = $row.find('.score-input').val();
-      done.push($(this).data('tool') + (score ? ' (score ' + score + ')' : ''));
-    });
-    var risk = $('input[name=risk]:checked').val();
-    var html = '<h4>Personal information</h4><div class="kv-grid">' +
-      row('Full name', $('#fName').val()) + row('Age', $('#fAge').val()) +
-      row('Phone', $('#fPhone').val()) + row('Gender', $('#fGender').val()) +
-      row('Region council', $('#fRegion').val()) + row('Local council', $('#fLocal').val()) +
-      row('Village', $('#fVillage').val()) + row('Language', $('#fLang').val()) +
-      row('Employment', $('#fEmp').val()) + row('Marital status', $('#fMarital').val()) +
-      row('Children', $('#fChildren').val()) + row('Health insurance', $('#fInsurance').val()) +
-      row('GP', $('#fGp').val()) + row('Prior MH treatment', $('#fPrior').val()) +
-      row('Connected to MH care', $('#fConnected').val()) + '</div>' +
-      '<h4>Screening</h4><div class="kv-grid">' +
-      row('Tools completed', done.length ? done.join(', ') : 'None') +
-      row('Risk level', risk ? CMS.riskBadge(risk) : '—') + '</div>';
+
+  function buildReview() {
+    var html = '<h4 class="sec-sub">Patient</h4>' +
+      reviewRow('Full name', fieldVal('fName')) +
+      reviewRow('Father name', fieldVal('fFather')) +
+      reviewRow('Gender', fieldText('fGender')) +
+      reviewRow('Date of birth', fieldVal('fDob')) +
+      reviewRow('CNIC', fieldVal('fCnic')) +
+      reviewRow('Phone', fieldVal('fPhone')) +
+      reviewRow('Address', fieldVal('fAddress')) +
+      '<h4 class="sec-sub">Case</h4>' +
+      reviewRow('Source', fieldText('fSource')) +
+      reviewRow('Priority', fieldText('fPriority')) +
+      reviewRow('Notes', fieldVal('fNotes'));
     $('#reviewBox').html(html);
   }
 
-  // ---- Submit ----
+  /* ------------------------------------------------------------------ *
+   * Submit: member → case → screening page
+   * ------------------------------------------------------------------ */
   $('#wizSubmit').on('click', function () {
-    if (!validateStep(3)) return;
-    CMS.loader(false);
-    CMS.toast('Demo mode — case registration is not connected to the API yet.', 'info');
+    if (!validateStep(1) || !validateStep(2)) { showStep(1); return; }
+    if (!$('#fConsent').is(':checked')) {
+      markInvalid($('#fConsent'), 'Consent is required.');
+      CMS.toast('Patient consent is required.', 'error');
+      return;
+    }
+
+    var dob = fieldVal('fDob');
+    var memberPayload = {
+      fullName: fieldVal('fName'),
+      fatherName: fieldVal('fFather') || null,
+      gender: fieldVal('fGender') || null,
+      dateOfBirth: dob || null,
+      cnic: fieldVal('fCnic') || null,
+      phone: fieldVal('fPhone') || null,
+      address: fieldVal('fAddress') || null
+    };
+    var casePayload = {
+      sourceType: fieldVal('fSource'),
+      priorityLevel: fieldVal('fPriority') || null,
+      notes: fieldVal('fNotes') || null
+    };
+
+    CMS.loader(true);
+    cmsAjax({
+      url: '/api/patients/members',
+      method: 'POST',
+      json: true,
+      data: memberPayload,
+      fallbackMsg: 'Could not register the patient.',
+      success: function (member) {
+        casePayload.communityMemberId = member.memberId;
+        cmsAjax({
+          url: '/api/cases',
+          method: 'POST',
+          json: true,
+          data: casePayload,
+          fallbackMsg: 'Patient registered, but the case could not be created.',
+          success: function (c) {
+            CMS.loader(false);
+            CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
+            location.href = '/Screening?caseId=' + c.caseId;
+          },
+          error: function () { CMS.loader(false); }
+        });
+      },
+      error: function () { CMS.loader(false); }
+    });
   });
 
   showStep(1);

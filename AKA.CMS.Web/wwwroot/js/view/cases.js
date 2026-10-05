@@ -1,151 +1,119 @@
-/* Cases — demo-only port of the template view script — no API calls. Filters, search and pagination run against CMS.demo data. */
+/* ==========================================================================
+   CMS · Cases — js/view/cases.js
+   API-wired (no demo data):
+     GET /api/cases?search=&page=&pageSize=  → paged case list
+   Row click → /Cases/Details?id={caseId}
+   ========================================================================== */
 $(function () {
+  'use strict';
 
-  var state = { q: '', filters: {}, page: 1, perPage: 8 };
-  var $tbody = $('#casesTable tbody');
-  var $empty = $('#casesEmpty');
+  var PAGE_SIZE = 20;
+  var state = { search: '', page: 1, totalCount: 0, items: [] };
 
-  // ---- Filters ----
-  $('#caseFilters').cmsFilters({
-    filters: [
-      { key: 'status', label: 'Status', type: 'select', options: ['New', 'Active', 'Follow-up Due', 'LTFU'], placeholder: 'All statuses' },
-      { key: 'risk', label: 'Risk', type: 'select', options: ['low', 'moderate', 'high', 'crisis'], placeholder: 'All risks' },
-      { key: 'region', label: 'Region', type: 'select', options: ['Skardu', 'Gojal', 'Hunza', 'Ghizer', 'Booni'], placeholder: 'All regions' },
-      { key: 'assignee', label: 'Assignee', type: 'select', options: ['Ayesha Khan', 'Dr. Ahmed Khan', 'Bilal Ahmed'], placeholder: 'All assignees' },
-      { key: 'registered', label: 'Registered', type: 'daterange', placeholder: 'Any date' }
-    ],
-    onChange: function (v) {
-      state.filters = v || {};
-      state.page = 1;
-      render();
-      updateFilterBadge();
-    }
-  });
-
-  // ---- Collapsible filter panel (funnel icon button) ----
-  function updateFilterBadge(){
-    var st = $('#caseFilters').data('cmsfilters');
-    var vals = st ? st.getValues() : {};
-    var n = 0;
-    $.each(vals, function(k, v){ if (v !== '' && v != null) n++; });
-    $('#filterCount').text(n).prop('hidden', n === 0);
-    $('#filterToggle').toggleClass('has-active', n > 0);
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
-  function setFilterPanel(open){
-    var $p = $('#caseFilterPanel');
-    $('#filterToggle').attr('aria-expanded', open ? 'true' : 'false');
-    if (open){
-      $p.prop('hidden', false).stop(true, true).hide().slideDown(220, function(){ $p.addClass('open'); });
-    } else {
-      $p.stop(true, true).slideUp(220, function(){ $p.prop('hidden', true).removeClass('open'); });
-    }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
-  $('#filterToggle').on('click', function(){
-    setFilterPanel($('#caseFilterPanel').prop('hidden') || !$('#caseFilterPanel').is(':visible'));
+  function priorityBadge(p) {
+    var v = String(p || '').toLowerCase();
+    var cls = v === 'high' ? 'badge-high' : v === 'low' ? 'badge-low' : 'badge-moderate';
+    return '<span class="badge ' + cls + '">' + esc(p || '—') + '</span>';
+  }
+
+  function loadCases() {
+    CMS.loader(true);
+    cmsAjax({
+      url: '/api/cases',
+      method: 'GET',
+      data: { search: state.search, page: state.page, pageSize: PAGE_SIZE },
+      fallbackMsg: 'Could not load cases.',
+      success: function (res) {
+        CMS.loader(false);
+        state.items = res.items || [];
+        state.totalCount = res.totalCount || 0;
+        renderTable();
+        renderPager();
+      },
+      error: function () { CMS.loader(false); }
+    });
+  }
+
+  function renderTable() {
+    var $tb = $('#casesTable tbody').empty();
+    $('#casesEmpty').prop('hidden', state.items.length > 0);
+    $('#caseCount').text(state.totalCount + ' case' + (state.totalCount === 1 ? '' : 's'));
+    state.items.forEach(function (c) {
+      $tb.append(
+        '<tr class="rowlink" data-id="' + c.caseId + '">' +
+        '<td><div class="cell-main">' + esc(c.caseNumber || ('#' + c.caseId)) + '</div></td>' +
+        '<td><div class="cell-main">' + esc(c.memberName || 'Unknown patient') + '</div>' +
+        (c.memberMrNo ? '<div class="cell-sub">' + esc(c.memberMrNo) + '</div>' : '') + '</td>' +
+        '<td><span class="pill">' + esc(c.statusName || c.status) + '</span></td>' +
+        '<td>' + priorityBadge(c.priorityLevel) + '</td>' +
+        '<td>' + esc(fmtDate(c.createdAt)) + '</td>' +
+        '</tr>'
+      );
+    });
+  }
+
+  function renderPager() {
+    var pages = Math.max(1, Math.ceil(state.totalCount / PAGE_SIZE));
+    var $p = $('#casePager').empty();
+    if (state.totalCount <= PAGE_SIZE) return;
+    $p.append(
+      '<button class="btn btn-ghost btn-sm" id="pgPrev" type="button" ' + (state.page <= 1 ? 'disabled' : '') + '>‹ Prev</button>' +
+      '<span class="hint">Page ' + state.page + ' of ' + pages + '</span>' +
+      '<button class="btn btn-ghost btn-sm" id="pgNext" type="button" ' + (state.page >= pages ? 'disabled' : '') + '>Next ›</button>'
+    );
+  }
+
+  $('#casePager').on('click', '#pgPrev', function () {
+    if (state.page > 1) { state.page--; loadCases(); }
   });
-  $('#caseApplyFilters').on('click', function(){ setFilterPanel(false); });
-  $('#caseClearFilters').on('click', function(){
-    var st = $('#caseFilters').data('cmsfilters');
-    if (st) st.reset();
-    updateFilterBadge();
+  $('#casePager').on('click', '#pgNext', function () {
+    if (state.page * PAGE_SIZE < state.totalCount) { state.page++; loadCases(); }
   });
 
-  // ---- Search ----
-  var searchTimer;
+  var searchTimer = null;
   $('#caseSearch').on('input', function () {
-    var q = $(this).val();
     clearTimeout(searchTimer);
+    var v = $(this).val();
     searchTimer = setTimeout(function () {
-      state.q = q.trim().toLowerCase();
+      state.search = $.trim(v);
       state.page = 1;
-      render();
-    }, 200);
+      loadCases();
+    }, 350);
   });
 
-  // ---- Filtering ----
-  function filteredCases() {
-    var all = CMS.demo.cases || [];
-    return all.filter(function (c) {
-      if (state.q && (c.name + ' ' + c.id).toLowerCase().indexOf(state.q) === -1) return false;
-      var f = state.filters;
-      if (f.status && c.status !== f.status) return false;
-      if (f.risk && c.risk !== f.risk) return false;
-      if (f.region && c.location !== f.region) return false;
-      if (f.assignee && c.assignee !== f.assignee) return false;
-      // 'registered' date range is decorative in demo mode
-      return true;
-    });
-  }
-
-  // ---- Render rows + pager ----
-  function render() {
-    var rows = filteredCases();
-    var total = rows.length;
-    var pages = Math.max(1, Math.ceil(total / state.perPage));
-    if (state.page > pages) state.page = pages;
-    var start = (state.page - 1) * state.perPage;
-    var pageRows = rows.slice(start, start + state.perPage);
-
-    $tbody.empty();
-    $empty.prop('hidden', total > 0);
-    $.each(pageRows, function (i, c) {
-      var $tr = $('<tr class="rowlink"></tr>').attr('data-id', c.id);
-      $tr.append($('<td class="td-check"></td>').html('<input type="checkbox" class="row-check" aria-label="Select case">'));
-      $tr.append($('<td class="pid"></td>').text(c.id));
-      $tr.append($('<td></td>').html('<div class="cell-main"></div><div class="cell-sub"></div>')
-        .find('.cell-main').text(c.name).end()
-        .find('.cell-sub').text(c.location));
-      $tr.append($('<td></td>').text(c.age + ' / ' + c.gender));
-      $tr.append($('<td></td>').text(c.location));
-      $tr.append($('<td></td>').html(CMS.riskBadge(c.risk)));
-      $tr.append($('<td></td>').html(CMS.statusPill(c.status)));
-      $tr.append($('<td></td>').text(c.assignee));
-      $tr.append($('<td class="muted"></td>').text(c.updated));
-      $tbody.append($tr);
-    });
-
-    $('#caseCount').text(total + (total === 1 ? ' case' : ' cases'));
-
-    var $pager = $('#casePager').empty();
-    if (pages > 1) {
-      for (var p = 1; p <= pages; p++) {
-        (function (pn) {
-          var $btn = $('<button type="button" class="page-btn"></button>')
-            .text(pn).toggleClass('active', pn === state.page)
-            .on('click', function () { state.page = pn; render(); });
-          $pager.append($btn);
-        })(p);
-      }
-    }
-    $('#selectAll').prop('checked', false);
-  }
-
-  // ---- Row clicks + checkbox isolation ----
-  $tbody.on('click', 'tr.rowlink', function (e) {
-    if ($(e.target).closest('.td-check, .row-check').length) return;
+  $('#casesTable').on('click', 'tr.rowlink', function () {
     location.href = '/Cases/Details?id=' + encodeURIComponent($(this).data('id'));
   });
-  $tbody.on('click', '.row-check', function (e) { e.stopPropagation(); });
 
-  $('#selectAll').on('change', function () {
-    $tbody.find('.row-check').prop('checked', $(this).is(':checked'));
-  });
-
-  // ---- Export CSV ----
   $('#exportCsvBtn').on('click', function () {
-    var rows = filteredCases();
-    var head = ['Case ID', 'Patient', 'Age', 'Gender', 'Location', 'Risk', 'Status', 'Assignee', 'Updated'];
-    var esc = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-    var lines = [head.map(esc).join(',')];
-    $.each(rows, function (i, c) {
-      lines.push([c.id, c.name, c.age, c.gender, c.location, c.risk, c.status, c.assignee, c.updated].map(esc).join(','));
+    if (!state.items.length) { CMS.toast('Nothing to export.', 'info'); return; }
+    var rows = [['Case ID', 'Case Number', 'Patient', 'MR No', 'Status', 'Priority', 'Created']];
+    state.items.forEach(function (c) {
+      rows.push([c.caseId, c.caseNumber || '', c.memberName || '', c.memberMrNo || '',
+        c.statusName || c.status, c.priorityLevel || '', c.createdAt || '']);
     });
-    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    var $a = $('<a></a>').attr({ href: URL.createObjectURL(blob), download: 'cms-cases.csv' }).appendTo('body');
-    $a[0].click();
-    setTimeout(function () { URL.revokeObjectURL($a.attr('href')); $a.remove(); }, 500);
-    CMS.toast('Exported ' + rows.length + ' case(s) to CSV.', 'success');
+    var csv = rows.map(function (r) {
+      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cases-page-' + state.page + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   });
 
-  render();
+  loadCases();
 });
