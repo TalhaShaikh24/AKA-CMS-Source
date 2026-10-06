@@ -43,3 +43,8 @@ uploads/*
 AKA.CMS.API/uploads/*
 config.bat
 node_modules
+
+
+*.pubxml
+*.pubxml.user
+*.publishproj
