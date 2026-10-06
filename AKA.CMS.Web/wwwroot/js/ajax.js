@@ -60,15 +60,81 @@
         return access ? { accessToken: access, refreshToken: refresh } : null;
     }
 
+    /* ---------------- JWT helpers: permissions & expiry ----------------
+       The access token carries the user's DB-driven permissions as
+       "cms_permission" claims (values like "Cases:Read"). The payload is
+       only base64-encoded, so the web can read them without a new API. */
+    var _permCache = { token: null, list: [] };
+
+    function decodePayload(token) {
+        try {
+            var parts = String(token || '').split('.');
+            if (parts.length !== 3) return null;
+            var b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            return JSON.parse(global.atob(b64));
+        } catch (e) { return null; }
+    }
+
+    function isTokenExpired() {
+        var tokens = readTokens();
+        if (!tokens) return true;
+        var payload = decodePayload(tokens.accessToken);
+        if (!payload || !payload.exp) return false; // no exp claim: let the API decide
+        return payload.exp * 1000 <= Date.now();
+    }
+
     global.cmsAuth = {
         getTokens: readTokens,
         isLoggedIn: function () { return !!readTokens(); },
+        /** Logged in AND the access token has not expired. */
+        isSessionValid: function () { return !!readTokens() && !isTokenExpired(); },
         getUser: function () {
             var raw = global.localStorage.getItem('cms_user')
                 || global.sessionStorage.getItem('cms_user');
             try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
         },
+        /** Permission claim values from the JWT, e.g. ["Cases:Read", ...]. */
+        getPermissions: function () {
+            var tokens = readTokens();
+            if (!tokens) return [];
+            if (_permCache.token === tokens.accessToken) return _permCache.list;
+            var payload = decodePayload(tokens.accessToken) || {};
+            var raw = payload.cms_permission || payload['cms_permission'];
+            var list = [];
+            if (typeof raw === 'string') list = [raw];
+            else if (raw && raw.length) list = Array.prototype.slice.call(raw);
+            _permCache = { token: tokens.accessToken, list: list };
+            return list;
+        },
+        hasPermission: function (claim) {
+            if (!claim) return true;
+            return global.cmsAuth.getPermissions().indexOf(claim) >= 0;
+        },
+        /**
+         * Page guard: bounce to the login page when there is no valid
+         * session. Returns true when the caller may continue.
+         */
+        requireAuth: function () {
+            if (global.cmsAuth.isSessionValid()) return true;
+            global.cmsAuth.clear();
+            var ret = global.location.pathname + global.location.search;
+            global.location.href = LOGIN_PAGE + '?returnUrl=' + encodeURIComponent(ret);
+            return false;
+        },
+        /**
+         * Page guard: requireAuth() + the given permission claim.
+         * Without the permission the user is sent to the dashboard with
+         * a ?denied= flag that the guard turns into an error toast.
+         */
+        requirePermission: function (claim) {
+            if (!global.cmsAuth.requireAuth()) return false;
+            if (global.cmsAuth.hasPermission(claim)) return true;
+            global.location.href = '/Dashboard?denied=' + encodeURIComponent(claim || 'page');
+            return false;
+        },
         save: function (loginResponse, remember) {
+            _permCache = { token: null, list: [] };
             var s = targetStore(!!remember);
             s.setItem('cms_access_token', loginResponse.accessToken);
             s.setItem('cms_refresh_token', loginResponse.refreshToken);
@@ -76,6 +142,7 @@
             s.setItem('cms_remember', remember ? '1' : '0');
         },
         clear: function () {
+            _permCache = { token: null, list: [] };
             [global.localStorage, global.sessionStorage].forEach(function (s) {
                 s.removeItem('cms_access_token');
                 s.removeItem('cms_refresh_token');
