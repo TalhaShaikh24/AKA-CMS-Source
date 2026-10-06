@@ -212,13 +212,18 @@ CMS.bindLayout = function(){
 };
 
 /* --------------------------------------------------------------------------
-   toast(msg, type)  — type: info | success | error
+   toast(msg, type) — the global notification function.
+   Usage: CMS.toast('Case saved.', 'success');
+   type: 'info' (default) | 'success' | 'warning' | 'error'
+   The message is HTML-escaped, so it is safe to pass server text.
    -------------------------------------------------------------------------- */
 CMS.toast = function(msg, type){
-  type = type || 'info';
+  type = ['info', 'success', 'warning', 'error'].indexOf(type) >= 0 ? type : 'info';
   var $wrap = $('.toast-wrap');
   if (!$wrap.length){ $wrap = $('<div class="toast-wrap"></div>').appendTo('body'); }
-  var $t = $('<div class="toast ' + type + '">' + msg + '</div>');
+  // Keep the stack readable: drop the oldest when more than 4 are showing.
+  while ($wrap.children('.toast').length >= 4){ $wrap.children('.toast').first().remove(); }
+  var $t = $('<div class="toast"></div>').addClass(type).text(msg == null ? '' : String(msg));
   $wrap.append($t);
   setTimeout(function(){ $t.fadeOut(300, function(){ $t.remove(); }); }, 3600);
 };
