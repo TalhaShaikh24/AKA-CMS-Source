@@ -135,6 +135,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Swagger visibility is driven by appsettings ("Swagger" section), not by
+// environment: the API's default view can be the Swagger UI.
+var swaggerEnabled = builder.Configuration.GetValue<bool>("Swagger:Enabled");
+var swaggerAsDefault = builder.Configuration.GetValue<bool>("Swagger:ServeAsDefaultView");
+if (swaggerEnabled || swaggerAsDefault)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+if (swaggerAsDefault)
+{
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+}
+
 app.UseRateLimiter();
 app.UseCors("WebApp");
 app.UseAuthentication();

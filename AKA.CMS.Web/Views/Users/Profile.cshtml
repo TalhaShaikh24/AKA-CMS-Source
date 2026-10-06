@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Edit Profile";
+    ViewData["ActivePage"] = "";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Edit Profile</h1>
+    <p class="sub">Update your email address and password</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px">
+  <div class="card-body">
+    <form id="profileForm" data-validate novalidate>
+      <div class="field">
+        <label for="pfUsername">Username</label>
+        <input class="input" id="pfUsername" type="text" readonly disabled>
+        <span class="field-error"></span>
+      </div>
+      <div class="field">
+        <label for="pfEmail">Email</label>
+        <input class="input" id="pfEmail" name="email" type="email" placeholder="you@example.org" autocomplete="email">
+        <span class="field-error"></span>
+      </div>
+      <h4 class="sec-sub">Change password</h4>
+      <p class="hint">Leave blank to keep your current password.</p>
+      <div class="field">
+        <label for="pfPass">New password</label>
+        <input class="input" id="pfPass" name="newPassword" type="password" placeholder="Minimum 8 characters" autocomplete="new-password">
+        <span class="field-error"></span>
+      </div>
+      <div class="field">
+        <label for="pfPass2">Confirm new password</label>
+        <input class="input" id="pfPass2" type="password" placeholder="Repeat the new password" autocomplete="new-password">
+        <span class="field-error"></span>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/profile.js" asp-append-version="true"></script>
+}

@@ -8,4 +8,9 @@ public sealed class UsersController : Controller
 {
     [HttpGet]
     public IActionResult Index() => View();
+
+    /// <summary>Serves the signed-in user's own profile editor. Any
+    /// authenticated user may open it; the API enforces self-access.</summary>
+    [HttpGet]
+    public IActionResult Profile() => View();
 }

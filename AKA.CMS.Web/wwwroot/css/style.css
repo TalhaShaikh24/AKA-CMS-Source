@@ -111,6 +111,15 @@ body.sidebar-collapsed .role-badge{display:none}
 .profile{display:flex;align-items:center;gap:10px}
 .profile strong{display:block;font-size:13px}
 .profile span{font-size:11px;color:var(--muted)}
+.profile-menu{position:relative}
+button.profile{background:none;border:0;cursor:pointer;text-align:left;padding:6px 10px 6px 6px;border-radius:10px;font-family:inherit}
+button.profile:hover{background:var(--bg)}
+.profile .caret{color:var(--muted);flex:none}
+.profile-dropdown{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-width:210px;padding:6px;z-index:90}
+.profile-dropdown[hidden]{display:none}
+.dd-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:8px;font-size:14px;color:var(--text);cursor:pointer;text-decoration:none;font-family:inherit}
+.dd-item:hover{background:var(--bg)}
+.dd-item svg{color:var(--muted);flex:none}
 .nav-toggle{display:inline-flex}
 
 /* Notification dropdown (anchored to the bell button) */

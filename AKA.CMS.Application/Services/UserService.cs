@@ -12,6 +12,7 @@ public sealed class UserService(
     IPasswordHasher passwordHasher,
     IValidator<CreateUserRequest> createValidator,
     IValidator<UpdateUserRequest> updateValidator,
+    IValidator<UpdateMyProfileRequest> myProfileValidator,
     IValidator<AssignRoleRequest> assignRoleValidator) : IUserService
 {
     public async Task<IReadOnlyList<UserDto>> GetAllAsync()
@@ -63,6 +64,25 @@ public sealed class UserService(
             : passwordHasher.Hash(request.NewPassword);
 
         await userRepository.UpdateAsync(userId, request.IsActive, request.IsLocked, passwordHash, request.Email?.Trim(), performedBy);
+        return (await userRepository.GetByIdAsync(userId))!.ToDto();
+    }
+
+    /// <summary>Self-service profile update: the signed-in user edits their
+    /// own e-mail and/or password. Admin-only flags are never touched here.</summary>
+    public async Task<UserDto> UpdateMyProfileAsync(int userId, UpdateMyProfileRequest request)
+    {
+        await myProfileValidator.ValidateAndThrowAsync(request);
+
+        _ = await userRepository.GetByIdAsync(userId)
+            ?? throw new NotFoundException($"User {userId} not found.");
+
+        await EnsureEmailAvailableAsync(request.Email, userId);
+
+        var passwordHash = request.NewPassword is null
+            ? null
+            : passwordHasher.Hash(request.NewPassword);
+
+        await userRepository.UpdateAsync(userId, null, null, passwordHash, request.Email?.Trim(), userId);
         return (await userRepository.GetByIdAsync(userId))!.ToDto();
     }
 

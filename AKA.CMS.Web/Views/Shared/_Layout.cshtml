@@ -98,13 +98,23 @@
         <input type="text" id="globalSearch" placeholder="Search users, roles…">
       </div>
       <div class="topbar-actions">
-        <div class="profile">
-          <div class="avatar" id="cmsUserAvatar">?</div>
-          <div><strong id="cmsUserNameTop">…</strong><span id="cmsUserRoleTop"></span></div>
+        <div class="profile-menu">
+          <button type="button" class="profile" id="profileMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <div class="avatar" id="cmsUserAvatar">?</div>
+            <div><strong id="cmsUserNameTop">…</strong><span id="cmsUserRoleTop"></span></div>
+            <svg class="caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="profile-dropdown" id="profileDropdown" hidden>
+            <a class="dd-item" href="@Url.Action("Profile", "Users")">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Edit profile
+            </a>
+            <button type="button" class="dd-item" id="logoutBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+              Sign out
+            </button>
+          </div>
         </div>
-        <button type="button" class="icon-btn" id="logoutBtn" title="Sign out" aria-label="Sign out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
-        </button>
       </div>
     </header>
     }
@@ -143,6 +153,29 @@
     if (av) av.textContent = name.length >= 2 ? name.substring(0, 2).toUpperCase() : '?';
     var lb = document.getElementById('logoutBtn');
     if (lb) lb.addEventListener('click', function () { window.cmsAuth.logout(); });
+    // Avatar dropdown: Edit profile / Sign out.
+    var menuBtn = document.getElementById('profileMenuBtn');
+    var menu = document.getElementById('profileDropdown');
+    if (menuBtn && menu) {
+        menuBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = menu.hidden;
+            menu.hidden = !open;
+            menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('click', function (e) {
+            if (!menu.hidden && !menu.contains(e.target)) {
+                menu.hidden = true;
+                menuBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !menu.hidden) {
+                menu.hidden = true;
+                menuBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 })();
 </script>
 @await RenderSectionAsync("Scripts", required: false)

@@ -21,6 +21,26 @@ public sealed class UsersController(IUserService userService, ICurrentUser curre
     public async Task<ActionResult<IReadOnlyList<UserDto>>> GetAll()
         => Ok(await userService.GetAllAsync());
 
+    /// <summary>Get the signed-in user's own profile.</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDto))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> GetMe()
+        => Ok(await userService.GetByIdAsync(currentUser.UserId));
+
+    /// <summary>Update the signed-in user's own profile (e-mail / password).
+    /// No admin permission needed; admin-only flags cannot be changed here.</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    [HttpPut("me")]
+    [Authorize]
+    public async Task<ActionResult<UserDto>> UpdateMe([FromBody] UpdateMyProfileRequest request)
+        => Ok(await userService.UpdateMyProfileAsync(currentUser.UserId, request));
+
     /// <summary>Get by id.</summary>
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
