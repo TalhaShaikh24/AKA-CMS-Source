@@ -22,6 +22,16 @@ public sealed class PatientsController(IPatientService patientService, ICurrentU
         [FromQuery] string? mr, [FromQuery] string? q)
         => Ok(await patientService.SearchAsync(mr ?? q));
 
+    /// <summary>Get a community member by id.</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CommunityMemberDto))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    [HttpGet("members/{id:int}")]
+    [Authorize(Policy = PermissionPolicies.PatientsRead)]
+    public async Task<ActionResult<CommunityMemberDto>> GetMemberById(int id)
+        => Ok(await patientService.GetCommunityMemberByIdAsync(id));
+
     /// <summary>Resolve identity.</summary>
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResolveIdentityResponse))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]

@@ -26,6 +26,20 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_CommunityMember_Create]
     @UnionCouncilCode VARCHAR(20) = NULL,
     @VillageCode VARCHAR(20) = NULL,
     @MrNo VARCHAR(20) = NULL,
+    @Age INT = NULL,
+    @RegionCouncil NVARCHAR(100) = NULL,
+    @LocalCouncil NVARCHAR(100) = NULL,
+    @Village NVARCHAR(100) = NULL,
+    @JkAttend NVARCHAR(100) = NULL,
+    @EmploymentEducation NVARCHAR(200) = NULL,
+    @MaritalStatus VARCHAR(30) = NULL,
+    @NumberOfChildren INT = NULL,
+    @LanguagesSpoken NVARCHAR(200) = NULL,
+    @HealthInsurance VARCHAR(50) = NULL,
+    @GpUsualCare NVARCHAR(200) = NULL,
+    @PriorMhTreatment VARCHAR(50) = NULL,
+    @ConnectedToMhCare VARCHAR(50) = NULL,
+    @CareProviderName NVARCHAR(200) = NULL,
     @CreatedBy INT,
     @IpAddress VARCHAR(50),
     @NewMemberId INT OUTPUT
@@ -38,10 +52,18 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_CommunityMembers]
             ([MrNo], [FullName], [FatherName], [Gender], [DateOfBirth], [Cnic], [Phone],
-             [Address], [UnionCouncilCode], [VillageCode], [IsActive], [CreatedBy], [IpAddress])
+             [Address], [UnionCouncilCode], [VillageCode], [Age], [RegionCouncil],
+             [LocalCouncil], [Village], [JkAttend], [EmploymentEducation], [MaritalStatus],
+             [NumberOfChildren], [LanguagesSpoken], [HealthInsurance], [GpUsualCare],
+             [PriorMhTreatment], [ConnectedToMhCare], [CareProviderName],
+             [IsActive], [CreatedBy], [IpAddress])
         VALUES
             (@MrNo, @FullName, @FatherName, @Gender, @DateOfBirth, @Cnic, @Phone,
-             @Address, @UnionCouncilCode, @VillageCode, 1, @CreatedBy, @IpAddress);
+             @Address, @UnionCouncilCode, @VillageCode, @Age, @RegionCouncil,
+             @LocalCouncil, @Village, @JkAttend, @EmploymentEducation, @MaritalStatus,
+             @NumberOfChildren, @LanguagesSpoken, @HealthInsurance, @GpUsualCare,
+             @PriorMhTreatment, @ConnectedToMhCare, @CareProviderName,
+             1, @CreatedBy, @IpAddress);
 
         SET @NewMemberId = SCOPE_IDENTITY();
 
@@ -75,6 +97,20 @@ BEGIN
             [Address],
             [UnionCouncilCode],
             [VillageCode],
+            [Age],
+            [RegionCouncil],
+            [LocalCouncil],
+            [Village],
+            [JkAttend],
+            [EmploymentEducation],
+            [MaritalStatus],
+            [NumberOfChildren],
+            [LanguagesSpoken],
+            [HealthInsurance],
+            [GpUsualCare],
+            [PriorMhTreatment],
+            [ConnectedToMhCare],
+            [CareProviderName],
             [IsActive],
             [RowVersion]
     FROM [dbo].[CMS_CommunityMembers]

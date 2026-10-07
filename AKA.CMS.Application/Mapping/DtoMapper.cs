@@ -35,7 +35,21 @@ public static class DtoMapper
         member.Cnic,
         member.Phone,
         member.Address,
-        member.IsActive);
+        member.IsActive,
+        member.Age,
+        member.RegionCouncil,
+        member.LocalCouncil,
+        member.Village,
+        member.JkAttend,
+        member.EmploymentEducation,
+        member.MaritalStatus,
+        member.NumberOfChildren,
+        member.LanguagesSpoken,
+        member.HealthInsurance,
+        member.GpUsualCare,
+        member.PriorMhTreatment,
+        member.ConnectedToMhCare,
+        member.CareProviderName);
 
     public static PatientSearchResultDto ToDto(this PatientSearchHit hit) => new(
         hit.Source,

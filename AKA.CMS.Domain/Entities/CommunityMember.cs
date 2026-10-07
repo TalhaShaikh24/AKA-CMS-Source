@@ -13,6 +13,20 @@ public sealed class CommunityMember
     public string? Address { get; set; }
     public string? UnionCouncilCode { get; set; }
     public string? VillageCode { get; set; }
+    public int? Age { get; set; }
+    public string? RegionCouncil { get; set; }
+    public string? LocalCouncil { get; set; }
+    public string? Village { get; set; }
+    public string? JkAttend { get; set; }
+    public string? EmploymentEducation { get; set; }
+    public string? MaritalStatus { get; set; }
+    public int? NumberOfChildren { get; set; }
+    public string? LanguagesSpoken { get; set; }
+    public string? HealthInsurance { get; set; }
+    public string? GpUsualCare { get; set; }
+    public string? PriorMhTreatment { get; set; }
+    public string? ConnectedToMhCare { get; set; }
+    public string? CareProviderName { get; set; }
     public bool IsActive { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }

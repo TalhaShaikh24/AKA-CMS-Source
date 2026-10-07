@@ -22,12 +22,26 @@
     <form id="wizardForm" data-validate novalidate>
       <div class="wizard-step active" id="s1">
         <div class="form-grid">
-          <div class="field"><label for="fName">Full name <span class="req">*</span></label><input class="input" id="fName" name="fullName" placeholder="Patient's full name" required><span class="field-error"></span></div>
+          <div class="field full"><label for="fName">Full name <span class="req">*</span></label><input class="input" id="fName" name="fullName" placeholder="Patient's full name" required><span class="field-error"></span></div>
+          <div class="field"><label for="fAge">Age <span class="req">*</span></label><select class="input select2" id="fAge" name="age" required><option value="">Select age&hellip;</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fPhone">Phone number</label><input class="input" id="fPhone" name="phone" placeholder="03xx xxx xxxx" data-validate="phone"><span class="field-error"></span></div>
+          <div class="field"><label for="fGender">Gender <span class="req">*</span></label><select class="input select2" id="fGender" name="gender" required><option value="">Select&hellip;</option><option>Male</option><option>Female</option><option>Other</option></select><span class="field-error"></span></div>
           <div class="field"><label for="fFather">Father name</label><input class="input" id="fFather" name="fatherName" placeholder="Father's name"><span class="field-error"></span></div>
-          <div class="field"><label for="fGender">Gender</label><select class="input select2" id="fGender" name="gender"><option value="">Select&hellip;</option><option>Male</option><option>Female</option><option>Other</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fRegion">Region council</label><input class="input" id="fRegion" name="regionCouncil" placeholder="Select region"><span class="field-error"></span></div>
+          <div class="field"><label for="fLocalCouncil">Local council</label><input class="input" id="fLocalCouncil" name="localCouncil" placeholder="Select local council"><span class="field-error"></span></div>
+          <div class="field"><label for="fVillage">Village</label><input class="input" id="fVillage" name="village" placeholder="Select village"><span class="field-error"></span></div>
+          <div class="field"><label for="fJk">JK attend</label><input class="input" id="fJk" name="jkAttend" placeholder="Select JK"><span class="field-error"></span></div>
+          <div class="field full"><label for="fEmployment">Employment / Education</label><input class="input" id="fEmployment" name="employmentEducation" placeholder="Employment / Education"><span class="field-error"></span></div>
+          <div class="field"><label for="fMarital">Marital status</label><select class="input select2" id="fMarital" name="maritalStatus"><option value="">Select&hellip;</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option><option>Separated</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fChildren">No. of children</label><select class="input select2" id="fChildren" name="numberOfChildren"><option value="">Select&hellip;</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5+</option></select><span class="field-error"></span></div>
+          <div class="field full"><label for="fLanguages">Which language(s) spoken</label><input class="input" id="fLanguages" name="languagesSpoken" placeholder="Languages"><span class="field-error"></span></div>
+          <div class="field"><label for="fInsurance">Health insurance</label><select class="input select2" id="fInsurance" name="healthInsurance"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fGp">GP / Usual source of care</label><input class="input" id="fGp" name="gpUsualCare" placeholder="Select"><span class="field-error"></span></div>
+          <div class="field"><label for="fPriorMh">Prior MH treatment</label><select class="input select2" id="fPriorMh" name="priorMhTreatment"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fConnectedMh">Connected to MH care?</label><select class="input select2" id="fConnectedMh" name="connectedToMhCare"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+          <div class="field full"><label for="fCareProvider">Name of care provider</label><input class="input" id="fCareProvider" name="careProviderName" placeholder="Care provider name"><span class="field-error"></span></div>
           <div class="field"><label for="fDob">Date of birth</label><input class="input" id="fDob" name="dateOfBirth" type="date"><span class="field-error"></span></div>
           <div class="field"><label for="fCnic">CNIC</label><input class="input" id="fCnic" name="cnic" placeholder="35202-XXXXXXX-X"><span class="field-error"></span></div>
-          <div class="field"><label for="fPhone">Phone</label><input class="input" id="fPhone" name="phone" placeholder="03XX-XXXXXXX" data-validate="phone"><span class="field-error"></span></div>
           <div class="field full"><label for="fAddress">Address</label><input class="input" id="fAddress" name="address" placeholder="Home address"><span class="field-error"></span></div>
         </div>
       </div>

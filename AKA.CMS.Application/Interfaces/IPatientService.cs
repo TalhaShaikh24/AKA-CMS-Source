@@ -5,6 +5,7 @@ namespace AKA.CMS.Application.Interfaces;
 public interface IPatientService
 {
     Task<IReadOnlyList<PatientSearchResultDto>> SearchAsync(string? searchTerm);
+    Task<CommunityMemberDto> GetCommunityMemberByIdAsync(int memberId);
     Task<CommunityMemberDto> RegisterCommunityMemberAsync(
         CreateCommunityMemberRequest request, int performedBy, string ipAddress);
     Task<ResolveIdentityResponse> ResolveIdentityAsync(

@@ -12,6 +12,13 @@ $(function () {
 
   CMS.initSelect2($('#wizardForm'));
 
+  // Age dropdown (mobile screen: "Select age").
+  (function buildAgeOptions() {
+    var html = '<option value="">Select age&hellip;</option>';
+    for (var a = 1; a <= 100; a++) html += '<option value="' + a + '">' + a + '</option>';
+    $('#fAge').html(html);
+  })();
+
   var step = 1;
 
   function showStep(n) {
@@ -87,11 +94,25 @@ $(function () {
   function buildReview() {
     var html = '<h4 class="sec-sub">Patient</h4>' +
       reviewRow('Full name', fieldVal('fName')) +
+      reviewRow('Age', fieldVal('fAge')) +
       reviewRow('Father name', fieldVal('fFather')) +
       reviewRow('Gender', fieldText('fGender')) +
+      reviewRow('Phone', fieldVal('fPhone')) +
+      reviewRow('Region council', fieldVal('fRegion')) +
+      reviewRow('Local council', fieldVal('fLocalCouncil')) +
+      reviewRow('Village', fieldVal('fVillage')) +
+      reviewRow('JK attend', fieldVal('fJk')) +
+      reviewRow('Employment / Education', fieldVal('fEmployment')) +
+      reviewRow('Marital status', fieldText('fMarital')) +
+      reviewRow('No. of children', fieldText('fChildren')) +
+      reviewRow('Languages spoken', fieldVal('fLanguages')) +
+      reviewRow('Health insurance', fieldText('fInsurance')) +
+      reviewRow('GP / Usual care', fieldVal('fGp')) +
+      reviewRow('Prior MH treatment', fieldText('fPriorMh')) +
+      reviewRow('Connected to MH care', fieldText('fConnectedMh')) +
+      reviewRow('Care provider', fieldVal('fCareProvider')) +
       reviewRow('Date of birth', fieldVal('fDob')) +
       reviewRow('CNIC', fieldVal('fCnic')) +
-      reviewRow('Phone', fieldVal('fPhone')) +
       reviewRow('Address', fieldVal('fAddress')) +
       '<h4 class="sec-sub">Case</h4>' +
       reviewRow('Source', fieldText('fSource')) +
@@ -112,6 +133,8 @@ $(function () {
     }
 
     var dob = fieldVal('fDob');
+    var ageVal = fieldVal('fAge');
+    var childrenVal = fieldVal('fChildren');
     var memberPayload = {
       fullName: fieldVal('fName'),
       fatherName: fieldVal('fFather') || null,
@@ -119,7 +142,21 @@ $(function () {
       dateOfBirth: dob || null,
       cnic: fieldVal('fCnic') || null,
       phone: fieldVal('fPhone') || null,
-      address: fieldVal('fAddress') || null
+      address: fieldVal('fAddress') || null,
+      age: ageVal ? parseInt(ageVal, 10) : null,
+      regionCouncil: fieldVal('fRegion') || null,
+      localCouncil: fieldVal('fLocalCouncil') || null,
+      village: fieldVal('fVillage') || null,
+      jkAttend: fieldVal('fJk') || null,
+      employmentEducation: fieldVal('fEmployment') || null,
+      maritalStatus: fieldVal('fMarital') || null,
+      numberOfChildren: childrenVal !== '' ? parseInt(childrenVal, 10) : null,
+      languagesSpoken: fieldVal('fLanguages') || null,
+      healthInsurance: fieldVal('fInsurance') || null,
+      gpUsualCare: fieldVal('fGp') || null,
+      priorMhTreatment: fieldVal('fPriorMh') || null,
+      connectedToMhCare: fieldVal('fConnectedMh') || null,
+      careProviderName: fieldVal('fCareProvider') || null
     };
     var casePayload = {
       sourceType: fieldVal('fSource'),

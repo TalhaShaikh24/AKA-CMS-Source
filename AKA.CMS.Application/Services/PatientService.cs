@@ -19,6 +19,13 @@ public sealed class PatientService(
         return hits.Select(h => h.ToDto()).ToList();
     }
 
+    public async Task<CommunityMemberDto> GetCommunityMemberByIdAsync(int memberId)
+    {
+        var member = await patientRepository.GetCommunityMemberByIdAsync(memberId)
+            ?? throw new NotFoundException($"Community member {memberId} not found.");
+        return member.ToDto();
+    }
+
     public async Task<CommunityMemberDto> RegisterCommunityMemberAsync(
         CreateCommunityMemberRequest request, int performedBy, string ipAddress)
     {
@@ -37,6 +44,20 @@ public sealed class PatientService(
                 Address = request.Address,
                 UnionCouncilCode = request.UnionCouncilCode,
                 VillageCode = request.VillageCode,
+                Age = request.Age,
+                RegionCouncil = request.RegionCouncil,
+                LocalCouncil = request.LocalCouncil,
+                Village = request.Village,
+                JkAttend = request.JkAttend,
+                EmploymentEducation = request.EmploymentEducation,
+                MaritalStatus = request.MaritalStatus,
+                NumberOfChildren = request.NumberOfChildren,
+                LanguagesSpoken = request.LanguagesSpoken,
+                HealthInsurance = request.HealthInsurance,
+                GpUsualCare = request.GpUsualCare,
+                PriorMhTreatment = request.PriorMhTreatment,
+                ConnectedToMhCare = request.ConnectedToMhCare,
+                CareProviderName = request.CareProviderName,
                 IsActive = true
             },
             performedBy,

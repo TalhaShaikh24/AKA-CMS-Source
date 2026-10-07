@@ -88,6 +88,7 @@ $(function () {
           kv('Priority', c.priorityLevel || '—') +
           kv('Registered', fmtDate(c.createdAt))
         );
+        loadMemberDetails(c.communityMemberId);
         $('#cdRiskSummary').html(
           '<p class="hint">Latest screening and workflow position appear here once screenings are recorded.</p>' +
           '<a class="btn btn-ghost btn-sm" href="/Screening?caseId=' + c.caseId + '">Open in Screening</a>'
@@ -101,6 +102,42 @@ $(function () {
   }
   function kv(k, v) {
     return '<div><span class="k">' + esc(k) + '</span><div class="v">' + esc(v) + '</div></div>';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Patient profile — GET /api/patients/members/{id}
+   * ------------------------------------------------------------------ */
+  function loadMemberDetails(memberId) {
+    if (!memberId) return;
+    cmsAjax({
+      url: '/api/patients/members/' + memberId,
+      method: 'GET',
+      fallbackMsg: 'Could not load patient details.',
+      success: function (m) {
+        var html =
+          kv('Age', m.age != null ? m.age : '—') +
+          kv('Gender', m.gender || '—') +
+          kv('Phone', m.phone || '—') +
+          kv('Father name', m.fatherName || '—') +
+          kv('CNIC', m.cnic || '—') +
+          kv('Address', m.address || '—') +
+          kv('Region council', m.regionCouncil || '—') +
+          kv('Local council', m.localCouncil || '—') +
+          kv('Village', m.village || '—') +
+          kv('JK attend', m.jkAttend || '—') +
+          kv('Employment / Education', m.employmentEducation || '—') +
+          kv('Marital status', m.maritalStatus || '—') +
+          kv('No. of children', m.numberOfChildren != null ? m.numberOfChildren : '—') +
+          kv('Languages spoken', m.languagesSpoken || '—') +
+          kv('Health insurance', m.healthInsurance || '—') +
+          kv('GP / Usual care', m.gpUsualCare || '—') +
+          kv('Prior MH treatment', m.priorMhTreatment || '—') +
+          kv('Connected to MH care', m.connectedToMhCare || '—') +
+          kv('Care provider', m.careProviderName || '—');
+        $('#cdPatientKv').html(html);
+      },
+      error: function () { /* keep overview-only view if member cannot load */ }
+    });
   }
 
   /* ------------------------------------------------------------------ *
