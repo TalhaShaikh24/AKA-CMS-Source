@@ -118,9 +118,6 @@ $(function () {
           kv('Age', m.age != null ? m.age : '—') +
           kv('Gender', m.gender || '—') +
           kv('Phone', m.phone || '—') +
-          kv('Father name', m.fatherName || '—') +
-          kv('CNIC', m.cnic || '—') +
-          kv('Address', m.address || '—') +
           kv('Region council', m.regionCouncil || '—') +
           kv('Local council', m.localCouncil || '—') +
           kv('Village', m.village || '—') +

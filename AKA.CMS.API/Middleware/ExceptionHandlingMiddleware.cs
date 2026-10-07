@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AKA.CMS.API.Middleware;
 
-public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public sealed class ExceptionHandlingMiddleware(
+    RequestDelegate next,
+    ILogger<ExceptionHandlingMiddleware> logger,
+    IWebHostEnvironment environment)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -20,7 +23,7 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         }
     }
 
-    private static Task WriteProblemAsync(HttpContext context, Exception ex)
+    private Task WriteProblemAsync(HttpContext context, Exception ex)
     {
         var (status, title) = ex switch
         {
@@ -36,8 +39,11 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
         };
 
+        // In Development, surface the real exception message so API consumers
+        // can diagnose the problem; in Production the detail stays generic and
+        // the correlationId ties the payload to the server logs.
         var detail = status == HttpStatusCode.InternalServerError
-            ? title
+            ? (environment.IsDevelopment() ? ex.Message : title)
             : ex.Message;
 
         var problem = new ProblemDetails

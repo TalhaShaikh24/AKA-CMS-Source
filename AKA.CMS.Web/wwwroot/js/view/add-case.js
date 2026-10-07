@@ -19,6 +19,14 @@ $(function () {
     $('#fAge').html(html);
   })();
 
+  // Gender segmented control (mobile Register screen style).
+  $('#fGenderSeg .seg-btn').on('click', function () {
+    $('#fGenderSeg .seg-btn').removeClass('active');
+    $(this).addClass('active');
+    $('#fGender').val($(this).data('val')).trigger('change');
+    clearFieldError($('#fGender'));
+  });
+
   var step = 1;
 
   function showStep(n) {
@@ -95,8 +103,7 @@ $(function () {
     var html = '<h4 class="sec-sub">Patient</h4>' +
       reviewRow('Full name', fieldVal('fName')) +
       reviewRow('Age', fieldVal('fAge')) +
-      reviewRow('Father name', fieldVal('fFather')) +
-      reviewRow('Gender', fieldText('fGender')) +
+      reviewRow('Gender', fieldVal('fGender')) +
       reviewRow('Phone', fieldVal('fPhone')) +
       reviewRow('Region council', fieldVal('fRegion')) +
       reviewRow('Local council', fieldVal('fLocalCouncil')) +
@@ -111,9 +118,6 @@ $(function () {
       reviewRow('Prior MH treatment', fieldText('fPriorMh')) +
       reviewRow('Connected to MH care', fieldText('fConnectedMh')) +
       reviewRow('Care provider', fieldVal('fCareProvider')) +
-      reviewRow('Date of birth', fieldVal('fDob')) +
-      reviewRow('CNIC', fieldVal('fCnic')) +
-      reviewRow('Address', fieldVal('fAddress')) +
       '<h4 class="sec-sub">Case</h4>' +
       reviewRow('Source', fieldText('fSource')) +
       reviewRow('Priority', fieldText('fPriority')) +
@@ -132,17 +136,12 @@ $(function () {
       return;
     }
 
-    var dob = fieldVal('fDob');
     var ageVal = fieldVal('fAge');
     var childrenVal = fieldVal('fChildren');
     var memberPayload = {
       fullName: fieldVal('fName'),
-      fatherName: fieldVal('fFather') || null,
       gender: fieldVal('fGender') || null,
-      dateOfBirth: dob || null,
-      cnic: fieldVal('fCnic') || null,
       phone: fieldVal('fPhone') || null,
-      address: fieldVal('fAddress') || null,
       age: ageVal ? parseInt(ageVal, 10) : null,
       regionCouncil: fieldVal('fRegion') || null,
       localCouncil: fieldVal('fLocalCouncil') || null,

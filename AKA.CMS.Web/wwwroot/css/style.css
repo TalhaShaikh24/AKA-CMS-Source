@@ -243,6 +243,10 @@ textarea.input{min-height:90px;resize:vertical}
 .wizard-step{display:none}
 .wizard-step.active{display:block}
 .wizard-foot{display:flex;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+/* Gender segmented control (mobile Register screen style) */
+.gender-seg{display:flex;gap:10px}
+.gender-seg .seg-btn{flex:1;padding:12px 8px;border:1.5px solid var(--border);border-radius:12px;background:#fff;font-size:14px;color:var(--muted);cursor:pointer;transition:all .15s}
+.gender-seg .seg-btn.active{background:#eef3d8;border-color:#c9d68a;color:#3f4a1f;font-weight:600}
 
 /* ==========================================================================
    MODAL / TOAST / LOADER
