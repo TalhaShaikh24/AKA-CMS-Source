@@ -9,4 +9,6 @@ public interface IAuthService
     Task LogoutAsync(RefreshTokenRequest request);
     Task<ForgotPasswordResponse> RequestPasswordResetAsync(ForgotPasswordRequest request, string? requestIp);
     Task<ResetPasswordResponse> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<ForgotPasswordResponse> RequestPasswordResetOtpAsync(ForgotPasswordRequest request, string? requestIp);
+    Task<ResetPasswordResponse> ResetPasswordWithOtpAsync(ResetPasswordOtpRequest request);
 }

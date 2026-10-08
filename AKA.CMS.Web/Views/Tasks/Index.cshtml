@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Tasks & Assignments";
+    ViewData["ActivePage"] = "tasks";
+    ViewData["RequiredPermission"] = "Tasks:Read";
+}
+<style>
+  .tabbar{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+  .tabbar .tab{padding:8px 16px;border-radius:999px;border:1px solid var(--line,#e3e6ea);background:#fff;cursor:pointer;font-weight:600;color:#555}
+  .tabbar .tab.active{background:#1b2a4a;color:#fff;border-color:#1b2a4a}
+  .task-card{background:#fff;border:1px solid var(--line,#e3e6ea);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+  .task-card .t-title{font-weight:700;font-size:15px}
+  .task-card .t-meta{color:#666;font-size:13px;margin-top:4px}
+  .task-card .t-due{font-size:13px;margin-top:6px;font-weight:600}
+  .due-over{color:#c0392b}.due-today{color:#b9770e}.due-ok{color:#1e7e34}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill-high{background:#fde2e2;color:#c0392b}.pill-medium{background:#fef3d8;color:#b9770e}.pill-low{background:#e2f3e5;color:#1e7e34}
+  .pill-pending{background:#eef1f5;color:#555}.pill-inprogress{background:#e3ecff;color:#1b2a4a}
+  .pill-completed{background:#e2f3e5;color:#1e7e34}.pill-cancelled{background:#f1f1f1;color:#999}
+  .task-actions{display:flex;gap:6px;flex-shrink:0}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Tasks &amp; Assignments</h1>
+    <p class="sub">Create and track clinical tasks for cases</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="@Url.Action("Create", "Tasks")" data-permission="Tasks:Write">+ Create New Task</a>
+  </div>
+</div>
+
+<div class="tabbar" role="tablist">
+  <button class="tab active" data-tab="All" role="tab">All <span id="cntAll"></span></button>
+  <button class="tab" data-tab="DueToday" role="tab">Due Today <span id="cntDueToday"></span></button>
+  <button class="tab" data-tab="Overdue" role="tab">Overdue <span id="cntOverdue"></span></button>
+</div>
+
+<div id="taskList"><p class="hint">Loading&hellip;</p></div>
+
+@section Scripts {
+<script src="~/js/view/tasks.js" asp-append-version="true"></script>
+}

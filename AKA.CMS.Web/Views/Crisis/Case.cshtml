@@ -1,0 +1,174 @@
+@model int
+@{
+    ViewData["Title"] = "Crisis Protocol";
+    ViewData["ActivePage"] = "cases";
+    ViewData["RequiredPermission"] = "Cases:Read";
+}
+<style>
+  .crisis-banner{background:#fde2e2;border:1px solid #f5b7b7;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .crisis-banner h2{color:#a93226;margin:0 0 6px}
+  .crisis-banner p{margin:4px 0;color:#7b241c}
+  .ind-list{margin:10px 0 0;padding:0;list-style:none}
+  .ind-list li{padding:6px 0;border-bottom:1px solid #f5d5d5;font-size:14px}
+  .ind-list li:last-child{border-bottom:0}
+  .ind-list .k{font-weight:600;color:#7b241c}
+  .rec-list{margin:8px 0 0;padding-left:20px;color:#444}
+  .rec-list li{margin:5px 0}
+  .timeline{position:relative;margin:10px 0 0 8px;padding-left:22px}
+  .timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:#dfe3e8}
+  .tl-item{position:relative;padding:8px 0}
+  .tl-item::before{content:'';position:absolute;left:-20px;top:14px;width:10px;height:10px;border-radius:50%;background:#1b2a4a}
+  .tl-item.crisis::before{background:#c0392b}
+  .tl-item .tl-title{font-weight:700}
+  .tl-item .tl-meta{color:#777;font-size:13px}
+  .steps{display:flex;gap:8px;margin:14px 0}
+  .step{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:#eef1f5;color:#777;font-weight:600;font-size:12px}
+  .step.active{background:#a93226;color:#fff}
+  .step.done{background:#e2f3e5;color:#1e7e34}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg label{padding:9px 14px;border:1px solid var(--line,#dfe3e8);border-radius:8px;cursor:pointer;font-weight:600;color:#555}
+  .seg input{display:none}
+  .seg label:has(input:checked){border-color:#1b2a4a;background:#eef3fb;color:#1b2a4a}
+  .radio-card{display:block;border:1px solid var(--line,#dfe3e8);border-radius:10px;padding:10px 14px;margin:8px 0;cursor:pointer}
+  .radio-card:has(input:checked){border-color:#a93226;background:#fdf0f0}
+  .radio-card input{margin-right:8px}
+  .wizard-foot{display:flex;justify-content:space-between;margin-top:18px}
+  .ev-card{border:1px solid var(--line,#e3e6ea);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .ev-card .ev-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+</style>
+
+<a class="link back-link" href="@Url.Action("Index", "Cases")">&larr; Back to cases</a>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Crisis Protocol</h1>
+    <p class="sub" id="crisisCaseSub">Loading&hellip;</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" id="startResponseBtn" type="button" data-permission="Crisis:Write">Start Crisis Response</button>
+  </div>
+</div>
+
+<!-- Protocol panel -->
+<div class="crisis-banner">
+  <h2>Immediate Action Required</h2>
+  <p>This case has been flagged as a crisis based on the risk assessment and/or current alerts.</p>
+  <ul class="ind-list" id="indicatorList"><li class="hint">Loading indicators&hellip;</li></ul>
+  <h3 style="margin:14px 0 4px;color:#a93226">Recommended Actions</h3>
+  <ol class="rec-list">
+    <li>Contact the individual immediately</li>
+    <li>Assess current safety</li>
+    <li>Activate crisis response team</li>
+    <li>Arrange urgent referral (if required)</li>
+  </ol>
+</div>
+
+<!-- Active crisis events -->
+<div class="card" style="margin-bottom:14px">
+  <div class="card-head"><h3>Crisis Events</h3></div>
+  <div class="card-body" id="crisisEvents"><p class="hint">Loading&hellip;</p></div>
+</div>
+
+<!-- Timeline -->
+<div class="card">
+  <div class="card-head"><h3>Case Timeline</h3></div>
+  <div class="card-body"><div class="timeline" id="caseTimeline"><p class="hint">Loading&hellip;</p></div></div>
+</div>
+
+<!-- Response wizard modal -->
+<div class="modal-backdrop" id="responseModal" style="display:none">
+  <div class="modal card" style="max-width:640px">
+    <div class="card-head"><h3>Crisis Response</h3></div>
+    <div class="card-body">
+      <div class="steps">
+        <div class="step active" data-step="1">1 · Contact</div>
+        <div class="step" data-step="2">2 · Assess</div>
+        <div class="step" data-step="3">3 · Escalate</div>
+        <div class="step" data-step="4">4 · Follow-up</div>
+      </div>
+
+      <div data-pane="1">
+        <h4>1. Contact Individual</h4>
+        <div class="field"><label>Attempt to contact</label>
+          <div class="seg" id="cMethod">
+            <label><input type="radio" name="cM" value="Phone Call" checked>Phone Call</label>
+            <label><input type="radio" name="cM" value="SMS">SMS</label>
+            <label><input type="radio" name="cM" value="In Person">In Person</label>
+            <label><input type="radio" name="cM" value="Other">Other</label>
+          </div>
+        </div>
+        <div class="field"><label for="cOutcome">Contact Outcome</label>
+          <select class="input select2" id="cOutcome">
+            <option>Reached</option><option>Not Reached</option><option>Voicemail</option><option>Wrong Number</option>
+          </select>
+        </div>
+        <div class="field"><label for="cNotes">Notes</label>
+          <textarea class="input" id="cNotes" rows="3" maxlength="2000" placeholder="What happened during the contact attempt&hellip;"></textarea>
+        </div>
+        <div class="wizard-foot">
+          <button class="btn btn-ghost" data-close type="button">Cancel</button>
+          <button class="btn btn-primary" id="toAssess" type="button">Next &rarr;</button>
+        </div>
+      </div>
+
+      <div data-pane="2" style="display:none">
+        <h4>2. Assess Current Safety</h4>
+        <div class="field"><label>Has there been a change in risk level?</label>
+          <div class="seg" id="cRiskChange">
+            <label><input type="radio" name="cR" value="No" checked>No</label>
+            <label><input type="radio" name="cR" value="Yes">Yes</label>
+          </div>
+        </div>
+        <div class="field"><label for="cSeverity">Current severity</label>
+          <select class="input select2" id="cSeverity">
+            <option>High</option><option>Critical</option><option>Moderate</option>
+          </select>
+        </div>
+        <div class="field"><label for="cAssessNotes">Assessment notes</label>
+          <textarea class="input" id="cAssessNotes" rows="3" maxlength="2000" placeholder="Safety assessment&hellip;"></textarea>
+        </div>
+        <div class="wizard-foot">
+          <button class="btn btn-ghost" id="backToContact" type="button">&larr; Previous</button>
+          <button class="btn btn-primary" id="toEscalate" type="button">Next &rarr;</button>
+        </div>
+      </div>
+
+      <div data-pane="3" style="display:none">
+        <h4>3. Escalate for Support</h4>
+        <div class="field"><label>Escalation Options</label>
+          <label class="radio-card"><input type="radio" name="cE" value="Notify Psychologist/Psychiatrist/GP"> Notify Psychologist / Psychiatrist / GP</label>
+          <label class="radio-card"><input type="radio" name="cE" value="Activate Crisis Team" checked> Activate Crisis Team (safety &amp; security)</label>
+          <label class="radio-card"><input type="radio" name="cE" value="Refer to Emergency Services (1122/15)"> Refer to Emergency Services (1122/15)</label>
+          <label class="radio-card"><input type="radio" name="cE" value="Notify Supervisor"> Notify Supervisor (helpline &amp; clinical coordinator)</label>
+        </div>
+        <div class="field"><label for="cReason">Reason for Escalation <span class="req">*</span></label>
+          <textarea class="input" id="cReason" rows="3" maxlength="2000" placeholder="Why is escalation required&hellip;"></textarea>
+          <span class="field-error"></span>
+        </div>
+        <div class="wizard-foot">
+          <button class="btn btn-ghost" id="backToAssess" type="button">&larr; Previous</button>
+          <button class="btn btn-primary" id="escalateBtn" type="button">Escalate</button>
+        </div>
+      </div>
+
+      <div data-pane="4" style="display:none">
+        <div style="text-align:center;padding:24px 10px">
+          <div style="font-size:48px;color:#1e7e34">&#10003;</div>
+          <h2>Case Successfully Escalated!</h2>
+          <p class="hint" id="escalatedMsg"></p>
+          <div style="margin-top:16px;display:flex;gap:10px;justify-content:center">
+            <button class="btn btn-ghost" data-close type="button">Close</button>
+            <a class="btn btn-primary" id="followUpLink" href="#">Schedule Follow-up</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+  window.__crisisCaseId = @Model;
+</script>
+<script src="~/js/view/crisis.js" asp-append-version="true"></script>
+}

@@ -21,7 +21,8 @@ public sealed class AuthService(
     IValidator<LoginRequest> loginValidator,
     IValidator<RefreshTokenRequest> refreshValidator,
     IValidator<ForgotPasswordRequest> forgotPasswordValidator,
-    IValidator<ResetPasswordRequest> resetPasswordValidator) : IAuthService
+    IValidator<ResetPasswordRequest> resetPasswordValidator,
+    IValidator<ResetPasswordOtpRequest> resetPasswordOtpValidator) : IAuthService
 {
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
@@ -122,6 +123,63 @@ public sealed class AuthService(
         return new ResetPasswordResponse("Your password has been reset. Please sign in with the new password.");
     }
 
+    public async Task<ForgotPasswordResponse> RequestPasswordResetOtpAsync(
+        ForgotPasswordRequest request, string? requestIp)
+    {
+        await forgotPasswordValidator.ValidateAndThrowAsync(request);
+
+        // Never reveal whether the e-mail belongs to an account.
+        var user = await authRepository.GetUserByEmailAsync(request.Email.Trim());
+        if (user is not null && user.IsActive && !user.IsLocked && !string.IsNullOrWhiteSpace(user.Email))
+        {
+            var otp = GenerateOtp();
+            var otpHash = HashToken(otp);
+            var expiresAt = DateTime.UtcNow.AddMinutes(passwordResetOptions.TokenMinutes);
+            await authRepository.CreatePasswordResetOtpAsync(user.UserId, otpHash, expiresAt, requestIp);
+
+            var subject = "AKA-CMS: your password reset code";
+            var body = $"""
+                <p>Hello {System.Net.WebUtility.HtmlEncode(user.Username)},</p>
+                <p>A password reset was requested for your AKA-CMS account. Enter this 4-digit code to choose a new password. The code expires in {passwordResetOptions.TokenMinutes} minutes and can be used only once.</p>
+                <p style="font-size:28px;letter-spacing:8px;font-weight:bold;">{otp}</p>
+                <p>If you did not request this, you can safely ignore this e-mail.</p>
+                """;
+
+            if (smtpOptions.IsConfigured)
+            {
+                await emailSender.SendAsync(user.Email, subject, body);
+            }
+            else
+            {
+                logger.LogWarning("Smtp is not configured; password reset OTP for {Email}: {Otp}",
+                    user.Email, otp);
+            }
+        }
+
+        return new ForgotPasswordResponse(
+            "If an account exists for this e-mail address, a 4-digit verification code has been sent.");
+    }
+
+    public async Task<ResetPasswordResponse> ResetPasswordWithOtpAsync(ResetPasswordOtpRequest request)
+    {
+        await resetPasswordOtpValidator.ValidateAndThrowAsync(request);
+
+        // The stored procedure verifies the OTP (single-use, not expired,
+        // max attempts, account active) and atomically applies the new
+        // password, consumes the OTP and revokes all refresh tokens.
+        var user = await authRepository.GetUserByEmailAsync(request.Email.Trim());
+        var completed = user is null
+            ? null
+            : await authRepository.CompletePasswordResetOtpAsync(
+                user.UserId, HashToken(request.Otp.Trim()), passwordHasher.Hash(request.NewPassword));
+
+        if (completed is null)
+            throw new UnauthorizedException("The verification code is invalid or has expired.");
+
+        logger.LogInformation("Password reset via OTP completed for user {UserId}", completed.UserId);
+        return new ResetPasswordResponse("Your password has been reset. Please sign in with the new password.");
+    }
+
     private string BuildResetLink(string token)
     {
         var baseUrl = passwordResetOptions.ResetUrlBase.TrimEnd('/');
@@ -131,6 +189,9 @@ public sealed class AuthService(
     private static string GenerateResetToken() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static string GenerateOtp() =>
+        RandomNumberGenerator.GetInt32(0, 10000).ToString("D4");
 
     private static string HashToken(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));

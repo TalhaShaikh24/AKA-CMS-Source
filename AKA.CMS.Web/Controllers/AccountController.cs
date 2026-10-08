@@ -14,6 +14,9 @@ public sealed class AccountController : Controller
     public IActionResult ForgotPassword() => View();
 
     [HttpGet]
+    public IActionResult Otp() => View();
+
+    [HttpGet]
     public IActionResult ResetPassword() => View();
 
     [HttpGet]

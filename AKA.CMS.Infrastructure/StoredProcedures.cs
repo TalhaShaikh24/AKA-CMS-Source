@@ -14,6 +14,8 @@ public static class StoredProcedures
     public const string AuthRevokeRefreshToken = "sp_CMS_Auth_RevokeRefreshToken";
     public const string PasswordResetCreate = "sp_CMS_PasswordReset_Create";
     public const string PasswordResetComplete = "sp_CMS_PasswordReset_Complete";
+    public const string PasswordResetOtpCreate = "sp_CMS_PasswordResetOtp_Create";
+    public const string PasswordResetOtpComplete = "sp_CMS_PasswordResetOtp_Complete";
 
     public const string UserGetById = "sp_CMS_User_GetById";
     public const string UserGetAll = "sp_CMS_User_GetAll";
@@ -43,6 +45,12 @@ public static class StoredProcedures
     public const string FacilityGetById = "sp_CMS_Facility_GetById";
     public const string FacilityCreate = "sp_CMS_Facility_Create";
     public const string FacilityUpdate = "sp_CMS_Facility_Update";
+
+    public const string TaskGetAll = "sp_CMS_Task_GetAll";
+    public const string TaskGetById = "sp_CMS_Task_GetById";
+    public const string TaskCreate = "sp_CMS_Task_Create";
+    public const string TaskUpdateStatus = "sp_CMS_Task_UpdateStatus";
+    public const string TaskAssign = "sp_CMS_Task_Assign";
 
     public const string CaseCreate = "sp_CMS_Case_Create";
     public const string CaseGetById = "sp_CMS_Case_GetById";

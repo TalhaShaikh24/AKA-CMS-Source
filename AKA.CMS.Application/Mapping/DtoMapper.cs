@@ -36,6 +36,25 @@ public static class DtoMapper
         facility.IsActive,
         facility.RowVersion);
 
+    public static TaskDto ToDto(this TaskItem task) => new(
+        task.TaskId,
+        task.Title,
+        task.Description,
+        task.CaseId,
+        task.CaseNumber,
+        task.PatientName,
+        task.TaskType,
+        task.Priority,
+        DateOnly.FromDateTime(task.DueDate),
+        task.AssignedToRoleId,
+        task.AssignedRoleName,
+        task.AssignedToUserId,
+        task.AssignedUserName,
+        task.NotifyRecipients,
+        task.Status,
+        task.CompletedAt,
+        task.RowVersion);
+
     public static CommunityMemberDto ToDto(this CommunityMember member) => new(
         member.MemberId,
         member.MrNo,

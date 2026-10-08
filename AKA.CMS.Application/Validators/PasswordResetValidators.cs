@@ -19,3 +19,14 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
         RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8).MaximumLength(200);
     }
 }
+
+public sealed class ResetPasswordOtpRequestValidator : AbstractValidator<ResetPasswordOtpRequest>
+{
+    public ResetPasswordOtpRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().MaximumLength(255).EmailAddress();
+        RuleFor(x => x.Otp).NotEmpty().Matches(@"^\d{4}$")
+            .WithMessage("The OTP must be a 4-digit code.");
+        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8).MaximumLength(200);
+    }
+}

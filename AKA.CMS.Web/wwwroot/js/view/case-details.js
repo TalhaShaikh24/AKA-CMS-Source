@@ -74,6 +74,7 @@ $(function () {
         $('#cdAvatar').text(CMS.initials(name));
         $('#cdName').text(name);
         $('#cdId').text(c.caseNumber || ('#' + c.caseId));
+        $('#crisisProtocolBtn').attr('href', '/Crisis/Case/' + c.caseId);
         $('#cdBadges').html(
           '<span class="pill">' + esc(c.statusName || c.status) + '</span> ' +
           (c.priorityLevel ? '<span class="badge badge-moderate">' + esc(c.priorityLevel) + ' priority</span>' : '')

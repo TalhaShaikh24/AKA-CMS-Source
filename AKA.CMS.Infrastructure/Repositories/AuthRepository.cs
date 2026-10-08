@@ -116,4 +116,27 @@ public sealed class AuthRepository(DapperContext context) : IAuthRepository
         return await connection.QuerySingleOrDefaultAsync<PasswordResetToken>(
             StoredProcedures.PasswordResetComplete, parameters, commandType: CommandType.StoredProcedure);
     }
+
+    public async Task CreatePasswordResetOtpAsync(int userId, string otpHash, DateTime expiresAtUtc, string? requestIp)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@UserId", userId);
+        parameters.Add("@OtpHash", otpHash);
+        parameters.Add("@ExpiresAt", expiresAtUtc);
+        parameters.Add("@IpAddress", requestIp);
+        await connection.ExecuteAsync(
+            StoredProcedures.PasswordResetOtpCreate, parameters, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<PasswordResetToken?> CompletePasswordResetOtpAsync(int userId, string otpHash, string passwordHash)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@UserId", userId);
+        parameters.Add("@OtpHash", otpHash);
+        parameters.Add("@PasswordHash", passwordHash);
+        return await connection.QuerySingleOrDefaultAsync<PasswordResetToken>(
+            StoredProcedures.PasswordResetOtpComplete, parameters, commandType: CommandType.StoredProcedure);
+    }
 }

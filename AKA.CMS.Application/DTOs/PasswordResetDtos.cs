@@ -10,3 +10,7 @@ public sealed record ForgotPasswordResponse(string Message);
 public sealed record ResetPasswordRequest(string Token, string NewPassword);
 
 public sealed record ResetPasswordResponse(string Message);
+
+/// <summary>Completes the OTP forgot-password flow with the 4-digit code
+/// from the e-mail (mobile design: Forget Pass -> OTP -> Reset Pass).</summary>
+public sealed record ResetPasswordOtpRequest(string Email, string Otp, string NewPassword);

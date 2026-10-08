@@ -15,4 +15,6 @@ public interface IAuthRepository
     Task<IReadOnlyList<ControllerAction>> GetAllPermissionsAsync();
     Task CreatePasswordResetAsync(int userId, string tokenHash, DateTime expiresAtUtc, string? requestIp);
     Task<PasswordResetToken?> CompletePasswordResetAsync(string tokenHash, string passwordHash);
+    Task CreatePasswordResetOtpAsync(int userId, string otpHash, DateTime expiresAtUtc, string? requestIp);
+    Task<PasswordResetToken?> CompletePasswordResetOtpAsync(int userId, string otpHash, string passwordHash);
 }
