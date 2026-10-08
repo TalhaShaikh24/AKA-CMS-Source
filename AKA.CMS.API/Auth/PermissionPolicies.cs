@@ -54,6 +54,8 @@ public static class PermissionPolicies
     public const string SyncRead = "Permissions:Sync:Read";
     public const string SyncWrite = "Permissions:Sync:Write";
     public const string LookupsRead = "Permissions:Lookups:Read";
+    public const string FacilitiesRead = "Permissions:Facilities:Read";
+    public const string FacilitiesWrite = "Permissions:Facilities:Write";
     public const string WorkflowConfigRead = "Permissions:WorkflowConfig:Read";
     public const string WorkflowConfigWrite = "Permissions:WorkflowConfig:Write";
     public const string ReportsRead = "Permissions:Reports:Read";

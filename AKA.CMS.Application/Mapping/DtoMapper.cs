@@ -25,6 +25,17 @@ public static class DtoMapper
         action.Action,
         action.PolicyName);
 
+    public static FacilityDto ToDto(this Facility facility) => new(
+        facility.FacilityId,
+        facility.FacilityCode,
+        facility.FacilityName,
+        facility.FacilityType,
+        facility.Region,
+        facility.Address,
+        facility.Phone,
+        facility.IsActive,
+        facility.RowVersion);
+
     public static CommunityMemberDto ToDto(this CommunityMember member) => new(
         member.MemberId,
         member.MrNo,

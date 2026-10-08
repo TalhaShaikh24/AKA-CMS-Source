@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Facilities";
+    ViewData["ActivePage"] = "facilities";
+    ViewData["RequiredPermission"] = "Facilities:Read";
+}
+<style>
+  .row-actions{white-space:nowrap}
+  .row-actions .btn{margin-right:6px}
+  .st-active{color:#1e7e34;font-weight:600}
+  .st-inactive{color:#999;font-weight:600}
+  .modal{max-width:560px}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Facilities</h1>
+    <p class="sub">Program sites &amp; service locations</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" id="addFacilityBtn" type="button" data-permission="Facilities:Write">+ Add Facility</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <table class="tbl" id="facilityTable">
+      <thead>
+        <tr><th>Code</th><th>Name</th><th>Type</th><th>Region</th><th>Phone</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="facilityRows"><tr><td colspan="7" class="hint">Loading&hellip;</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="facilityModal">
+  <div class="modal card">
+    <div class="card-head"><h3 id="facilityModalTitle">Add Facility</h3></div>
+    <div class="card-body">
+      <form id="facilityForm" data-validate novalidate>
+        <div class="form-grid">
+          <div class="field"><label for="fCode">Code <span class="req">*</span></label><input class="input" id="fCode" required maxlength="20" placeholder="AKH-GILGIT"><span class="field-error"></span></div>
+          <div class="field"><label for="fName">Name <span class="req">*</span></label><input class="input" id="fName" required maxlength="200" placeholder="Facility name"><span class="field-error"></span></div>
+          <div class="field"><label for="fType">Type</label><select class="input select2" id="fType"><option value="">Select&hellip;</option><option>Hospital</option><option>Diagnostic Centre</option><option>Medical Centre</option><option>Health Centre</option><option>Clinic</option></select><span class="field-error"></span></div>
+          <div class="field"><label for="fRegion">Region</label><input class="input" id="fRegion" maxlength="100" placeholder="Region"><span class="field-error"></span></div>
+          <div class="field full"><label for="fAddress">Address</label><input class="input" id="fAddress" maxlength="500" placeholder="Address"><span class="field-error"></span></div>
+          <div class="field"><label for="fPhone">Phone</label><input class="input" id="fPhone" maxlength="20" placeholder="Phone"><span class="field-error"></span></div>
+          <div class="field"><label for="fActive">Status</label><select class="input select2" id="fActive"><option value="true">Active</option><option value="false">Inactive</option></select><span class="field-error"></span></div>
+        </div>
+        <div class="wizard-foot">
+          <button type="button" class="btn btn-ghost" id="facilityCancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/facilities.js" asp-append-version="true"></script>
+}

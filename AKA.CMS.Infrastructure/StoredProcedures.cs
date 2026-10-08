@@ -39,6 +39,11 @@ public static class StoredProcedures
     public const string FacilityMrBlockGetAll = "sp_CMS_FacilityMrBlock_GetAll";
     public const string FacilityMrBlockUpsert = "sp_CMS_FacilityMrBlock_Upsert";
 
+    public const string FacilityGetAll = "sp_CMS_Facility_GetAll";
+    public const string FacilityGetById = "sp_CMS_Facility_GetById";
+    public const string FacilityCreate = "sp_CMS_Facility_Create";
+    public const string FacilityUpdate = "sp_CMS_Facility_Update";
+
     public const string CaseCreate = "sp_CMS_Case_Create";
     public const string CaseGetById = "sp_CMS_Case_GetById";
     public const string CaseList = "sp_CMS_Case_List";

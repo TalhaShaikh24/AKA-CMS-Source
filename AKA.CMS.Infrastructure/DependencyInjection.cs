@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IPatientRepository, PatientRepository>();
+        services.AddScoped<IFacilityRepository, FacilityRepository>();
         services.AddScoped<ICaseRepository, CaseRepository>();
         services.AddScoped<IScreeningRepository, ScreeningRepository>();
         services.AddScoped<ICarePlanRepository, CarePlanRepository>();
@@ -56,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IPatientService, PatientService>();
+        services.AddScoped<IFacilityService, FacilityService>();
         services.AddScoped<ICaseService, CaseService>();
         services.AddScoped<IScreeningService, ScreeningService>();
         services.AddScoped<ICarePlanService, CarePlanService>();
