@@ -11,4 +11,8 @@ public interface IScreeningService
         int performedBy, string ipAddress);
 
     Task<IReadOnlyList<ScreeningDto>> GetByCaseAsync(int caseId);
+
+    Task<ScreeningDto> UpdateAsync(
+        int screeningId, UpdateScreeningRequest request,
+        Func<string, bool> hasPermission, int performedBy, string ipAddress);
 }

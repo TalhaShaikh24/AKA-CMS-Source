@@ -75,4 +75,35 @@ public sealed class ScreeningRepository(DapperContext context) : IScreeningRepos
             throw new NotFoundException($"Case {caseId} not found.");
         }
     }
+
+    public async Task<Screening> UpdateAsync(
+        int screeningId, string itemScoresJson, byte[] rowVersion,
+        int performedBy, string ipAddress)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@ScreeningId", screeningId);
+        parameters.Add("@ItemScoresJson", itemScoresJson);
+        parameters.Add("@RowVersion", rowVersion);
+        parameters.Add("@PerformedBy", performedBy);
+        parameters.Add("@IpAddress", ipAddress);
+        try
+        {
+            return await connection.QuerySingleAsync<Screening>(
+                StoredProcedures.ScreeningUpdate, parameters,
+                commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number == 50008)
+        {
+            throw new NotFoundException(ex.Message);
+        }
+        catch (SqlException ex) when (ex.Number == 50005)
+        {
+            throw new ConcurrencyException(ex.Message);
+        }
+        catch (SqlException ex) when (ex.Number == 50009)
+        {
+            throw new ScreeningValidationException(ex.Message);
+        }
+    }
 }

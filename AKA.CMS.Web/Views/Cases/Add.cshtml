@@ -63,8 +63,21 @@
 
   <!-- STEP 3: Screening -->
   <div class="reg-step" id="rs3" hidden>
-    <div class="card"><h3>Quick Screening Tools</h3>
-      <div class="grid grid-2" id="screenTools"></div>
+    <div class="card"><h3>Screening Tools</h3>
+      <p style="margin-top:-8px">You can complete a screening now, or skip and do it later from the Screening page.</p>
+      <div class="field" style="max-width:340px;margin-bottom:16px">
+        <label for="screenToolSel">Select screening tool</label>
+        <select class="input select2" id="screenToolSel">
+          <option value="">Choose a tool…</option>
+          <option value="PHQ9">PHQ-9 (Depression)</option>
+          <option value="GAD7">GAD-7 (Anxiety)</option>
+          <option value="DASS21">DASS-21 (Stress / Depression / Anxiety)</option>
+          <option value="SBQR">SBQ-R (Suicide Risk)</option>
+          <option value="CSSRS">C-SSRS (Suicidal Ideation / Behavior)</option>
+        </select>
+      </div>
+      <div id="regScreenQuestions"></div>
+      <div id="regScreenDone" style="margin-top:12px"></div>
       <div class="field" style="margin-top:18px;max-width:320px">
         <label for="fPrelimRisk">Risk Level (Preliminary)</label>
         <select class="input select2" id="fPrelimRisk"><option>Low</option><option>Moderate</option><option>High</option></select>
@@ -91,5 +104,6 @@
 </form>
 
 @section Scripts {
+<script src="~/js/screening-questions.js" asp-append-version="true"></script>
 <script src="~/js/view/add-case.js" asp-append-version="true"></script>
 }

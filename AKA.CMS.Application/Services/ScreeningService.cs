@@ -2,6 +2,7 @@ using System.Text.Json;
 using AKA.CMS.Application.DTOs;
 using AKA.CMS.Application.Interfaces;
 using AKA.CMS.Application.Mapping;
+using AKA.CMS.Application.Validators;
 using FluentValidation;
 
 namespace AKA.CMS.Application.Services;
@@ -53,6 +54,19 @@ public sealed class ScreeningService(
     {
         var screenings = await screeningRepository.GetByCaseAsync(caseId);
         return screenings.Select(s => s.ToDto()).ToList();
+    }
+
+    public async Task<ScreeningDto> UpdateAsync(
+        int screeningId, UpdateScreeningRequest request,
+        Func<string, bool> hasPermission, int performedBy, string ipAddress)
+    {
+        var validator = new UpdateScreeningRequestValidator();
+        await validator.ValidateAndThrowAsync(request);
+
+        var itemScoresJson = JsonSerializer.Serialize(request.ItemScores);
+        var screening = await screeningRepository.UpdateAsync(
+            screeningId, itemScoresJson, request.RowVersion, performedBy, ipAddress);
+        return screening.ToDto();
     }
 
     private async Task<(bool Applied, string? Note)> TryFlagEmergencyAsync(

@@ -47,6 +47,21 @@ public sealed class ScreeningsController(IScreeningService screeningService, ICu
     public async Task<ActionResult<IReadOnlyList<ScreeningDto>>> GetByCase(int caseId)
         => Ok(await screeningService.GetByCaseAsync(caseId));
 
+    /// <summary>Update a screening's item scores (re-scored server-side).</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ScreeningDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = PermissionPolicies.ScreeningsWrite)]
+    public async Task<ActionResult<ScreeningDto>> Update(
+        int id, [FromBody] UpdateScreeningRequest request)
+    {
+        var dto = await screeningService.UpdateAsync(
+            id, request, currentUser.HasPermission, currentUser.UserId, ClientIpAddress);
+        return Ok(dto);
+    }
+
     private string ClientIpAddress =>
         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
 }

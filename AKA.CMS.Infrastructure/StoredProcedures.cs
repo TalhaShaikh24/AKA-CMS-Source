@@ -76,6 +76,7 @@ public static class StoredProcedures
 
     public const string ScreeningToolGetAll = "sp_CMS_ScreeningTool_GetAll";
     public const string ScreeningSubmit = "sp_CMS_Screening_Submit";
+    public const string ScreeningUpdate = "sp_CMS_Screening_Update";
     public const string ScreeningGetById = "sp_CMS_Screening_GetById";
     public const string ScreeningGetByCase = "sp_CMS_Screening_GetByCase";
 

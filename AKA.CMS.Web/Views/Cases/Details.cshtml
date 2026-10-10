@@ -16,6 +16,7 @@
   <div>
     <div class="card"><h3>Patient Information</h3><div class="kv" id="cdPatientKv"><div class="hint">Loading&hellip;</div></div></div>
     <div class="card"><h3>Current Service</h3><div class="kv" id="cdServiceKv"><div class="hint">Loading&hellip;</div></div></div>
+    <div class="card"><h3>Screening Results</h3><div id="cdScreenings"><div class="hint">Loading&hellip;</div></div></div>
     <div class="card"><h3>Case Actions</h3>
       <div class="grid grid-2">
         <button class="btn danger" data-go-crisis>Crisis Protocol</button>
@@ -66,6 +67,21 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="editScreeningModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <h3 id="esTitle">Edit Screening</h3>
+      <button class="modal-x" data-close type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body"><div id="esQuestions"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" id="esSave" type="button">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
+<script src="~/js/screening-questions.js" asp-append-version="true"></script>
 <script src="~/js/view/case-details.js" asp-append-version="true"></script>
 }

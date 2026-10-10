@@ -82,11 +82,41 @@ $(function () {
         );
         if (c.communityMemberId) loadMemberDetails(c.communityMemberId);
         loadTimeline();
+        loadScreenings();
       },
       error: function (xhr) {
         CMS.loader(false);
         if (xhr && xhr.status === 404) location.href = '/Cases';
       }
+    });
+  }
+
+  function loadScreenings() {
+    cmsAjax({
+      url: '/api/screenings/case/' + caseId, method: 'GET',
+      fallbackMsg: 'Could not load screening results.',
+      success: function (list) {
+        list = list || [];
+        if (!list.length) {
+          $('#cdScreenings').html('<div class="empty">No screenings recorded yet. <a href="/Screening?caseId=' + caseId + '">Start a screening</a></div>');
+          return;
+        }
+        $('#cdScreenings').html(list.map(function (s) {
+          var badge = 'badge-low';
+          var rl = String(s.riskLevelName || s.riskLevel || '').toUpperCase();
+          if (rl.indexOf('MODERATE') >= 0) badge = 'badge-moderate';
+          else if (rl.indexOf('HIGH') >= 0 || rl.indexOf('SEVERE') >= 0) badge = 'badge-high';
+          if (rl.indexOf('CRISIS') >= 0) badge = 'badge-crisis';
+          return '<div class="geo-card" style="margin-bottom:10px">' +
+            '<div class="geo-card-main"><div class="geo-card-name">' + esc(s.toolName || s.toolCode) + '</div>' +
+            '<div class="geo-card-sub">Score: ' + esc(s.rawScore) + ' · ' + esc(s.completedAt ? new Date(s.completedAt).toLocaleDateString() : '') + '</div></div>' +
+            '<div class="geo-card-side"><span class="badge ' + badge + '">' + esc(s.riskLevelName || s.riskLevel || '') + '</span>' +
+            '<button class="btn btn-ghost btn-sm" data-edit-screening="' + s.screeningId + '" data-permission="Screenings:Write" type="button">Edit</button></div>' +
+            '</div>';
+        }).join(''));
+        window._cdScreenings = list;
+      },
+      error: function () { $('#cdScreenings').html('<div class="empty">Could not load screening results.</div>'); }
     });
   }
 
@@ -152,6 +182,61 @@ $(function () {
         }
       });
     }
+  });
+
+  /* ---------- edit screening ---------- */
+  var editingScreening = null;
+
+  $(document).on('click', '[data-edit-screening]', function () {
+    var id = parseInt($(this).data('edit-screening'), 10);
+    var list = window._cdScreenings || [];
+    var s = list.filter(function (x) { return x.screeningId === id; })[0];
+    if (!s || !window.CMS_SCREEN_QUESTIONS) return;
+    editingScreening = s;
+    var qs = window.CMS_SCREEN_QUESTIONS[s.toolCode] || [];
+    $('#esTitle').text('Edit ' + (s.toolName || s.toolCode));
+    var html = '';
+    qs.forEach(function (q, qi) {
+      var cur = (s.itemScores || [])[qi];
+      html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
+      html += '<div class="seg" data-seg="esq' + qi + '">';
+      q.options.forEach(function (o) {
+        html += '<button type="button" data-val="' + o.v + '"' + (cur === o.v ? ' class="sel"' : '') + '>' + esc(o.t) + '</button>';
+      });
+      html += '</div><span class="field-error">Please answer this question.</span></div>';
+    });
+    $('#esQuestions').html(html);
+    CMS.initSegmented($('#esQuestions'));
+    $('#editScreeningModal').addClass('open');
+  });
+
+  $('#esSave').on('click', function () {
+    if (!editingScreening || !window.CMS_SCREEN_QUESTIONS) return;
+    var qs = window.CMS_SCREEN_QUESTIONS[editingScreening.toolCode] || [];
+    var answers = [], ok = true;
+    qs.forEach(function (q, qi) {
+      var $f = $('#esQuestions .field[data-q="' + qi + '"]');
+      var v = $f.find('.seg button.sel').data('val');
+      if (v === undefined) { $f.addClass('invalid'); ok = false; }
+      else { $f.removeClass('invalid'); answers.push(parseInt(v, 10)); }
+    });
+    if (!ok) { CMS.toast('Please answer all questions.', 'error'); return; }
+    CMS.loader(true);
+    cmsAjax({
+      url: '/api/screenings/' + editingScreening.screeningId,
+      method: 'PUT',
+      json: true,
+      data: { itemScores: answers, rowVersion: editingScreening.rowVersion },
+      fallbackMsg: 'Could not update the screening.',
+      success: function () {
+        CMS.loader(false);
+        CMS.toast('Screening updated.', 'success');
+        $('#editScreeningModal').removeClass('open');
+        editingScreening = null;
+        loadScreenings();
+      },
+      error: function () { CMS.loader(false); }
+    });
   });
 
   loadCase();

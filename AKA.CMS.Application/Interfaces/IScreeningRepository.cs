@@ -11,4 +11,8 @@ public interface IScreeningRepository
         int performedBy, string ipAddress);
 
     Task<IReadOnlyList<Screening>> GetByCaseAsync(int caseId);
+
+    Task<Screening> UpdateAsync(
+        int screeningId, string itemScoresJson, byte[] rowVersion,
+        int performedBy, string ipAddress);
 }

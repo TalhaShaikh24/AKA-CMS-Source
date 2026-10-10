@@ -88,12 +88,91 @@ $(function () {
   $('#fRegion').on('change', applyCouncilFilter);
   $('#fLocalCouncil').on('change', applyVillageFilter);
 
-  /* ---------- screening tools (design info cards) ---------- */
-  var tools = ['PHQ-9 (Depression)', 'GAD-7 (Anxiety)', 'DASS-21 (Stress/Depression/Anxiety)', 'SBQ-R (Suicide Risk)', 'C-SSRS (Suicidal Ideation/Behavior)'];
-  $('#screenTools').html(tools.map(function (t) {
-    return '<div class="quick card" style="box-shadow:none"><div class="left"><div class="qicon">✓</div><div><b>' + esc(t) + '</b>' +
-      '<div style="font-size:12px;color:#8995a7">Available after registration</div></div></div></div>';
-  }).join(''));
+  /* ---------- screening during registration ---------- */
+  var pendingScreenings = []; // {toolCode, toolName, itemScores}
+  var regScreenTool = null;
+
+  $('#screenToolSel').on('change', function () {
+    var code = $(this).val();
+    regScreenTool = code || null;
+    renderRegScreenQuestions();
+  });
+
+  function renderRegScreenQuestions() {
+    var $wrap = $('#regScreenQuestions');
+    if (!regScreenTool || !window.CMS_SCREEN_QUESTIONS) { $wrap.html(''); return; }
+    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool] || [];
+    var toolName = $('#screenToolSel option:selected').text();
+    var html = '<div class="card" style="box-shadow:none;border:1.5px solid var(--border);margin-bottom:0"><h3 style="margin-bottom:12px">' + esc(toolName) + '</h3>';
+    qs.forEach(function (q, qi) {
+      html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
+      html += '<div class="seg" data-seg="rq' + qi + '">';
+      q.options.forEach(function (o) {
+        html += '<button type="button" data-val="' + o.v + '">' + esc(o.t) + '</button>';
+      });
+      html += '</div><span class="field-error">Please answer this question.</span></div>';
+    });
+    html += '<button type="button" class="btn primary" id="regScreenComplete" style="margin-top:6px">Complete ' + esc(toolName.split(' (')[0]) + ' Screening</button></div>';
+    $wrap.html(html);
+    CMS.initSegmented($wrap);
+  }
+
+  $(document).on('click', '#regScreenComplete', function () {
+    if (!regScreenTool) return;
+    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool] || [];
+    var answers = [], ok = true;
+    qs.forEach(function (q, qi) {
+      var $f = $('#regScreenQuestions .field[data-q="' + qi + '"]');
+      var v = $f.find('.seg button.sel').data('val');
+      if (v === undefined) { $f.addClass('invalid'); ok = false; }
+      else { $f.removeClass('invalid'); answers.push(parseInt(v, 10)); }
+    });
+    if (!ok) { CMS.toast('Please answer all questions.', 'error'); return; }
+    var toolName = $('#screenToolSel option:selected').text();
+    // Replace any earlier completion of the same tool.
+    pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== regScreenTool; });
+    pendingScreenings.push({ toolCode: regScreenTool, toolName: toolName, itemScores: answers });
+    renderPendingScreenings();
+    $('#regScreenQuestions').html('');
+    $('#screenToolSel').val('').trigger('change');
+    regScreenTool = null;
+    CMS.toast(toolName.split(' (')[0] + ' screening saved — will be submitted with the case.', 'success');
+  });
+
+  function renderPendingScreenings() {
+    var $d = $('#regScreenDone');
+    if (!pendingScreenings.length) { $d.html(''); return; }
+    $d.html('<div class="notice" style="margin:0">' + pendingScreenings.map(function (s) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">' +
+        '<span>✓ <b>' + esc(s.toolName) + '</b> completed</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-rmscreen="' + s.toolCode + '">Remove</button></div>';
+    }).join('') + '</div>');
+  }
+
+  $(document).on('click', '[data-rmscreen]', function () {
+    var code = $(this).data('rmscreen');
+    pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== code; });
+    renderPendingScreenings();
+  });
+
+  function submitPendingScreenings(caseId, done) {
+    if (!pendingScreenings.length) { done(); return; }
+    var queue = pendingScreenings.slice();
+    pendingScreenings = [];
+    (function next() {
+      var s = queue.shift();
+      if (!s) { done(); return; }
+      cmsAjax({
+        url: '/api/screenings/submit',
+        method: 'POST',
+        json: true,
+        data: { caseId: caseId, toolCode: s.toolCode, itemScores: s.itemScores },
+        fallbackMsg: 'Case created, but ' + s.toolName + ' screening could not be submitted.',
+        success: next,
+        error: next
+      });
+    })();
+  }
 
   /* ---------- steps ---------- */
   function showStep(n) {
@@ -212,9 +291,11 @@ $(function () {
           data: casePayload,
           fallbackMsg: 'Patient registered, but the case could not be created.',
           success: function (c) {
-            CMS.loader(false);
-            CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
-            location.href = '/Screening?caseId=' + c.caseId;
+            submitPendingScreenings(c.caseId, function () {
+              CMS.loader(false);
+              CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
+              location.href = '/Screening?caseId=' + c.caseId;
+            });
           },
           error: function () { CMS.loader(false); }
         });
