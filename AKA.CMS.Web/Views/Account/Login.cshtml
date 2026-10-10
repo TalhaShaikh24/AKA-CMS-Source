@@ -17,68 +17,33 @@
 @* Web API base URL for the global cmsAjax helper. *@
 <script>window.CMS_API_BASE_URL = "@Configuration["ApiBaseUrl"]";</script>
 <div class="auth-wrap">
-  <div class="auth-brand">
-    <div class="auth-brand-inner">
-      <div class="auth-logo">
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-          <circle cx="22" cy="22" r="20" fill="#DCE88A"/>
-          <circle cx="22" cy="16" r="4.5" fill="#2E3D62"/>
-          <circle cx="28.5" cy="22" r="4.5" fill="#2E3D62"/>
-          <circle cx="22" cy="28" r="4.5" fill="#2E3D62"/>
-          <circle cx="15.5" cy="22" r="4.5" fill="#2E3D62"/>
-          <circle cx="22" cy="22" r="3.2" fill="#F4F6FB"/>
-        </svg>
-      </div>
-      <h1>CASE MANAGEMENT SYSTEM</h1>
-      <p class="auth-prog">Integrated Mental Health Programme</p>
-      <div class="auth-feats">
-        <div class="feat">
-          <span class="feat-ic">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
-          </span>
-          <div><strong>Offline-safe field mode</strong><span>Syncs automatically when back online</span></div>
-        </div>
-        <div class="feat">
-          <span class="feat-ic">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </span>
-          <div><strong>Role-based access</strong><span>Permissions tailored to your team role</span></div>
-        </div>
-        <div class="feat">
-          <span class="feat-ic">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8-3v7c0 6 8 10 8 10z"/></svg>
-          </span>
-          <div><strong>Encrypted data</strong><span>Patient information protected end to end</span></div>
-        </div>
-      </div>
+  <div class="auth-card">
+    <div class="auth-brand-head">
+      <img src="~/img/cmo-logo.png" asp-append-version="true" alt="Case Management System">
+      <div class="line"></div>
+      <h1>Welcome back</h1>
+      <p>Sign in to your case management workspace</p>
     </div>
-    <div class="mountains" aria-hidden="true"></div>
-  </div>
-  <div class="auth-card-wrap">
-    <div class="auth-card">
-      <h2>Welcome back</h2>
-      <p class="sub">Sign in to your case management workspace</p>
-      <form id="loginForm" data-validate novalidate>
-        <div class="field">
-          <label for="loginUser">Username <span class="req">*</span></label>
-          <input class="input" type="text" id="loginUser" name="username" placeholder="e.g. admin" required autocomplete="username">
-          <span class="field-error"></span>
-        </div>
-        <div class="field">
-          <label for="loginPass">Password <span class="req">*</span></label>
-          <input class="input" type="password" id="loginPass" name="password" placeholder="••••••••" required autocomplete="current-password">
-          <span class="field-error"></span>
-        </div>
-        <div class="auth-row">
-          <label class="check-row">
-            <input type="checkbox" id="rememberMe" name="rememberMe">
-            <span class="check-label">Remember me</span>
-          </label>
-          <a class="link" href="@Url.Action("ForgotPassword", "Account")">Forgot password?</a>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
-      </form>
-    </div>
+    <form id="loginForm" data-validate novalidate>
+      <div class="field">
+        <label for="loginUser">Username <span class="req">*</span></label>
+        <input class="input" type="text" id="loginUser" name="username" placeholder="e.g. admin" required autocomplete="username">
+        <span class="field-error"></span>
+      </div>
+      <div class="field">
+        <label for="loginPass">Password <span class="req">*</span></label>
+        <input class="input" type="password" id="loginPass" name="password" placeholder="••••••••" required autocomplete="current-password">
+        <span class="field-error"></span>
+      </div>
+      <div class="auth-row">
+        <label class="check-row">
+          <input type="checkbox" id="rememberMe" name="rememberMe">
+          <span>Remember me</span>
+        </label>
+        <a class="link" href="@Url.Action("ForgotPassword", "Account")">Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    </form>
   </div>
 </div>
 <div class="toast-wrap" id="toastWrap"></div>
