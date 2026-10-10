@@ -21,14 +21,16 @@ $(function () {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   /* ---------- tabs ---------- */
-  $('#geoTabs .tab').on('click', function () {
+  $('#geoTabs').on('click', '.tab', function () {
     activeTab = $(this).data('tab');
     $('#geoTabs .tab').removeClass('active');
     $(this).addClass('active');
     $('.tab-panel').removeClass('active');
     $('#panel-' + activeTab).addClass('active');
     $('#addGeoBtn').text('+ Add ' + META[activeTab].title);
-    loadTab(activeTab); // fresh data on every tab switch
+    // Show cached data instantly; refresh in background so the panel never goes blank.
+    renderTab(activeTab);
+    loadTab(activeTab);
   });
 
   /* ---------- load ---------- */
@@ -69,6 +71,12 @@ $(function () {
       (sub ? '<div class="geo-card-sub">' + esc(sub) + '</div>' : '') + '</div>' +
       '<div class="geo-card-side">' + statusBadge(active) + editBtn(kind, id) + '</div>' +
       '</div>';
+  }
+
+  function renderTab(kind) {
+    if (kind === 'regions') renderRegions();
+    else if (kind === 'councils') renderCouncils();
+    else if (kind === 'villages') renderVillages();
   }
 
   function renderRegions() {
