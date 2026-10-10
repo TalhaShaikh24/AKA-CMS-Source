@@ -38,54 +38,58 @@ $(function () {
         cmsAjax({ url: '/api/geography/regions?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load regions.',
           success: function (res) { regions = res || []; renderRegions(); fillParentOptions(); },
-          error: function () { $('#regionRows').html('<tr><td colspan="3" class="hint">Could not load regions.</td></tr>'); } });
+          error: function () { $('#regionRows').html('<div class="hint geo-empty">Could not load regions.</div>'); } });
       },
       councils: function () {
         cmsAjax({ url: '/api/geography/councils?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load local councils.',
           success: function (res) { councils = res || []; renderCouncils(); },
-          error: function () { $('#councilRows').html('<tr><td colspan="4" class="hint">Could not load local councils.</td></tr>'); } });
+          error: function () { $('#councilRows').html('<div class="hint geo-empty">Could not load local councils.</div>'); } });
       },
       villages: function () {
         cmsAjax({ url: '/api/geography/villages?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load villages.',
           success: function (res) { villages = res || []; renderVillages(); },
-          error: function () { $('#villageRows').html('<tr><td colspan="4" class="hint">Could not load villages.</td></tr>'); } });
+          error: function () { $('#villageRows').html('<div class="hint geo-empty">Could not load villages.</div>'); } });
       }
     };
     if (loaders[kind]) loaders[kind]();
   }
   function loadAll() { loadTab('regions'); loadTab('councils'); loadTab('villages'); }
 
-  function statusCell(active) {
-    return '<td class="' + (active ? 'st-active' : 'st-inactive') + '">' + (active ? 'Active' : 'Inactive') + '</td>';
+  function statusBadge(active) {
+    return '<span class="badge ' + (active ? 'st-active' : 'st-ltfu') + '">' + (active ? 'Active' : 'Inactive') + '</span>';
   }
   function editBtn(kind, id) {
-    return '<td class="row-actions" data-permission="Geography:Write">' +
-      '<button class="btn btn-ghost btn-sm" data-kind="' + kind + '" data-edit="' + id + '">Edit</button></td>';
+    return '<button class="btn btn-ghost btn-sm geo-edit" data-kind="' + kind + '" data-edit="' + id + '" data-permission="Geography:Write" type="button">Edit</button>';
+  }
+  function geoCard(name, sub, active, kind, id) {
+    return '<div class="geo-card">' +
+      '<div class="geo-card-main"><div class="geo-card-name">' + esc(name) + '</div>' +
+      (sub ? '<div class="geo-card-sub">' + esc(sub) + '</div>' : '') + '</div>' +
+      '<div class="geo-card-side">' + statusBadge(active) + editBtn(kind, id) + '</div>' +
+      '</div>';
   }
 
   function renderRegions() {
     var html = regions.map(function (r) {
-      return '<tr><td><strong>' + esc(r.regionName) + '</strong></td>' + statusCell(r.isActive) + editBtn('regions', r.regionId) + '</tr>';
+      return geoCard(r.regionName, null, r.isActive, 'regions', r.regionId);
     }).join('');
-    $('#regionRows').html(html || '<tr><td colspan="3" class="hint">No regions found.</td></tr>');
+    $('#regionRows').html(html || '<div class="hint geo-empty">No regions found.</div>');
     if (window.CMS && typeof CMS.applyPermissions === 'function') CMS.applyPermissions(document);
   }
   function renderCouncils() {
     var html = councils.map(function (c) {
-      return '<tr><td><strong>' + esc(c.councilName) + '</strong></td><td>' + esc(c.regionName || '—') + '</td>' +
-        statusCell(c.isActive) + editBtn('councils', c.councilId) + '</tr>';
+      return geoCard(c.councilName, c.regionName, c.isActive, 'councils', c.councilId);
     }).join('');
-    $('#councilRows').html(html || '<tr><td colspan="4" class="hint">No local councils found.</td></tr>');
+    $('#councilRows').html(html || '<div class="hint geo-empty">No local councils found.</div>');
     if (window.CMS && typeof CMS.applyPermissions === 'function') CMS.applyPermissions(document);
   }
   function renderVillages() {
     var html = villages.map(function (v) {
-      return '<tr><td><strong>' + esc(v.villageName) + '</strong></td><td>' + esc(v.councilName || '—') + '</td>' +
-        statusCell(v.isActive) + editBtn('villages', v.villageId) + '</tr>';
+      return geoCard(v.villageName, v.councilName, v.isActive, 'villages', v.villageId);
     }).join('');
-    $('#villageRows').html(html || '<tr><td colspan="4" class="hint">No villages found.</td></tr>');
+    $('#villageRows').html(html || '<div class="hint geo-empty">No villages found.</div>');
     if (window.CMS && typeof CMS.applyPermissions === 'function') CMS.applyPermissions(document);
   }
 
