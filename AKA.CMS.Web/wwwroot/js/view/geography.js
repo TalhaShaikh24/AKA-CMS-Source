@@ -21,12 +21,15 @@ $(function () {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   /* ---------- tabs ---------- */
-  $('#geoTabs').on('click', '.tab', function () {
-    activeTab = $(this).data('tab');
-    $('#geoTabs .tab').removeClass('active');
+  var $tabs = $('#geoTabs .tab');
+  var $panels = $('.tab-panel');
+  $tabs.on('click', function () {
+    var idx = $tabs.index(this);
+    activeTab = $(this).attr('data-tab');
+    $tabs.removeClass('active');
     $(this).addClass('active');
-    $('.tab-panel').removeClass('active');
-    $('#panel-' + activeTab).addClass('active');
+    $panels.removeClass('active');
+    $panels.eq(idx).addClass('active');
     $('#addGeoBtn').text('+ Add ' + META[activeTab].title);
     renderTab(activeTab); // data already loaded on page init; just re-render cached
   });
