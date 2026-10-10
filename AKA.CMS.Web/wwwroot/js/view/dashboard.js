@@ -28,7 +28,7 @@ $(function () {
     error: function () { $('#stActive').text('—'); $('#stNew').text('—'); }
   });
   cmsAjax({
-    url: '/api/followups/due', method: 'GET',
+    url: '/api/follow-ups/due', method: 'GET',
     success: function (res) {
       var list = res || [];
       $('#stFollowups').text(list.length);

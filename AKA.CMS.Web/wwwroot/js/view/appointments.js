@@ -1,8 +1,8 @@
 /* ==========================================================================
    Follow-ups — matches the CMO design: filter + follow-up queue table.
    API-wired (no demo data):
-     GET  /api/followups/due       → due queue
-     POST /api/followups/schedule  → schedule a follow-up
+     GET  /api/follow-ups/due       → due queue
+     POST /api/follow-ups/schedule  → schedule a follow-up
    ========================================================================== */
 $(function () {
   if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
@@ -36,7 +36,7 @@ $(function () {
 
   function load() {
     cmsAjax({
-      url: '/api/followups/due', method: 'GET',
+      url: '/api/follow-ups/due', method: 'GET',
       fallbackMsg: 'Could not load follow-ups.',
       success: function (res) {
         allRows = (res || []).map(function (r) {
@@ -89,7 +89,7 @@ $(function () {
   $('#bookForm').cmsValidate({
     onValid: function () {
       cmsAjax({
-        url: '/api/followups/schedule', method: 'POST', json: true,
+        url: '/api/follow-ups/schedule', method: 'POST', json: true,
         data: {
           caseId: parseInt($('#bCase').val(), 10),
           scheduledDate: $('#bDate').val(),
