@@ -209,6 +209,14 @@ CMS.bindLayout = function(){
     $wrap.find('.tab-panel').removeClass('active');
     $wrap.find('#' + $tab.data('tab')).addClass('active');
   });
+
+  // Segmented single-select buttons (used by screening question modals).
+  $(document).off('click.cmsseg').on('click.cmsseg', '.seg button', function(){
+    var $seg = $(this).closest('.seg');
+    $seg.find('button').removeClass('sel');
+    $(this).addClass('sel');
+    $seg.closest('.field').removeClass('invalid');
+  });
 };
 
 /* --------------------------------------------------------------------------

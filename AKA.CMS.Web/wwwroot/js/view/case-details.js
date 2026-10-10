@@ -206,7 +206,6 @@ $(function () {
       html += '</div><span class="field-error">Please answer this question.</span></div>';
     });
     $('#esQuestions').html(html);
-    CMS.initSegmented($('#esQuestions'));
     $('#editScreeningModal').addClass('open');
   });
 

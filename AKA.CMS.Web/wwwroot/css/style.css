@@ -748,13 +748,12 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .screen-tool-card.done .stc-badge{background:var(--green);color:#fff}
 .stc-tap{background:var(--blue-tint);color:var(--blue)}
 
-/* ---------- screening tool rows (reference design) ---------- */
-.screen-tool-row{
-  background:#fff;border:1.5px solid var(--border);border-radius:14px;
-  padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-  transition:border-color .15s,box-shadow .15s;
+/* ---------- segmented option buttons (screening questions) ---------- */
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{
+  padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;
+  background:#fff;font:inherit;font-size:13px;color:var(--text);cursor:pointer;
+  transition:border-color .15s,background .15s;
 }
-.screen-tool-row:hover{border-color:#b9c4d6;box-shadow:0 4px 14px rgba(25,63,122,.06)}
-.str-name{font-weight:700;font-size:14.5px;color:var(--text)}
-.str-status{font-size:12.5px;color:#9aa5b5;margin-top:2px}
-.str-open{min-width:76px}
+.seg button:hover{border-color:var(--navy)}
+.seg button.sel{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
