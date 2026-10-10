@@ -63,15 +63,14 @@
 
   <!-- STEP 3: Screening -->
   <div class="reg-step" id="rs3" hidden>
-    <div class="card"><h3>Screening Tools</h3>
-      <p style="margin-top:-8px">Tap a tool to complete its screening. You can complete multiple tools, or skip this step.</p>
-      <div class="screen-tool-grid" id="screenToolCards"></div>
-      <div class="field" style="margin-top:18px;max-width:320px">
+    <div class="card"><h3>Quick Screening Tools</h3>
+      <div class="grid grid-2" id="screenToolCards" style="margin-bottom:20px"></div>
+      <div class="field" style="margin-bottom:4px">
         <label for="fPrelimRisk">Risk Level (Preliminary)</label>
         <select class="input select2" id="fPrelimRisk"><option>Low</option><option>Moderate</option><option>High</option></select>
         <span class="field-error"></span>
       </div>
-      <div class="bottom-actions">
+      <div class="bottom-actions" style="justify-content:flex-end">
         <button type="button" class="btn secondary" id="rsBack3">Back</button>
         <button type="button" class="btn primary" id="rsNext3">Next</button>
       </div>

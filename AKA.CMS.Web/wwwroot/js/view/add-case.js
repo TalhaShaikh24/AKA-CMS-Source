@@ -93,38 +93,42 @@ $(function () {
   var regScreenTool = null;
 
   var SCREEN_TOOLS = [
-    { code: 'PHQ9',   name: 'PHQ-9',   desc: 'Depression' },
-    { code: 'GAD7',   name: 'GAD-7',   desc: 'Anxiety' },
-    { code: 'DASS21', name: 'DASS-21', desc: 'Stress / Depression / Anxiety' },
-    { code: 'SBQR',   name: 'SBQ-R',   desc: 'Suicide Risk' },
-    { code: 'CSSRS',  name: 'C-SSRS',  desc: 'Suicidal Ideation / Behavior' }
+    { code: 'PHQ9',   name: 'PHQ-9 (Depression)' },
+    { code: 'GAD7',   name: 'GAD-7 (Anxiety)' },
+    { code: 'DASS21', name: 'DASS-21 (Stress/Depression/Anxiety)' },
+    { code: 'SBQR',   name: 'SBQ-R (Suicide Risk)' },
+    { code: 'CSSRS',  name: 'C-SSRS (Suicidal Ideation/Behavior)' }
   ];
 
   function renderScreenToolCards() {
     $('#screenToolCards').html(SCREEN_TOOLS.map(function (t) {
       var done = pendingScreenings.some(function (s) { return s.toolCode === t.code; });
-      return '<button type="button" class="screen-tool-card' + (done ? ' done' : '') + '" data-tool="' + t.code + '">' +
-        '<div class="stc-name">' + esc(t.name) + '</div>' +
-        '<div class="stc-desc">' + esc(t.desc) + '</div>' +
-        (done ? '<div class="stc-badge">✓ Completed</div>' : '<div class="stc-badge stc-tap">Tap to start</div>') +
-        '</button>';
+      return '<div class="screen-tool-row">' +
+        '<div><div class="str-name">' + esc(t.name) + '</div>' +
+        '<div class="str-status">' + (done ? 'Completed' : 'Not completed') + '</div></div>' +
+        '<button type="button" class="btn btn-ghost btn-sm str-open" data-tool="' + t.code + '">' + (done ? 'Review' : 'Open') + '</button>' +
+        '</div>';
     }).join(''));
   }
   renderScreenToolCards();
 
-  $(document).on('click', '.screen-tool-card', function () {
+  $(document).on('click', '.str-open', function () {
     var code = $(this).data('tool');
     var tool = SCREEN_TOOLS.filter(function (t) { return t.code === code; })[0];
     if (!tool || !window.CMS_SCREEN_QUESTIONS) return;
     regScreenTool = tool;
     var qs = window.CMS_SCREEN_QUESTIONS[code] || [];
-    $('#rsmTitle').text(tool.name + ' — ' + tool.desc);
+    // Pre-fill with previous answers if re-opening a completed tool.
+    var prev = pendingScreenings.filter(function (s) { return s.toolCode === code; })[0];
+    var prevScores = prev ? prev.itemScores : [];
+    $('#rsmTitle').text(tool.name);
     var html = '';
     qs.forEach(function (q, qi) {
+      var cur = prevScores[qi];
       html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
       html += '<div class="seg" data-seg="rsmq' + qi + '">';
       q.options.forEach(function (o) {
-        html += '<button type="button" data-val="' + o.v + '">' + esc(o.t) + '</button>';
+        html += '<button type="button" data-val="' + o.v + '"' + (cur === o.v ? ' class="sel"' : '') + '>' + esc(o.t) + '</button>';
       });
       html += '</div><span class="field-error">Please answer this question.</span></div>';
     });
@@ -145,7 +149,7 @@ $(function () {
     });
     if (!ok) { CMS.toast('Please answer all questions.', 'error'); return; }
     pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== regScreenTool.code; });
-    pendingScreenings.push({ toolCode: regScreenTool.code, toolName: regScreenTool.name + ' (' + regScreenTool.desc + ')', itemScores: answers });
+    pendingScreenings.push({ toolCode: regScreenTool.code, toolName: regScreenTool.name, itemScores: answers });
     renderScreenToolCards();
     $('#regScreenModal').removeClass('open');
     regScreenTool = null;
