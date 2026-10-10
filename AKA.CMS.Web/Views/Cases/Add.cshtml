@@ -64,20 +64,8 @@
   <!-- STEP 3: Screening -->
   <div class="reg-step" id="rs3" hidden>
     <div class="card"><h3>Screening Tools</h3>
-      <p style="margin-top:-8px">You can complete a screening now, or skip and do it later from the Screening page.</p>
-      <div class="field" style="max-width:340px;margin-bottom:16px">
-        <label for="screenToolSel">Select screening tool</label>
-        <select class="input select2" id="screenToolSel">
-          <option value="">Choose a tool…</option>
-          <option value="PHQ9">PHQ-9 (Depression)</option>
-          <option value="GAD7">GAD-7 (Anxiety)</option>
-          <option value="DASS21">DASS-21 (Stress / Depression / Anxiety)</option>
-          <option value="SBQR">SBQ-R (Suicide Risk)</option>
-          <option value="CSSRS">C-SSRS (Suicidal Ideation / Behavior)</option>
-        </select>
-      </div>
-      <div id="regScreenQuestions"></div>
-      <div id="regScreenDone" style="margin-top:12px"></div>
+      <p style="margin-top:-8px">Tap a tool to complete its screening. You can complete multiple tools, or skip this step.</p>
+      <div class="screen-tool-grid" id="screenToolCards"></div>
       <div class="field" style="margin-top:18px;max-width:320px">
         <label for="fPrelimRisk">Risk Level (Preliminary)</label>
         <select class="input select2" id="fPrelimRisk"><option>Low</option><option>Moderate</option><option>High</option></select>
@@ -86,6 +74,21 @@
       <div class="bottom-actions">
         <button type="button" class="btn secondary" id="rsBack3">Back</button>
         <button type="button" class="btn primary" id="rsNext3">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screening modal -->
+  <div class="modal-backdrop" id="regScreenModal">
+    <div class="modal" style="max-width:640px">
+      <div class="modal-head">
+        <h3 id="rsmTitle">Screening</h3>
+        <button class="modal-x" data-close type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body"><div id="rsmQuestions"></div></div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
+        <button class="btn btn-primary" id="rsmComplete" type="button">Complete Screening</button>
       </div>
     </div>
   </div>

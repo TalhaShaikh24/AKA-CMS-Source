@@ -88,71 +88,68 @@ $(function () {
   $('#fRegion').on('change', applyCouncilFilter);
   $('#fLocalCouncil').on('change', applyVillageFilter);
 
-  /* ---------- screening during registration ---------- */
+  /* ---------- screening during registration (cards + modal) ---------- */
   var pendingScreenings = []; // {toolCode, toolName, itemScores}
   var regScreenTool = null;
 
-  $('#screenToolSel').on('change', function () {
-    var code = $(this).val();
-    regScreenTool = code || null;
-    renderRegScreenQuestions();
-  });
+  var SCREEN_TOOLS = [
+    { code: 'PHQ9',   name: 'PHQ-9',   desc: 'Depression' },
+    { code: 'GAD7',   name: 'GAD-7',   desc: 'Anxiety' },
+    { code: 'DASS21', name: 'DASS-21', desc: 'Stress / Depression / Anxiety' },
+    { code: 'SBQR',   name: 'SBQ-R',   desc: 'Suicide Risk' },
+    { code: 'CSSRS',  name: 'C-SSRS',  desc: 'Suicidal Ideation / Behavior' }
+  ];
 
-  function renderRegScreenQuestions() {
-    var $wrap = $('#regScreenQuestions');
-    if (!regScreenTool || !window.CMS_SCREEN_QUESTIONS) { $wrap.html(''); return; }
-    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool] || [];
-    var toolName = $('#screenToolSel option:selected').text();
-    var html = '<div class="card" style="box-shadow:none;border:1.5px solid var(--border);margin-bottom:0"><h3 style="margin-bottom:12px">' + esc(toolName) + '</h3>';
+  function renderScreenToolCards() {
+    $('#screenToolCards').html(SCREEN_TOOLS.map(function (t) {
+      var done = pendingScreenings.some(function (s) { return s.toolCode === t.code; });
+      return '<button type="button" class="screen-tool-card' + (done ? ' done' : '') + '" data-tool="' + t.code + '">' +
+        '<div class="stc-name">' + esc(t.name) + '</div>' +
+        '<div class="stc-desc">' + esc(t.desc) + '</div>' +
+        (done ? '<div class="stc-badge">✓ Completed</div>' : '<div class="stc-badge stc-tap">Tap to start</div>') +
+        '</button>';
+    }).join(''));
+  }
+  renderScreenToolCards();
+
+  $(document).on('click', '.screen-tool-card', function () {
+    var code = $(this).data('tool');
+    var tool = SCREEN_TOOLS.filter(function (t) { return t.code === code; })[0];
+    if (!tool || !window.CMS_SCREEN_QUESTIONS) return;
+    regScreenTool = tool;
+    var qs = window.CMS_SCREEN_QUESTIONS[code] || [];
+    $('#rsmTitle').text(tool.name + ' — ' + tool.desc);
+    var html = '';
     qs.forEach(function (q, qi) {
       html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
-      html += '<div class="seg" data-seg="rq' + qi + '">';
+      html += '<div class="seg" data-seg="rsmq' + qi + '">';
       q.options.forEach(function (o) {
         html += '<button type="button" data-val="' + o.v + '">' + esc(o.t) + '</button>';
       });
       html += '</div><span class="field-error">Please answer this question.</span></div>';
     });
-    html += '<button type="button" class="btn primary" id="regScreenComplete" style="margin-top:6px">Complete ' + esc(toolName.split(' (')[0]) + ' Screening</button></div>';
-    $wrap.html(html);
-    CMS.initSegmented($wrap);
-  }
+    $('#rsmQuestions').html(html);
+    CMS.initSegmented($('#rsmQuestions'));
+    $('#regScreenModal').addClass('open');
+  });
 
-  $(document).on('click', '#regScreenComplete', function () {
-    if (!regScreenTool) return;
-    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool] || [];
+  $('#rsmComplete').on('click', function () {
+    if (!regScreenTool || !window.CMS_SCREEN_QUESTIONS) return;
+    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool.code] || [];
     var answers = [], ok = true;
     qs.forEach(function (q, qi) {
-      var $f = $('#regScreenQuestions .field[data-q="' + qi + '"]');
+      var $f = $('#rsmQuestions .field[data-q="' + qi + '"]');
       var v = $f.find('.seg button.sel').data('val');
       if (v === undefined) { $f.addClass('invalid'); ok = false; }
       else { $f.removeClass('invalid'); answers.push(parseInt(v, 10)); }
     });
     if (!ok) { CMS.toast('Please answer all questions.', 'error'); return; }
-    var toolName = $('#screenToolSel option:selected').text();
-    // Replace any earlier completion of the same tool.
-    pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== regScreenTool; });
-    pendingScreenings.push({ toolCode: regScreenTool, toolName: toolName, itemScores: answers });
-    renderPendingScreenings();
-    $('#regScreenQuestions').html('');
-    $('#screenToolSel').val('').trigger('change');
+    pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== regScreenTool.code; });
+    pendingScreenings.push({ toolCode: regScreenTool.code, toolName: regScreenTool.name + ' (' + regScreenTool.desc + ')', itemScores: answers });
+    renderScreenToolCards();
+    $('#regScreenModal').removeClass('open');
     regScreenTool = null;
-    CMS.toast(toolName.split(' (')[0] + ' screening saved — will be submitted with the case.', 'success');
-  });
-
-  function renderPendingScreenings() {
-    var $d = $('#regScreenDone');
-    if (!pendingScreenings.length) { $d.html(''); return; }
-    $d.html('<div class="notice" style="margin:0">' + pendingScreenings.map(function (s) {
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">' +
-        '<span>✓ <b>' + esc(s.toolName) + '</b> completed</span>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-rmscreen="' + s.toolCode + '">Remove</button></div>';
-    }).join('') + '</div>');
-  }
-
-  $(document).on('click', '[data-rmscreen]', function () {
-    var code = $(this).data('rmscreen');
-    pendingScreenings = pendingScreenings.filter(function (s) { return s.toolCode !== code; });
-    renderPendingScreenings();
+    CMS.toast('Screening completed — will be submitted with the case.', 'success');
   });
 
   function submitPendingScreenings(caseId, done) {
