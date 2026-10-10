@@ -28,20 +28,34 @@ $(function () {
     $('.tab-panel').removeClass('active');
     $('#panel-' + activeTab).addClass('active');
     $('#addGeoBtn').text('+ Add ' + META[activeTab].title);
+    loadTab(activeTab); // fresh data on every tab switch
   });
 
   /* ---------- load ---------- */
-  function loadAll() {
-    cmsAjax({ url: '/api/geography/regions?includeInactive=true', method: 'GET',
-      fallbackMsg: 'Could not load regions.',
-      success: function (res) { regions = res || []; renderRegions(); fillParentOptions(); } });
-    cmsAjax({ url: '/api/geography/councils?includeInactive=true', method: 'GET',
-      fallbackMsg: 'Could not load local councils.',
-      success: function (res) { councils = res || []; renderCouncils(); } });
-    cmsAjax({ url: '/api/geography/villages?includeInactive=true', method: 'GET',
-      fallbackMsg: 'Could not load villages.',
-      success: function (res) { villages = res || []; renderVillages(); } });
+  function loadTab(kind) {
+    var loaders = {
+      regions: function () {
+        cmsAjax({ url: '/api/geography/regions?includeInactive=true', method: 'GET',
+          fallbackMsg: 'Could not load regions.',
+          success: function (res) { regions = res || []; renderRegions(); fillParentOptions(); },
+          error: function () { $('#regionRows').html('<tr><td colspan="3" class="hint">Could not load regions.</td></tr>'); } });
+      },
+      councils: function () {
+        cmsAjax({ url: '/api/geography/councils?includeInactive=true', method: 'GET',
+          fallbackMsg: 'Could not load local councils.',
+          success: function (res) { councils = res || []; renderCouncils(); },
+          error: function () { $('#councilRows').html('<tr><td colspan="4" class="hint">Could not load local councils.</td></tr>'); } });
+      },
+      villages: function () {
+        cmsAjax({ url: '/api/geography/villages?includeInactive=true', method: 'GET',
+          fallbackMsg: 'Could not load villages.',
+          success: function (res) { villages = res || []; renderVillages(); },
+          error: function () { $('#villageRows').html('<tr><td colspan="4" class="hint">Could not load villages.</td></tr>'); } });
+      }
+    };
+    if (loaders[kind]) loaders[kind]();
   }
+  function loadAll() { loadTab('regions'); loadTab('councils'); loadTab('villages'); }
 
   function statusCell(active) {
     return '<td class="' + (active ? 'st-active' : 'st-inactive') + '">' + (active ? 'Active' : 'Inactive') + '</td>';

@@ -17,6 +17,13 @@ $(function () {
   var step = 1;
   var geo = { regions: [], councils: [], villages: [] };
 
+  // Age dropdown (old theme style: individual ages 1-100).
+  (function buildAgeOptions() {
+    var html = '<option value="" selected disabled>Select age</option>';
+    for (var a = 1; a <= 100; a++) html += '<option value="' + a + '">' + a + '</option>';
+    $('#fAge').html(html);
+  })();
+
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function val(id) { return $.trim($('#' + id).val() || ''); }
@@ -142,7 +149,7 @@ $(function () {
   function buildReview() {
     $('#revPersonal').html(
       kvRow('Name', val('fName')) +
-      kvRow('Age', text('fAge')) +
+      kvRow('Age', val('fAge')) +
       kvRow('Gender', text('fGender')) +
       kvRow('Phone', val('fPhone')) +
       kvRow('Location', [text('fVillage'), text('fLocalCouncil'), text('fRegion')].filter(Boolean).join(', '))
@@ -158,14 +165,12 @@ $(function () {
   $('#rsSubmit').on('click', function () {
     if (!validateStep(1)) { showStep(1); return; }
 
-    // Map the design's age bands to a representative age for the API.
-    var ageBand = text('fAge');
-    var ageMap = { '0-5': 3, '6-12': 9, '13-17': 15, '18-24': 21, '25-44': 34, '45-64': 54, '65+': 70 };
+    var ageVal = val('fAge');
     var memberPayload = {
       fullName: val('fName'),
       gender: text('fGender') || null,
       phone: val('fPhone') || null,
-      age: ageMap[ageBand] || null,
+      age: ageVal ? parseInt(ageVal, 10) : null,
       regionCouncil: text('fRegion') || null,
       localCouncil: text('fLocalCouncil') || null,
       village: text('fVillage') || null,
