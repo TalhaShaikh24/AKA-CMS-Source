@@ -1,30 +1,32 @@
 /* ==========================================================================
-   CMS · Cases — js/view/cases.js
-   API-wired (no demo data):
+   CMS · My Cases — js/view/cases.js
+   Matches the CMO design: search + status/risk filters, case register
+   table with risk badges. API-wired (no demo data):
      GET /api/cases?search=&page=&pageSize=  → paged case list
-   Row click → /Cases/Details?id={caseId}
+   Row "View" → /Cases/Details?id={caseId}
    ========================================================================== */
 $(function () {
   'use strict';
+  if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
+  CMS.bindLayout();
 
   var PAGE_SIZE = 20;
-  var state = { search: '', page: 1, totalCount: 0, items: [] };
+  var state = { search: '', status: '', risk: '', page: 1, totalCount: 0, items: [] };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function fmtDate(iso) {
-    if (!iso) return '—';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  function riskBadge(level) {
+    var v = String(level || '').toLowerCase();
+    var cls = v === 'high' || v === 'critical' ? 'high'
+      : v === 'medium' || v === 'moderate' ? 'medium'
+      : v === 'low' ? 'low' : 'gray';
+    return '<span class="badge ' + cls + '">' + esc(level || '—') + '</span>';
   }
-  function priorityBadge(p) {
-    var v = String(p || '').toLowerCase();
-    var cls = v === 'high' ? 'badge-high' : v === 'low' ? 'badge-low' : 'badge-moderate';
-    return '<span class="badge ' + cls + '">' + esc(p || '—') + '</span>';
+  function statusBadge(s) {
+    return '<span class="badge blue">' + esc(s || '—') + '</span>';
   }
 
   function loadCases() {
@@ -38,6 +40,7 @@ $(function () {
         CMS.loader(false);
         state.items = res.items || [];
         state.totalCount = res.totalCount || 0;
+        renderStatuses();
         renderTable();
         renderPager();
       },
@@ -45,22 +48,41 @@ $(function () {
     });
   }
 
-  function renderTable() {
-    var $tb = $('#casesTable tbody').empty();
-    $('#casesEmpty').prop('hidden', state.items.length > 0);
-    $('#caseCount').text(state.totalCount + ' case' + (state.totalCount === 1 ? '' : 's'));
+  function renderStatuses() {
+    var seen = {};
     state.items.forEach(function (c) {
-      $tb.append(
-        '<tr class="rowlink" data-id="' + c.caseId + '">' +
-        '<td><div class="cell-main">' + esc(c.caseNumber || ('#' + c.caseId)) + '</div></td>' +
-        '<td><div class="cell-main">' + esc(c.memberName || 'Unknown patient') + '</div>' +
-        (c.memberMrNo ? '<div class="cell-sub">' + esc(c.memberMrNo) + '</div>' : '') + '</td>' +
-        '<td><span class="pill">' + esc(c.statusName || c.status) + '</span></td>' +
-        '<td>' + priorityBadge(c.priorityLevel) + '</td>' +
-        '<td>' + esc(fmtDate(c.createdAt)) + '</td>' +
-        '</tr>'
-      );
+      var s = c.statusName || c.status;
+      if (s && !seen[s]) seen[s] = true;
     });
+    var cur = $('#caseStatusFilter').val();
+    var html = '<option value="">All Status</option>' + Object.keys(seen).sort().map(function (s) {
+      return '<option value="' + esc(s) + '">' + esc(s) + '</option>';
+    }).join('');
+    $('#caseStatusFilter').html(html);
+    if (cur) $('#caseStatusFilter').val(cur);
+  }
+
+  function matchFilters(c) {
+    if (state.status && (c.statusName || c.status) !== state.status) return false;
+    if (state.risk && String(c.priorityLevel || '').toLowerCase() !== state.risk.toLowerCase()) return false;
+    return true;
+  }
+
+  function renderTable() {
+    var rows = state.items.filter(matchFilters);
+    var html = rows.map(function (c) {
+      var ageGender = [c.memberAge != null ? c.memberAge : null, c.memberGender].filter(function (x) { return x; }).join(' / ') || '—';
+      return '<tr>' +
+        '<td><strong>' + esc(c.caseNumber || ('#' + c.caseId)) + '</strong></td>' +
+        '<td>' + esc(c.memberName || 'Unknown patient') + '</td>' +
+        '<td>' + esc(ageGender) + '</td>' +
+        '<td>' + esc(c.memberVillage || '—') + '</td>' +
+        '<td>' + riskBadge(c.priorityLevel) + '</td>' +
+        '<td>' + statusBadge(c.statusName || c.status) + '</td>' +
+        '<td><button class="btn small secondary" data-view="' + c.caseId + '">View</button></td>' +
+        '</tr>';
+    }).join('');
+    $('#caseRows').html(html || '<tr><td colspan="7"><div class="empty">No cases found.</div></td></tr>');
   }
 
   function renderPager() {
@@ -91,28 +113,11 @@ $(function () {
       loadCases();
     }, 350);
   });
+  $('#caseStatusFilter').on('change', function () { state.status = $(this).val(); renderTable(); });
+  $('#caseRiskFilter').on('change', function () { state.risk = $(this).val(); renderTable(); });
 
-  $('#casesTable').on('click', 'tr.rowlink', function () {
-    location.href = '/Cases/Details?id=' + encodeURIComponent($(this).data('id'));
-  });
-
-  $('#exportCsvBtn').on('click', function () {
-    if (!state.items.length) { CMS.toast('Nothing to export.', 'info'); return; }
-    var rows = [['Case ID', 'Case Number', 'Patient', 'MR No', 'Status', 'Priority', 'Created']];
-    state.items.forEach(function (c) {
-      rows.push([c.caseId, c.caseNumber || '', c.memberName || '', c.memberMrNo || '',
-        c.statusName || c.status, c.priorityLevel || '', c.createdAt || '']);
-    });
-    var csv = rows.map(function (r) {
-      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
-    }).join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'cases-page-' + state.page + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  $(document).on('click', '[data-view]', function () {
+    location.href = '/Cases/Details?id=' + encodeURIComponent($(this).data('view'));
   });
 
   loadCases();

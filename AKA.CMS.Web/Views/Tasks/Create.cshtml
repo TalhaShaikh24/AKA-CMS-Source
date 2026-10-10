@@ -1,99 +1,83 @@
 @{
     ViewData["Title"] = "Create Task";
+    ViewData["Breadcrumb"] = "Workspace";
     ViewData["ActivePage"] = "tasks";
     ViewData["RequiredPermission"] = "Tasks:Write";
 }
-<style>
-  .steps{display:flex;gap:8px;margin:14px 0}
-  .step{flex:1;text-align:center;padding:8px;border-radius:8px;background:#eef1f5;color:#777;font-weight:600;font-size:13px}
-  .step.active{background:#1b2a4a;color:#fff}
-  .step.done{background:#e2f3e5;color:#1e7e34}
-  .seg{display:flex;gap:6px}
-  .seg label{flex:1;text-align:center;padding:9px 0;border:1px solid var(--line,#dfe3e8);border-radius:8px;cursor:pointer;font-weight:600;color:#555}
-  .seg input{display:none}
-  .seg input:checked+span{color:#1b2a4a}
-  .seg label:has(input:checked){border-color:#1b2a4a;background:#eef3fb}
-  .wizard-foot{display:flex;justify-content:space-between;margin-top:18px}
-  .review-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0}
-  .review-row .k{color:#777}.review-row .v{font-weight:600;text-align:right}
-  .checkline{display:flex;gap:8px;align-items:center;margin:6px 0}
-  .success-panel{text-align:center;padding:40px 20px}
-  .success-panel .tick{font-size:48px;color:#1e7e34}
-</style>
 
-<div class="page-head">
-  <div class="page-title">
-    <h1>Create Task</h1>
-    <p class="sub">Assign clinical work to a team member</p>
-  </div>
+<div class="page-head"><div><h1>Create Task</h1></div></div>
+
+<div class="steps" id="taskSteps">
+  <div class="step current" data-step="1"><span class="circle">1</span>Task Details</div><div class="step-line"></div>
+  <div class="step" data-step="2"><span class="circle">2</span>Assign To</div><div class="step-line"></div>
+  <div class="step" data-step="3"><span class="circle">3</span>Review &amp; Create</div>
 </div>
 
-<div class="card"><div class="card-body">
-  <div class="steps">
-    <div class="step active" data-step="1">1 · Task Details</div>
-    <div class="step" data-step="2">2 · Assign To</div>
-    <div class="step" data-step="3">3 · Review &amp; Create</div>
-  </div>
-
+<form id="taskForm" data-validate novalidate>
   <!-- STEP 1 -->
   <div data-pane="1">
-    <div class="form-grid">
-      <div class="field full"><label for="tTitle">Task Title <span class="req">*</span></label><input class="input" id="tTitle" maxlength="200" placeholder="Complete PHQ-9 assessment"><span class="field-error"></span></div>
-      <div class="field full"><label for="tDesc">Description / Instructions</label><textarea class="input" id="tDesc" rows="3" maxlength="4000" placeholder="Instructions for the assignee&hellip;"></textarea><span class="field-error"></span></div>
-      <div class="field full"><label for="tCase">Case / Patient <span class="req">*</span></label><select class="input" id="tCase" style="width:100%"></select><span class="field-error"></span></div>
-      <div class="field"><label for="tType">Task Type</label><select class="input select2" id="tType"><option>Clinical Assessment</option><option>Follow-up Call</option><option>Screening</option><option>Referral Review</option><option>Home Visit</option><option>Documentation</option><option>Other</option></select><span class="field-error"></span></div>
-      <div class="field"><label for="tDue">Due Date <span class="req">*</span></label><input class="input" id="tDue" type="date"><span class="field-error"></span></div>
-      <div class="field full"><label>Priority</label><div class="seg" id="tPriority">
-        <label><input type="radio" name="tPri" value="High"><span>High</span></label>
-        <label><input type="radio" name="tPri" value="Medium" checked><span>Medium</span></label>
-        <label><input type="radio" name="tPri" value="Low"><span>Low</span></label>
-      </div></div>
-    </div>
-    <div class="wizard-foot">
-      <a class="btn btn-ghost" href="@Url.Action("Index", "Tasks")">Cancel</a>
-      <button class="btn btn-primary" id="toStep2" type="button">Next &rarr;</button>
+    <div class="card"><h3>1. Task Details</h3>
+      <div class="form-grid">
+        <div class="field"><label for="tTitle">Task Title *</label><input class="input" id="tTitle" maxlength="200" placeholder="Complete PHQ-9 assessment" required><span class="field-error"></span></div>
+        <div class="field"><label for="tType">Task Type</label><select class="input" id="tType"><option>Clinical Assessment</option><option>Follow-up Call</option><option>Screening</option><option>Referral Review</option><option>Home Visit</option><option>Documentation</option><option>Other</option></select><span class="field-error"></span></div>
+        <div class="field full"><label for="tDesc">Description / Instructions</label><textarea class="input" id="tDesc" rows="3" maxlength="4000" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field"><label for="tCase">Case / Patient *</label><select class="input" id="tCase" style="width:100%" required></select><span class="field-error"></span></div>
+        <div class="field"><label for="tPriority">Priority</label><select class="input" id="tPriority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="tDue">Due Date *</label><input class="input" id="tDue" type="date" required><span class="field-error"></span></div>
+      </div>
+      <div class="bottom-actions">
+        <a class="btn secondary" href="@Url.Action("Index", "Tasks")">Cancel</a>
+        <button class="btn primary" id="toStep2" type="button">Next</button>
+      </div>
     </div>
   </div>
 
   <!-- STEP 2 -->
-  <div data-pane="2" style="display:none">
-    <div class="form-grid">
-      <div class="field"><label for="tRole">Role</label><select class="input select2" id="tRole"><option value="">Select role&hellip;</option></select><span class="field-error"></span></div>
-      <div class="field"><label for="tUser">User</label><select class="input select2" id="tUser"><option value="">Select user&hellip;</option></select><span class="field-error"></span></div>
-      <div class="field full"><label>Additional Recipients for Approval</label>
-        <div class="checkline"><input type="checkbox" id="nHc" checked><label for="nHc">Notify Helpline Coordinator</label></div>
-        <div class="checkline"><input type="checkbox" id="nCc" checked><label for="nCc">Notify Clinical Coordinator</label></div>
-        <div class="checkline"><input type="checkbox" id="nPc"><label for="nPc">Notify Programme Coordinator</label></div>
+  <div data-pane="2" hidden>
+    <div class="card"><h3>2. Assign To</h3>
+      <div class="form-grid">
+        <div class="field"><label for="tRole">Role</label><select class="input" id="tRole"><option value="">Select role&hellip;</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="tUser">User</label><select class="input" id="tUser"><option value="">Select user&hellip;</option></select><span class="field-error"></span></div>
       </div>
-    </div>
-    <div class="wizard-foot">
-      <button class="btn btn-ghost" id="backTo1" type="button">&larr; Previous</button>
-      <button class="btn btn-primary" id="toStep3" type="button">Next &rarr;</button>
+      <h3 style="margin-top:22px">Additional Recipients for Approval</h3>
+      <div class="checkbox-row">
+        <label class="check"><input type="checkbox" id="nHc" checked> Notify Helpline Coordinator</label>
+        <label class="check"><input type="checkbox" id="nCc"> Notify Clinical Coordinator</label>
+        <label class="check"><input type="checkbox" id="nPc"> Notify Programme Manager</label>
+      </div>
+      <div class="notice" style="margin-top:18px">This task will also be visible to the assigned user's team based on their role permissions.</div>
+      <div class="bottom-actions">
+        <button class="btn secondary" id="backTo1" type="button">Back</button>
+        <button class="btn primary" id="toStep3" type="button">Next</button>
+      </div>
     </div>
   </div>
 
   <!-- STEP 3 -->
-  <div data-pane="3" style="display:none">
-    <div id="reviewBox"></div>
-    <div class="wizard-foot">
-      <button class="btn btn-ghost" id="backTo2" type="button">&larr; Previous</button>
-      <button class="btn btn-primary" id="createTaskBtn" type="button">Create Task</button>
+  <div data-pane="3" hidden>
+    <div class="card"><h3>3. Review &amp; Create</h3>
+      <div class="kv" id="reviewBox"></div>
+      <div class="bottom-actions">
+        <button class="btn secondary" id="backTo2" type="button">Back</button>
+        <button class="btn primary" id="createTaskBtn" type="button">Assign Task</button>
+      </div>
     </div>
   </div>
 
   <!-- SUCCESS -->
-  <div data-pane="4" style="display:none">
-    <div class="success-panel">
-      <div class="tick">&#10003;</div>
-      <h2>Task Successfully Assigned!</h2>
+  <div data-pane="4" hidden>
+    <div class="hero-success">
+      <div class="success-icon">✓</div>
+      <h1>Task Successfully Assigned!</h1>
       <p class="hint" id="successMsg"></p>
-      <div style="margin-top:18px;display:flex;gap:10px;justify-content:center">
-        <a class="btn btn-ghost" href="@Url.Action("Index", "Tasks")">Back to Tasks</a>
-        <a class="btn btn-primary" href="@Url.Action("Create", "Tasks")">Create Another</a>
+      <p><b id="successTaskId"></b></p>
+      <div class="success-actions">
+        <a class="btn primary" href="@Url.Action("Index", "Tasks")">Back to Tasks</a>
+        <a class="btn secondary" href="@Url.Action("Create", "Tasks")">Create Another</a>
       </div>
     </div>
   </div>
-</div></div>
+</form>
 
 @section Scripts {
 <script src="~/js/view/task-create.js" asp-append-version="true"></script>

@@ -35,7 +35,6 @@ $(function () {
       success: function (res) { crisisTypes = res || []; }
     });
     loadEvents();
-    loadTimeline();
   }
 
   function loadEvents() {
@@ -92,44 +91,13 @@ $(function () {
     $('#crisisEvents').html(html);
   }
 
-  function loadTimeline() {
-    var history = [], crises = [];
-    var done = 0;
-    function maybeRender() {
-      if (++done < 2) return;
-      var items = [];
-      history.forEach(function (h) {
-        items.push({ at: h.performedAt, title: (h.actionCode || 'Transition') + ': ' + (h.fromState || '') + ' → ' + (h.toState || ''),
-          meta: (h.performedByUsername || 'System') + (h.comment ? ' · ' + h.comment : ''), crisis: false });
-      });
-      crises.forEach(function (e) {
-        items.push({ at: e.createdAt, title: 'Crisis: ' + (e.crisisTypeName || e.crisisTypeCode) + ' (' + e.status + ')',
-          meta: (e.createdByUsername || 'System') + (e.notes ? ' · ' + e.notes : ''), crisis: true });
-        if (e.updatedAt) items.push({ at: e.updatedAt, title: 'Crisis ' + e.status.toLowerCase() + ': ' + (e.crisisTypeName || e.crisisTypeCode),
-          meta: '', crisis: true });
-      });
-      items.sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
-      if (!items.length) { $('#caseTimeline').html('<p class="hint">No timeline events yet.</p>'); return; }
-      var html = '';
-      items.slice(0, 50).forEach(function (i) {
-        html += '<div class="tl-item' + (i.crisis ? ' crisis' : '') + '"><div class="tl-title">' + esc(i.title) +
-                '</div><div class="tl-meta">' + fmtDT(i.at) + (i.meta ? ' · ' + esc(i.meta) : '') + '</div></div>';
-      });
-      $('#caseTimeline').html(html);
-    }
-    cmsAjax({ url: '/api/cases/' + caseId + '/history', method: 'GET', fallbackMsg: '',
-      success: function (res) { history = res || []; }, complete: maybeRender });
-    cmsAjax({ url: '/api/crisis-events/case/' + caseId, method: 'GET', fallbackMsg: '',
-      success: function (res) { crises = res || []; }, complete: maybeRender });
-  }
-
   /* ---------- event actions ---------- */
   function updateEventStatus(card, newStatus) {
     cmsAjax({
       url: '/api/crisis-events/' + card.data('id') + '/status', method: 'PATCH',
       data: JSON.stringify({ newStatus: newStatus, rowVersion: card.data('rv') }),
       fallbackMsg: 'Could not update the crisis event.',
-      success: function () { CMS.toast('Crisis event updated.', 'success'); loadEvents(); loadTimeline(); }
+      success: function () { CMS.toast('Crisis event updated.', 'success'); loadEvents(); }
     });
   }
   $('#crisisEvents').on('click', '[data-ev-escalate]', function () { updateEventStatus($(this).closest('.ev-card'), 'ESCALATED'); });
@@ -139,17 +107,19 @@ $(function () {
   function goStep(n) {
     $('#responseModal [data-pane]').hide();
     $('#responseModal [data-pane="' + n + '"]').show();
-    $('#responseModal .step').removeClass('active done');
-    $('#responseModal .step').each(function () {
+    $('#crisisSteps .step').each(function () {
       var s = +$(this).data('step');
-      if (s < n) $(this).addClass('done');
-      if (s === n) $(this).addClass('active');
+      $(this).toggleClass('done', s < n).toggleClass('current', s === n);
+      $(this).find('.circle').text(s < n ? '✓' : s);
     });
   }
   function openModal() { goStep(1); $('#responseModal').addClass('open').css('display', 'flex'); }
   function closeModal() { $('#responseModal').removeClass('open').css('display', 'none'); }
 
   $('#startResponseBtn').on('click', openModal);
+  $('#viewChecklistBtn').on('click', function () {
+    location.href = '/Cases/Timeline?id=' + caseId;
+  });
   $('#responseModal').on('click', '[data-close]', closeModal);
   $('#responseModal').on('click', function (e) { if (e.target === this) closeModal(); });
   $('#toAssess').on('click', function () { goStep(2); });
@@ -183,7 +153,7 @@ $(function () {
       $('#escalatedMsg').text('The case ' + (caseInfo ? (caseInfo.caseNumber || '') : '') +
         ' has been assigned to the crisis and emergency team. Escalation: ' + $('input[name=cE]:checked').val() + '.');
       goStep(4);
-      loadEvents(); loadTimeline();
+      loadEvents();
     }
 
     var typeCode = (crisisTypes[0] && crisisTypes[0].crisisTypeCode) || 'OTHER';

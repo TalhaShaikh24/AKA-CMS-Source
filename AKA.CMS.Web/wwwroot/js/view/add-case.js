@@ -1,166 +1,194 @@
 /* ==========================================================================
    CMS · Register New Case — js/view/add-case.js
-   API-wired (no demo data) — matches the real backend flow:
+   Matches the CMO design: 4 steps (Personal Info → Risk Assessment →
+   Screening → Review). Region/Local Council/Village dropdowns are loaded
+   dynamically from /api/geography. Submit flow (unchanged backend):
      1. POST /api/patients/members  → register the community member
      2. POST /api/cases              → create the case for that member
-     3. redirect → /Screening?caseId={id} for the actual screening
-   Screening is NOT collected here: the API scores screenings
-   server-side after the case exists.
+     3. redirect → /Screening?caseId={id}
    ========================================================================== */
 $(function () {
   'use strict';
-
-  CMS.initSelect2($('#wizardForm'));
-
-  // Age dropdown (mobile screen: "Select age").
-  (function buildAgeOptions() {
-    var html = '<option value="">Select age&hellip;</option>';
-    for (var a = 1; a <= 100; a++) html += '<option value="' + a + '">' + a + '</option>';
-    $('#fAge').html(html);
-  })();
-
-  // Gender segmented control (mobile Register screen style).
-  $('#fGenderSeg .seg-btn').on('click', function () {
-    $('#fGenderSeg .seg-btn').removeClass('active');
-    $(this).addClass('active');
-    $('#fGender').val($(this).data('val')).trigger('change');
-    clearFieldError($('#fGender'));
-  });
+  if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
+  CMS.bindLayout();
+  CMS.initSelect2($('#regForm'));
+  CMS.initValidation(document);
 
   var step = 1;
+  var geo = { regions: [], councils: [], villages: [] };
 
-  function showStep(n) {
-    step = n;
-    $('.wizard-step').removeClass('active');
-    $('#s' + n).addClass('active');
-    $('#wizardStepper .step').each(function () {
-      $(this).toggleClass('active', parseInt($(this).data('step'), 10) <= n);
-    });
-    $('#wizBack').prop('hidden', n === 1);
-    $('#wizNext').prop('hidden', n === 3);
-    $('#wizSubmit').prop('hidden', n !== 3);
-    if (n === 3) buildReview();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function fieldVal(id) { return $.trim($('#' + id).val() || ''); }
-  function fieldText(id) {
-    var $el = $('#' + id);
-    var v = $el.val();
-    if ($el.is('select')) {
-      var t = $el.find('option:selected').text();
-      return $.trim(t) && v ? $.trim(t) : '';
-    }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function val(id) { return $.trim($('#' + id).val() || ''); }
+  function text(id) {
+    var $el = $('#' + id), v = $el.val();
+    if ($el.is('select')) { var t = $.trim($el.find('option:selected').text()); return v ? t : ''; }
     return $.trim(v || '');
   }
-  function markInvalid($f, msg) {
-    $f.addClass('invalid');
-    $f.closest('.field').find('.field-error').text(msg || 'This field is required.');
+
+  /* ---------- geography dropdowns (dynamic) ---------- */
+  function fillSelect($sel, items, textKey, placeholder) {
+    var html = '<option value="" selected disabled>' + placeholder + '</option>';
+    items.forEach(function (it) {
+      html += '<option value="' + esc(it[textKey]) + '">' + esc(it[textKey]) + '</option>';
+    });
+    $sel.html(html);
   }
-  function clearInvalid(scope) {
-    $(scope).find('.invalid').removeClass('invalid');
-    $(scope).find('.field-error').text('');
+  function loadGeography() {
+    cmsAjax({ url: '/api/geography/regions', method: 'GET',
+      fallbackMsg: 'Could not load regions.',
+      success: function (res) {
+        geo.regions = res || [];
+        fillSelect($('#fRegion'), geo.regions, 'regionName', 'Select region');
+      }
+    });
+    cmsAjax({ url: '/api/geography/councils', method: 'GET',
+      fallbackMsg: 'Could not load local councils.',
+      success: function (res) {
+        geo.councils = res || [];
+        applyCouncilFilter();
+      }
+    });
+    cmsAjax({ url: '/api/geography/villages', method: 'GET',
+      fallbackMsg: 'Could not load villages.',
+      success: function (res) {
+        geo.villages = res || [];
+        applyVillageFilter();
+      }
+    });
+  }
+  function applyCouncilFilter() {
+    var regionName = val('fRegion');
+    var region = geo.regions.filter(function (r) { return r.regionName === regionName; })[0];
+    var list = region
+      ? geo.councils.filter(function (c) { return !c.regionId || c.regionId === region.regionId; })
+      : geo.councils;
+    var cur = val('fLocalCouncil');
+    fillSelect($('#fLocalCouncil'), list, 'councilName', 'Select local council');
+    if (cur) $('#fLocalCouncil').val(cur);
+    applyVillageFilter();
+  }
+  function applyVillageFilter() {
+    var councilName = val('fLocalCouncil');
+    var council = geo.councils.filter(function (c) { return c.councilName === councilName; })[0];
+    var list = council
+      ? geo.villages.filter(function (v) { return !v.councilId || v.councilId === council.councilId; })
+      : geo.villages;
+    var cur = val('fVillage');
+    fillSelect($('#fVillage'), list, 'villageName', 'Select village');
+    if (cur) $('#fVillage').val(cur);
+  }
+  $('#fRegion').on('change', applyCouncilFilter);
+  $('#fLocalCouncil').on('change', applyVillageFilter);
+
+  /* ---------- screening tools (design info cards) ---------- */
+  var tools = ['PHQ-9 (Depression)', 'GAD-7 (Anxiety)', 'DASS-21 (Stress/Depression/Anxiety)', 'SBQ-R (Suicide Risk)', 'C-SSRS (Suicidal Ideation/Behavior)'];
+  $('#screenTools').html(tools.map(function (t) {
+    return '<div class="quick card" style="box-shadow:none"><div class="left"><div class="qicon">✓</div><div><b>' + esc(t) + '</b>' +
+      '<div style="font-size:12px;color:#8995a7">Available after registration</div></div></div></div>';
+  }).join(''));
+
+  /* ---------- steps ---------- */
+  function showStep(n) {
+    step = n;
+    $('.reg-step').prop('hidden', true);
+    $('#rs' + n).prop('hidden', false);
+    $('#regSteps .step').each(function () {
+      var s = parseInt($(this).data('step'), 10);
+      $(this).toggleClass('done', s < n).toggleClass('current', s === n);
+      $(this).find('.circle').text(s < n ? '✓' : s);
+    });
+    if (n === 4) buildReview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function validateStep(n) {
     var ok = true;
-    clearInvalid('#s' + n);
-    $('#s' + n).find('[required]').each(function () {
+    var $scope = $('#rs' + n);
+    $scope.find('.field').removeClass('invalid');
+    $scope.find('[required]').each(function () {
       var $f = $(this);
-      var valid = true;
-      if ($f.is(':checkbox')) valid = $f.is(':checked');
-      else valid = $.trim($f.val() || '') !== '';
-      if (!valid) { markInvalid($f); ok = false; }
+      if (!$.trim($f.val() || '')) {
+        $f.closest('.field').addClass('invalid');
+        $f.closest('.field').find('.field-error').text('This field is required.');
+        ok = false;
+      }
     });
-    // Phone format check (shared validator attribute).
-    var phone = fieldVal('fPhone');
-    if (phone && window.CMS && typeof CMS.validatePhone === 'function' && !CMS.validatePhone(phone)) {
-      markInvalid($('#fPhone'), 'Enter a valid phone number.');
-      ok = false;
+    if (n === 1) {
+      var phone = val('fPhone');
+      if (phone && window.CMS && typeof CMS.validatePhone === 'function' && !CMS.validatePhone(phone)) {
+        $('#fPhone').closest('.field').addClass('invalid');
+        $('#fPhone').closest('.field').find('.field-error').text('Enter a valid phone number.');
+        ok = false;
+      }
     }
+    if (!ok) CMS.toast('Please fix the highlighted fields.', 'error');
     return ok;
   }
 
-  $('#wizNext').on('click', function () {
-    if (validateStep(step)) showStep(Math.min(3, step + 1));
-  });
-  $('#wizBack').on('click', function () {
-    showStep(Math.max(1, step - 1));
-  });
-  $('#wizardStepper').on('click', '.step', function () {
-    var n = parseInt($(this).data('step'), 10);
-    if (n < step) showStep(n);
-  });
+  $('#rsNext1').on('click', function () { if (validateStep(1)) showStep(2); });
+  $('#rsNext2').on('click', function () { showStep(3); });
+  $('#rsNext3').on('click', function () { showStep(4); });
+  $('#rsBack2').on('click', function () { showStep(1); });
+  $('#rsBack3').on('click', function () { showStep(2); });
+  $('#rsBack4').on('click', function () { showStep(3); });
+  $('[data-go]').on('click', function () { location.href = $(this).data('go'); });
 
-  function reviewRow(k, v) {
+  /* ---------- review ---------- */
+  function kvRow(k, v) {
     if (!v) return '';
-    var d = document.createElement('div');
-    d.textContent = v;
-    return '<div class="rev-row"><span>' + k + '</span><strong>' + d.innerHTML + '</strong></div>';
+    return '<div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div>';
   }
-
   function buildReview() {
-    var html = '<h4 class="sec-sub">Patient</h4>' +
-      reviewRow('Full name', fieldVal('fName')) +
-      reviewRow('Age', fieldVal('fAge')) +
-      reviewRow('Gender', fieldVal('fGender')) +
-      reviewRow('Phone', fieldVal('fPhone')) +
-      reviewRow('Region council', fieldVal('fRegion')) +
-      reviewRow('Local council', fieldVal('fLocalCouncil')) +
-      reviewRow('Village', fieldVal('fVillage')) +
-      reviewRow('JK attend', fieldVal('fJk')) +
-      reviewRow('Employment / Education', fieldVal('fEmployment')) +
-      reviewRow('Marital status', fieldText('fMarital')) +
-      reviewRow('No. of children', fieldText('fChildren')) +
-      reviewRow('Languages spoken', fieldVal('fLanguages')) +
-      reviewRow('Health insurance', fieldText('fInsurance')) +
-      reviewRow('GP / Usual care', fieldVal('fGp')) +
-      reviewRow('Prior MH treatment', fieldText('fPriorMh')) +
-      reviewRow('Connected to MH care', fieldText('fConnectedMh')) +
-      reviewRow('Care provider', fieldVal('fCareProvider')) +
-      '<h4 class="sec-sub">Case</h4>' +
-      reviewRow('Source', fieldText('fSource')) +
-      reviewRow('Priority', fieldText('fPriority')) +
-      reviewRow('Notes', fieldVal('fNotes'));
-    $('#reviewBox').html(html);
+    $('#revPersonal').html(
+      kvRow('Name', val('fName')) +
+      kvRow('Age', text('fAge')) +
+      kvRow('Gender', text('fGender')) +
+      kvRow('Phone', val('fPhone')) +
+      kvRow('Location', [text('fVillage'), text('fLocalCouncil'), text('fRegion')].filter(Boolean).join(', '))
+    );
+    $('#revConcern').text(val('fConcern') || '—');
+    var riskBits = [];
+    if (text('fRiskCat')) riskBits.push(text('fRiskCat') + ' risk');
+    if (text('fIsCrisis') === 'Yes') riskBits.push('active crisis');
+    $('#revRisk').text(riskBits.join(' / ') || '—');
   }
 
-  /* ------------------------------------------------------------------ *
-   * Submit: member → case → screening page
-   * ------------------------------------------------------------------ */
-  $('#wizSubmit').on('click', function () {
-    if (!validateStep(1) || !validateStep(2)) { showStep(1); return; }
-    if (!$('#fConsent').is(':checked')) {
-      markInvalid($('#fConsent'), 'Consent is required.');
-      CMS.toast('Patient consent is required.', 'error');
-      return;
-    }
+  /* ---------- submit: member → case → screening ---------- */
+  $('#rsSubmit').on('click', function () {
+    if (!validateStep(1)) { showStep(1); return; }
 
-    var ageVal = fieldVal('fAge');
-    var childrenVal = fieldVal('fChildren');
+    // Map the design's age bands to a representative age for the API.
+    var ageBand = text('fAge');
+    var ageMap = { '0-5': 3, '6-12': 9, '13-17': 15, '18-24': 21, '25-44': 34, '45-64': 54, '65+': 70 };
     var memberPayload = {
-      fullName: fieldVal('fName'),
-      gender: fieldVal('fGender') || null,
-      phone: fieldVal('fPhone') || null,
-      age: ageVal ? parseInt(ageVal, 10) : null,
-      regionCouncil: fieldVal('fRegion') || null,
-      localCouncil: fieldVal('fLocalCouncil') || null,
-      village: fieldVal('fVillage') || null,
-      jkAttend: fieldVal('fJk') || null,
-      employmentEducation: fieldVal('fEmployment') || null,
-      maritalStatus: fieldVal('fMarital') || null,
-      numberOfChildren: childrenVal !== '' ? parseInt(childrenVal, 10) : null,
-      languagesSpoken: fieldVal('fLanguages') || null,
-      healthInsurance: fieldVal('fInsurance') || null,
-      gpUsualCare: fieldVal('fGp') || null,
-      priorMhTreatment: fieldVal('fPriorMh') || null,
-      connectedToMhCare: fieldVal('fConnectedMh') || null,
-      careProviderName: fieldVal('fCareProvider') || null
+      fullName: val('fName'),
+      gender: text('fGender') || null,
+      phone: val('fPhone') || null,
+      age: ageMap[ageBand] || null,
+      regionCouncil: text('fRegion') || null,
+      localCouncil: text('fLocalCouncil') || null,
+      village: text('fVillage') || null,
+      jkAttend: text('fJk') || null,
+      employmentEducation: text('fEmployment') || null,
+      maritalStatus: text('fMarital') || null,
+      languagesSpoken: val('fLanguages') || null,
+      healthInsurance: text('fInsurance') || null,
+      gpUsualCare: text('fGp') || null,
+      priorMhTreatment: text('fPriorMh') || null,
+      connectedToMhCare: text('fConnectedMh') || null
     };
+    var riskCat = text('fRiskCat');
+    var priorityMap = { 'Low': 'Low', 'Moderate': 'Moderate', 'High': 'High', 'Critical': 'High' };
+    var notesBits = [];
+    if (val('fConcern')) notesBits.push(val('fConcern'));
+    if (text('fIsCrisis')) notesBits.push('Crisis: ' + text('fIsCrisis'));
+    if (riskCat) notesBits.push('Risk: ' + riskCat);
+    if (val('fAssessor')) notesBits.push('Assessor: ' + val('fAssessor'));
     var casePayload = {
-      sourceType: fieldVal('fSource'),
-      priorityLevel: fieldVal('fPriority') || null,
-      notes: fieldVal('fNotes') || null
+      sourceType: 'WalkIn',
+      priorityLevel: priorityMap[riskCat] || null,
+      notes: notesBits.join(' | ') || null
     };
 
     CMS.loader(true);
@@ -190,5 +218,6 @@ $(function () {
     });
   });
 
+  loadGeography();
   showStep(1);
 });

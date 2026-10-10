@@ -62,6 +62,12 @@ public sealed class ReferralService(
         return referrals.Select(r => r.ToDto()).ToList();
     }
 
+    public async Task<IReadOnlyList<ReferralDto>> GetAllAsync(int top = 100)
+    {
+        var referrals = await referralRepository.GetAllAsync(top);
+        return referrals.Select(r => r.ToDto()).ToList();
+    }
+
     private async Task<string?> TryApplyTransitionAsync(
         int caseId, string action, string comment,
         Func<string, bool> hasPermission, int performedBy, string ipAddress)

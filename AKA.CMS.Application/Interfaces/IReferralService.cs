@@ -9,4 +9,5 @@ public interface IReferralService
         int referralId, UpdateReferralStatusRequest request,
         Func<string, bool> hasPermission, int performedBy, string ipAddress);
     Task<IReadOnlyList<ReferralDto>> GetByCaseAsync(int caseId);
+    Task<IReadOnlyList<ReferralDto>> GetAllAsync(int top = 100);
 }

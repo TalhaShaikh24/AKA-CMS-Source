@@ -56,6 +56,8 @@ public static class PermissionPolicies
     public const string LookupsRead = "Permissions:Lookups:Read";
     public const string FacilitiesRead = "Permissions:Facilities:Read";
     public const string FacilitiesWrite = "Permissions:Facilities:Write";
+    public const string GeographyRead = "Permissions:Geography:Read";
+    public const string GeographyWrite = "Permissions:Geography:Write";
     public const string TasksRead = "Permissions:Tasks:Read";
     public const string TasksWrite = "Permissions:Tasks:Write";
     public const string WorkflowConfigRead = "Permissions:WorkflowConfig:Read";

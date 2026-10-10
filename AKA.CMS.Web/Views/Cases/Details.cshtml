@@ -1,150 +1,52 @@
 @{
     ViewData["Title"] = "Case Details";
+    ViewData["Breadcrumb"] = "Workspace";
     ViewData["ActivePage"] = "cases";
     ViewData["RequiredPermission"] = "Cases:Read";
 }
-<style>
-  .ref-item{border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px}
-  .ref-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
-  .cell-sub.muted{color:var(--muted);font-size:12px}
-  .note-item{border-left:3px solid var(--navy);background:var(--bg);border-radius:0 10px 10px 0;padding:8px 12px;margin-bottom:12px}
-  .note-item p{margin:4px 0 0}
-  .case-header{display:flex;gap:16px;align-items:center}
-  .case-header-info{flex:1;min-width:0}
-  .case-header-info h2{margin:0 0 4px}
-  .case-header-info .pid{color:var(--muted);font-size:13px}
-  .case-badges{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-  .case-header-actions{display:flex;gap:8px}
-  .avatar.lg{width:56px;height:56px;font-size:20px}
-</style>
 
-<a class="link back-link" href="@Url.Action("Index", "Cases")">&larr; Back to cases</a>
-
-<div id="caseDetailsWrap">
-  <div class="card case-header-card">
-    <div class="card-body case-header">
-      <span class="avatar lg" id="cdAvatar"></span>
-      <div class="case-header-info">
-        <h2 id="cdName"></h2>
-        <span class="pid" id="cdId"></span>
-        <div class="case-badges" id="cdBadges"></div>
-      </div>
-      <div class="case-header-actions">
-        <a class="btn btn-ghost" id="crisisProtocolBtn" href="#" data-permission="Crisis:Read">Crisis Protocol</a>
-        <a class="btn btn-ghost" href="@Url.Action("Index", "Appointments")">Book Appointment</a>
-        <button class="btn btn-primary" id="editCaseBtn" type="button">Edit Case</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabs" id="caseTabs">
-    <button class="tab active" data-tab="overview" type="button">Overview</button>
-    <button class="tab" data-tab="clinical" type="button">Clinical Assessment</button>
-    <button class="tab" data-tab="screenings" type="button">Screenings</button>
-    <button class="tab" data-tab="referrals" type="button">Referrals</button>
-    <button class="tab" data-tab="timeline" type="button">Timeline</button>
-  </div>
-
-  <div class="tab-panel active" data-panel="overview">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-head"><h3>Patient Information</h3></div>
-        <div class="card-body"><div class="kv" id="cdKv"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>Risk Summary</h3></div>
-        <div class="card-body" id="cdRiskSummary"></div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head"><h3>Patient Profile (Registration Details)</h3></div>
-      <div class="card-body"><div class="kv" id="cdPatientKv"><div><span class="k">Loading&hellip;</span><div class="v">&nbsp;</div></div></div></div>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="clinical">
-    <div class="card">
-      <div class="card-head"><h3>Clinical Notes</h3></div>
-      <div class="card-body">
-        <div id="clinicalNotesList" style="margin-bottom:16px"></div>
-        <div class="field">
-          <label for="clinicalNotes">Add assessment note</label>
-          <textarea class="input" id="clinicalNotes" rows="4" placeholder="Write clinical observations, formulation and plan&hellip;"></textarea>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" id="saveNotesBtn" type="button">Save Note</button></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="screenings">
-    <div class="card">
-      <div class="card-head"><h3>Screening History</h3></div>
-      <div class="card-body flush">
-        <div class="table-wrap">
-          <table class="table" id="screeningTable">
-            <thead><tr><th>Tool</th><th>Score</th><th>Severity</th><th>Date</th><th>By</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="referrals">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-head"><h3>Referrals</h3></div>
-        <div class="card-body"><div id="referralList" class="ref-list"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>Add Referral</h3></div>
-        <div class="card-body">
-          <form id="referralForm" data-validate novalidate>
-            <div class="field">
-              <label for="refTo">Referred to <span class="req">*</span></label>
-              <select class="input select2" id="refTo" required>
-                <option value="">Select&hellip;</option>
-                <option value="PSYCHIATRIST">Psychiatrist</option>
-                <option value="PSYCHOLOGIST">Clinical Psychologist</option>
-                <option value="PSYCHOSOCIAL">Psychosocial Support</option>
-                <option value="EMERGENCY_SERVICES">Emergency Services</option>
-              </select>
-              <span class="field-error"></span>
-            </div>
-            <div class="field">
-              <label for="refNotes">Notes</label>
-              <textarea class="input" id="refNotes" rows="3" placeholder="Reason for referral&hellip;"></textarea>
-            </div>
-            <button class="btn btn-primary" type="submit">Add Referral</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="timeline">
-    <div class="card">
-      <div class="card-head"><h3>Case Timeline</h3></div>
-      <div class="card-body"><div class="timeline" id="caseTimeline"></div></div>
-    </div>
+<div class="page-head">
+  <div><h1>Case Details</h1><p id="cdSub">Loading&hellip;</p></div>
+  <div class="page-actions">
+    <button class="btn btn-ghost" id="editCaseBtn" type="button" data-permission="Cases:Write">Edit Case</button>
   </div>
 </div>
 
-@section Scripts {
-<script src="~/js/view/case-details.js" asp-append-version="true"></script>
-}
+<div class="detail-grid">
+  <div>
+    <div class="card"><h3>Patient Information</h3><div class="kv" id="cdPatientKv"><div class="hint">Loading&hellip;</div></div></div>
+    <div class="card"><h3>Current Service</h3><div class="kv" id="cdServiceKv"><div class="hint">Loading&hellip;</div></div></div>
+    <div class="card"><h3>Case Actions</h3>
+      <div class="grid grid-2">
+        <button class="btn danger" data-go-crisis>Crisis Protocol</button>
+        <button class="btn secondary" data-go="/Screening">Risk Assessment</button>
+        <button class="btn secondary" data-go-timeline>Case Timeline</button>
+        <button class="btn secondary" data-go="/Referrals/Create">Referrals</button>
+        <button class="btn secondary" data-go="/SafetyPlans">Safety Plan</button>
+        <button class="btn secondary" data-go="/Appointments">Follow-ups</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="card"><h3>Current Risk</h3><div id="cdRiskBox"><div class="hint">Loading&hellip;</div></div></div>
+    <div class="card"><h3>Recent Timeline</h3>
+      <div class="timeline" id="cdTimeline"><div class="hint">Loading&hellip;</div></div>
+      <div style="margin-top:14px"><button class="btn secondary" data-go-timeline style="width:100%">View Full Timeline</button></div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="editCaseModal">
   <div class="modal">
     <div class="modal-head">
       <h3>Edit Case</h3>
-      <button class="modal-x" data-modal-close type="button" aria-label="Close">&times;</button>
+      <button class="modal-x" data-close type="button" aria-label="Close">&times;</button>
     </div>
     <form id="editCaseForm" data-validate novalidate>
       <div class="modal-body">
         <div class="field">
           <label for="ecPriority">Priority</label>
-          <select class="input select2" id="ecPriority">
+          <select class="input" id="ecPriority">
             <option value="">Select&hellip;</option>
             <option>High</option>
             <option>Moderate</option>
@@ -157,9 +59,13 @@
         </div>
       </div>
       <div class="modal-foot">
-        <button class="btn btn-ghost" data-modal-close type="button">Cancel</button>
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
         <button class="btn btn-primary" type="submit">Save Changes</button>
       </div>
     </form>
   </div>
 </div>
+
+@section Scripts {
+<script src="~/js/view/case-details.js" asp-append-version="true"></script>
+}

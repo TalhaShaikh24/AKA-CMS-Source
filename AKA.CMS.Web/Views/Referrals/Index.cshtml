@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "Referrals";
+    ViewData["Breadcrumb"] = "Workspace";
+    ViewData["ActivePage"] = "referrals";
+    ViewData["RequiredPermission"] = "Referrals:Read";
+}
+
+<div class="page-head">
+  <div><h1>Referrals</h1><p>Manage referral requests and provider status.</p></div>
+</div>
+
+<div class="card"><h3>Referral Queue</h3>
+  <div class="table-wrap"><table class="table" id="refTable">
+    <thead><tr><th>Referral ID</th><th>Service</th><th>Referred By</th><th>Status</th><th></th></tr></thead>
+    <tbody id="refRows"><tr><td colspan="6" class="hint">Loading&hellip;</td></tr></tbody>
+  </table></div>
+</div>
+
+<div style="margin-top:18px" data-permission="Referrals:Write">
+  <button class="btn primary" data-go="/Referrals/Create">Create Referral</button>
+</div>
+
+@section Scripts {
+<script src="~/js/view/referrals.js" asp-append-version="true"></script>
+}

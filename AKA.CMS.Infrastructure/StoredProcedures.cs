@@ -46,6 +46,19 @@ public static class StoredProcedures
     public const string FacilityCreate = "sp_CMS_Facility_Create";
     public const string FacilityUpdate = "sp_CMS_Facility_Update";
 
+    public const string RegionGetAll = "sp_CMS_Region_GetAll";
+    public const string RegionGetById = "sp_CMS_Region_GetById";
+    public const string RegionCreate = "sp_CMS_Region_Create";
+    public const string RegionUpdate = "sp_CMS_Region_Update";
+    public const string LocalCouncilGetAll = "sp_CMS_LocalCouncil_GetAll";
+    public const string LocalCouncilGetById = "sp_CMS_LocalCouncil_GetById";
+    public const string LocalCouncilCreate = "sp_CMS_LocalCouncil_Create";
+    public const string LocalCouncilUpdate = "sp_CMS_LocalCouncil_Update";
+    public const string VillageGetAll = "sp_CMS_Village_GetAll";
+    public const string VillageGetById = "sp_CMS_Village_GetById";
+    public const string VillageCreate = "sp_CMS_Village_Create";
+    public const string VillageUpdate = "sp_CMS_Village_Update";
+
     public const string TaskGetAll = "sp_CMS_Task_GetAll";
     public const string TaskGetById = "sp_CMS_Task_GetById";
     public const string TaskCreate = "sp_CMS_Task_Create";
@@ -76,6 +89,7 @@ public static class StoredProcedures
     public const string ReferralGetById = "sp_CMS_Referral_GetById";
     public const string ReferralUpdateStatus = "sp_CMS_Referral_UpdateStatus";
     public const string ReferralGetByCase = "sp_CMS_Referral_GetByCase";
+    public const string ReferralGetAll = "sp_CMS_Referral_GetAll";
     public const string CaseCommentAdd = "sp_CMS_CaseComment_Add";
     public const string CaseCommentGetByCase = "sp_CMS_CaseComment_GetByCase";
     public const string CarerAdd = "sp_CMS_Carer_Add";

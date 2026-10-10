@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Geography";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "geography";
+    ViewData["RequiredPermission"] = "Geography:Read";
+}
+<style>
+  .row-actions{white-space:nowrap}
+  .row-actions .btn{margin-right:6px}
+  .st-active{color:#1e7e34;font-weight:600}
+  .st-inactive{color:#999;font-weight:600}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Geography</h1>
+    <p class="sub">Regions, local councils and villages — used by the case registration form</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" id="addGeoBtn" type="button" data-permission="Geography:Write">+ Add</button>
+  </div>
+</div>
+
+<div class="tabs" id="geoTabs">
+  <button class="tab active" data-tab="regions" type="button">Regions</button>
+  <button class="tab" data-tab="councils" type="button">Local Councils</button>
+  <button class="tab" data-tab="villages" type="button">Villages</button>
+</div>
+
+<div class="tab-panel active" id="panel-regions">
+  <div class="card"><div class="card-body">
+    <table class="table"><thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+    <tbody id="regionRows"><tr><td colspan="3" class="hint">Loading&hellip;</td></tr></tbody></table>
+  </div></div>
+</div>
+<div class="tab-panel" id="panel-councils">
+  <div class="card"><div class="card-body">
+    <table class="table"><thead><tr><th>Name</th><th>Region</th><th>Status</th><th></th></tr></thead>
+    <tbody id="councilRows"><tr><td colspan="4" class="hint">Loading&hellip;</td></tr></tbody></table>
+  </div></div>
+</div>
+<div class="tab-panel" id="panel-villages">
+  <div class="card"><div class="card-body">
+    <table class="table"><thead><tr><th>Name</th><th>Local Council</th><th>Status</th><th></th></tr></thead>
+    <tbody id="villageRows"><tr><td colspan="4" class="hint">Loading&hellip;</td></tr></tbody></table>
+  </div></div>
+</div>
+
+<div class="modal-backdrop" id="geoModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="geoModalTitle">Add</h3><button class="modal-x" data-close type="button">&times;</button></div>
+    <div class="modal-body">
+      <form id="geoForm" data-validate novalidate>
+        <div class="form-grid">
+          <div class="field full" id="fParentWrap" hidden>
+            <label for="fParent" id="fParentLabel">Parent</label>
+            <select class="input select2" id="fParent"></select>
+            <span class="field-error"></span>
+          </div>
+          <div class="field full">
+            <label for="fName" id="fNameLabel">Name <span class="req">*</span></label>
+            <input class="input" id="fName" required maxlength="100" placeholder="Name">
+            <span class="field-error"></span>
+          </div>
+          <div class="field" id="fActiveWrap" hidden>
+            <label for="fActive">Status</label>
+            <select class="input" id="fActive"><option value="true">Active</option><option value="false">Inactive</option></select>
+            <span class="field-error"></span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="button" class="btn btn-primary" id="geoFormSubmit">Save</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/geography.js" asp-append-version="true"></script>
+}

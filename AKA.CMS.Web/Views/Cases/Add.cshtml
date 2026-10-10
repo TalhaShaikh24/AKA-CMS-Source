@@ -1,101 +1,94 @@
 @{
     ViewData["Title"] = "Register New Case";
-    ViewData["ActivePage"] = "cases";
+    ViewData["Breadcrumb"] = "Case";
+    ViewData["ActivePage"] = "cases-add";
     ViewData["RequiredPermission"] = "Cases:Write";
 }
 
 <div class="page-head">
-  <div class="page-title">
-    <h1>Register New Case</h1>
-    <p class="sub">Register the patient, create the case, then continue to screening</p>
-  </div>
+  <div><h1>Register New Case</h1><p>Create a new case and complete the initial assessment.</p></div>
 </div>
 
-<div class="card">
-  <div class="card-body">
-    <div class="stepper" id="wizardStepper">
-      <div class="step active" data-step="1"><span class="n">1</span><span class="t">Personal Information</span></div>
-      <div class="step" data-step="2"><span class="n">2</span><span class="t">Case Information</span></div>
-      <div class="step" data-step="3"><span class="n">3</span><span class="t">Review &amp; Submit</span></div>
+<div class="steps" id="regSteps">
+  <div class="step current" data-step="1"><span class="circle">1</span>Personal Info</div><div class="step-line"></div>
+  <div class="step" data-step="2"><span class="circle">2</span>Risk Assessment</div><div class="step-line"></div>
+  <div class="step" data-step="3"><span class="circle">3</span>Screening</div><div class="step-line"></div>
+  <div class="step" data-step="4"><span class="circle">4</span>Review</div>
+</div>
+
+<form id="regForm" data-validate novalidate>
+  <!-- STEP 1: Personal Info -->
+  <div class="reg-step" id="rs1">
+    <div class="card"><h3>Personal Information</h3>
+      <div class="form-grid">
+        <div class="field"><label for="fName">Full Name *</label><input class="input" id="fName" placeholder="Enter full name" required><span class="field-error"></span></div>
+        <div class="field"><label for="fAge">Age *</label><select class="input" id="fAge" required><option value="" selected disabled>Select age</option><option>0-5</option><option>6-12</option><option>13-17</option><option>18-24</option><option>25-44</option><option>45-64</option><option>65+</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fPhone">Phone Number</label><input class="input" id="fPhone" placeholder="03xx xxx xxxx" data-validate="phone"><span class="field-error"></span></div>
+        <div class="field"><label for="fGender">Gender *</label><select class="input" id="fGender" required><option value="" selected disabled>Select gender</option><option>Female</option><option>Male</option><option>Other</option><option>Prefer not to say</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fRegion">Region</label><select class="input" id="fRegion"><option value="" selected disabled>Select region</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fLocalCouncil">Local Council</label><select class="input" id="fLocalCouncil"><option value="" selected disabled>Select local council</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fVillage">Village</label><select class="input" id="fVillage"><option value="" selected disabled>Select village</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fJk">JK / Attend</label><select class="input" id="fJk"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fEmployment">Employment / Education</label><select class="input" id="fEmployment"><option value="" selected disabled>Select status</option><option>Student</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option><option>Not applicable</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fMarital">Marital Status</label><select class="input" id="fMarital"><option value="" selected disabled>Select marital status</option><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fLanguages">Language(s) Spoken</label><input class="input" id="fLanguages" placeholder="Languages"><span class="field-error"></span></div>
+        <div class="field"><label for="fInsurance">Health Insurance</label><select class="input" id="fInsurance"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>Unknown</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fGp">GP / Usual Source of Care</label><select class="input" id="fGp"><option value="" selected disabled>Select source</option><option>GP</option><option>Hospital</option><option>Clinic</option><option>Community Health Worker</option><option>None</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fPriorMh">Prior MH Treatment</label><select class="input" id="fPriorMh"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>Unknown</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fConnectedMh">Connected to MH Care?</label><select class="input" id="fConnectedMh"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+      </div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" data-go="/Dashboard">Cancel</button>
+        <button type="button" class="btn primary" id="rsNext1">Next</button>
+      </div>
     </div>
-
-    <form id="wizardForm" data-validate novalidate>
-      <div class="wizard-step active" id="s1">
-        <div class="form-grid">
-          <div class="field full"><label for="fName">Full name <span class="req">*</span></label><input class="input" id="fName" name="fullName" placeholder="Enter full name" required><span class="field-error"></span></div>
-          <div class="field"><label for="fAge">Age <span class="req">*</span></label><select class="input select2" id="fAge" name="age" required><option value="">Select age&hellip;</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fPhone">Phone number</label><input class="input" id="fPhone" name="phone" placeholder="03xx xxx xxxx" data-validate="phone"><span class="field-error"></span></div>
-          <div class="field full"><label>Gender <span class="req">*</span></label><div class="gender-seg" id="fGenderSeg" role="radiogroup" aria-label="Gender"><button type="button" class="seg-btn" data-val="Male">Male</button><button type="button" class="seg-btn" data-val="Female">Female</button><button type="button" class="seg-btn" data-val="Other">Other</button></div><input type="hidden" id="fGender" name="gender" required><span class="field-error"></span></div>
-          <div class="field"><label for="fRegion">Region council</label><input class="input" id="fRegion" name="regionCouncil" placeholder="Select region"><span class="field-error"></span></div>
-          <div class="field"><label for="fLocalCouncil">Local council</label><input class="input" id="fLocalCouncil" name="localCouncil" placeholder="Select local council"><span class="field-error"></span></div>
-          <div class="field"><label for="fVillage">Village</label><input class="input" id="fVillage" name="village" placeholder="Select village"><span class="field-error"></span></div>
-          <div class="field"><label for="fJk">JK attend</label><input class="input" id="fJk" name="jkAttend" placeholder="Select JK"><span class="field-error"></span></div>
-          <div class="field full"><label for="fEmployment">Employment / Education</label><input class="input" id="fEmployment" name="employmentEducation" placeholder="Employment / Education"><span class="field-error"></span></div>
-          <div class="field"><label for="fMarital">Marital status</label><select class="input select2" id="fMarital" name="maritalStatus"><option value="">Select&hellip;</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option><option>Separated</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fChildren">No. of children</label><select class="input select2" id="fChildren" name="numberOfChildren"><option value="">Select&hellip;</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5+</option></select><span class="field-error"></span></div>
-          <div class="field full"><label for="fLanguages">Which language(s) spoken</label><input class="input" id="fLanguages" name="languagesSpoken" placeholder="Languages"><span class="field-error"></span></div>
-          <div class="field"><label for="fInsurance">Health insurance</label><select class="input select2" id="fInsurance" name="healthInsurance"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fGp">GP/Usual source of care</label><input class="input" id="fGp" name="gpUsualCare" placeholder="Select"><span class="field-error"></span></div>
-          <div class="field"><label for="fPriorMh">Prior MH treatment</label><select class="input select2" id="fPriorMh" name="priorMhTreatment"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-          <div class="field"><label for="fConnectedMh">Connected to MH care?</label><select class="input select2" id="fConnectedMh" name="connectedToMhCare"><option value="">Select&hellip;</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-          <div class="field full"><label for="fCareProvider">Name of care provider</label><input class="input" id="fCareProvider" name="careProviderName" placeholder="Care provider name"><span class="field-error"></span></div>
-        </div>
-      </div>
-
-      <div class="wizard-step" id="s2">
-        <div class="form-grid">
-          <div class="field">
-            <label for="fSource">Case source <span class="req">*</span></label>
-            <select class="input select2" id="fSource" name="sourceType" required>
-              <option value="">Select&hellip;</option>
-              <option value="WalkIn">Walk-in</option>
-              <option value="Referral">Referral</option>
-              <option value="Helpline">Helpline</option>
-              <option value="AwarenessSession">Awareness session</option>
-              <option value="Screening">Community screening</option>
-              <option value="Community">Community</option>
-            </select>
-            <span class="field-error"></span>
-          </div>
-          <div class="field">
-            <label for="fPriority">Priority</label>
-            <select class="input select2" id="fPriority" name="priorityLevel">
-              <option value="">Select&hellip;</option>
-              <option>High</option>
-              <option>Moderate</option>
-              <option>Low</option>
-            </select>
-            <span class="field-error"></span>
-          </div>
-          <div class="field full">
-            <label for="fNotes">Notes</label>
-            <textarea class="input" id="fNotes" name="notes" rows="3" placeholder="Reason for registration, presenting concerns&hellip;"></textarea>
-            <span class="field-error"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="wizard-step" id="s3">
-        <h3 class="step-h">Review &amp; submit</h3>
-        <p class="sub">Please review the information before registering the case. After registration you will continue to the Screening page.</p>
-        <div id="reviewBox" class="review-box"></div>
-        <div class="field consent-field">
-          <label class="check-row">
-            <input type="checkbox" id="fConsent" name="consent" required>
-            <span class="check-label">I confirm the patient has consented to registration and data processing. <span class="req">*</span></span>
-          </label>
-          <span class="field-error"></span>
-        </div>
-      </div>
-
-      <div class="wizard-foot">
-        <button class="btn btn-ghost" id="wizBack" type="button">Back</button>
-        <button class="btn btn-primary" id="wizNext" type="button">Next</button>
-        <button class="btn btn-accent" id="wizSubmit" type="button" hidden>Register Case</button>
-      </div>
-    </form>
   </div>
-</div>
+
+  <!-- STEP 2: Risk Assessment -->
+  <div class="reg-step" id="rs2" hidden>
+    <div class="card"><h3>Presenting Concern / History</h3>
+      <div class="form-grid">
+        <div class="field full"><label for="fConcern">Presenting Concern / History</label><textarea class="input" id="fConcern" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field"><label for="fIsCrisis">Is this a Crisis?</label><select class="input" id="fIsCrisis"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fRiskCat">Risk Category</label><select class="input" id="fRiskCat"><option value="" selected disabled>Select risk</option><option>Low</option><option>Moderate</option><option>High</option><option>Critical</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fAssessor">Assessor Name</label><input class="input" id="fAssessor" placeholder="Free text"><span class="field-error"></span></div>
+        <div class="field"><label for="fAssessTime">Time of Assessment</label><input class="input" type="date" id="fAssessTime"><span class="field-error"></span></div>
+      </div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" id="rsBack2">Back</button>
+        <button type="button" class="btn primary" id="rsNext2">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Screening -->
+  <div class="reg-step" id="rs3" hidden>
+    <div class="card"><h3>Quick Screening Tools</h3>
+      <div class="grid grid-2" id="screenTools"></div>
+      <div class="field" style="margin-top:18px;max-width:320px">
+        <label for="fPrelimRisk">Risk Level (Preliminary)</label>
+        <select class="input" id="fPrelimRisk"><option>Low</option><option>Moderate</option><option>High</option></select>
+        <span class="field-error"></span>
+      </div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" id="rsBack3">Back</button>
+        <button type="button" class="btn primary" id="rsNext3">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Review & Submit -->
+  <div class="reg-step" id="rs4" hidden>
+    <div class="card"><h3>Personal Details</h3><div class="kv" id="revPersonal"></div></div>
+    <div class="card"><h3>Reason for Referral</h3><p id="revConcern" style="margin:0"></p></div>
+    <div class="card"><h3>Risk Assessment</h3><p id="revRisk" style="margin:0"></p></div>
+    <div class="notice">This case will be assigned to the Case Management Officer (CMO) for further assessment and care coordination.</div>
+    <div class="bottom-actions">
+      <button type="button" class="btn secondary" id="rsBack4">Back</button>
+      <button type="button" class="btn primary" id="rsSubmit">Submit Case</button>
+    </div>
+  </div>
+</form>
 
 @section Scripts {
 <script src="~/js/view/add-case.js" asp-append-version="true"></script>

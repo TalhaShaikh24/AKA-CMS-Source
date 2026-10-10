@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Case Timeline";
+    ViewData["Breadcrumb"] = "Case";
+    ViewData["ActivePage"] = "cases";
+    ViewData["RequiredPermission"] = "Cases:Read";
+}
+
+<div class="page-head">
+  <div><h1>Case Timeline</h1><p id="tlSub">Loading&hellip;</p></div>
+  <div class="page-actions">
+    <button class="btn btn-ghost" id="tlBack" type="button">Back to Case</button>
+  </div>
+</div>
+
+<div class="card"><h3>Activity Timeline</h3>
+  <div class="timeline" id="tlEvents"><div class="hint">Loading&hellip;</div></div>
+</div>
+
+@section Scripts {
+<script>
+$(function () {
+  if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
+  CMS.bindLayout();
+  var params = new URLSearchParams(window.location.search);
+  var caseId = parseInt(params.get('id'), 10);
+  if (!caseId) { location.href = '/Cases'; return; }
+  $('#tlBack').on('click', function () { location.href = '/Cases/Details?id=' + caseId; });
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmtDT(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) +
+      ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+  cmsAjax({ url: '/api/cases/' + caseId, method: 'GET',
+    success: function (c) { $('#tlSub').text('Complete audit trail for ' + (c.caseNumber || ('#' + c.caseId))); }
+  });
+  cmsAjax({
+    url: '/api/cases/' + caseId + '/history', method: 'GET',
+    fallbackMsg: 'Could not load the timeline.',
+    success: function (rows) {
+      if (!rows || !rows.length) { $('#tlEvents').html('<div class="empty">No activity yet.</div>'); return; }
+      $('#tlEvents').html(rows.map(function (h) {
+        return '<div class="event"><h4>' + esc(h.actionName || h.actionCode || (h.fromState + ' → ' + h.toState)) + '</h4>' +
+          '<p>' + esc(fmtDT(h.performedAt)) + (h.performedByUsername ? ' · ' + esc(h.performedByUsername) : '') +
+          (h.comment ? ' — ' + esc(h.comment) : '') + '</p></div>';
+      }).join(''));
+    },
+    error: function () { $('#tlEvents').html('<div class="empty">Could not load the timeline.</div>'); }
+  });
+});
+</script>
+}

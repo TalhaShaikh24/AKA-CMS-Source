@@ -1,90 +1,66 @@
 @model int
 @{
     ViewData["Title"] = "Crisis Protocol";
+    ViewData["Breadcrumb"] = "Case";
     ViewData["ActivePage"] = "cases";
     ViewData["RequiredPermission"] = "Cases:Read";
 }
 <style>
-  .crisis-banner{background:#fde2e2;border:1px solid #f5b7b7;border-radius:12px;padding:16px 18px;margin-bottom:14px}
-  .crisis-banner h2{color:#a93226;margin:0 0 6px}
-  .crisis-banner p{margin:4px 0;color:#7b241c}
   .ind-list{margin:10px 0 0;padding:0;list-style:none}
   .ind-list li{padding:6px 0;border-bottom:1px solid #f5d5d5;font-size:14px}
   .ind-list li:last-child{border-bottom:0}
-  .ind-list .k{font-weight:600;color:#7b241c}
-  .rec-list{margin:8px 0 0;padding-left:20px;color:#444}
-  .rec-list li{margin:5px 0}
-  .timeline{position:relative;margin:10px 0 0 8px;padding-left:22px}
-  .timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:#dfe3e8}
-  .tl-item{position:relative;padding:8px 0}
-  .tl-item::before{content:'';position:absolute;left:-20px;top:14px;width:10px;height:10px;border-radius:50%;background:#1b2a4a}
-  .tl-item.crisis::before{background:#c0392b}
-  .tl-item .tl-title{font-weight:700}
-  .tl-item .tl-meta{color:#777;font-size:13px}
-  .steps{display:flex;gap:8px;margin:14px 0}
-  .step{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:#eef1f5;color:#777;font-weight:600;font-size:12px}
-  .step.active{background:#a93226;color:#fff}
-  .step.done{background:#e2f3e5;color:#1e7e34}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg label{padding:9px 14px;border:1px solid var(--line,#dfe3e8);border-radius:8px;cursor:pointer;font-weight:600;color:#555}
   .seg input{display:none}
-  .seg label:has(input:checked){border-color:#1b2a4a;background:#eef3fb;color:#1b2a4a}
+  .seg label:has(input:checked){border-color:var(--navy);background:#eef3fb;color:var(--navy)}
   .radio-card{display:block;border:1px solid var(--line,#dfe3e8);border-radius:10px;padding:10px 14px;margin:8px 0;cursor:pointer}
   .radio-card:has(input:checked){border-color:#a93226;background:#fdf0f0}
   .radio-card input{margin-right:8px}
-  .wizard-foot{display:flex;justify-content:space-between;margin-top:18px}
   .ev-card{border:1px solid var(--line,#e3e6ea);border-radius:10px;padding:12px 14px;margin-bottom:10px}
   .ev-card .ev-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 </style>
 
-<a class="link back-link" href="@Url.Action("Index", "Cases")">&larr; Back to cases</a>
-
 <div class="page-head">
-  <div class="page-title">
-    <h1>Crisis Protocol</h1>
-    <p class="sub" id="crisisCaseSub">Loading&hellip;</p>
+  <div><h1>Crisis Protocol</h1><p id="crisisCaseSub">Immediate response workflow for active crisis indicators.</p></div>
+</div>
+
+<div class="alert" id="crisisAlertBox">
+  <strong>Indicators Identified</strong>
+  <span id="indicatorList">Loading indicators&hellip;</span>
+</div>
+
+<div class="grid grid-2" style="margin-top:20px">
+  <div class="card"><h3>Recommended Actions</h3>
+    <div class="checkbox-row">
+      <label class="check"><input type="checkbox" checked> Contact the individual immediately</label>
+      <label class="check"><input type="checkbox"> Assess current safety</label>
+      <label class="check"><input type="checkbox"> Activate crisis response team</label>
+      <label class="check"><input type="checkbox"> Arrange urgent referral if required</label>
+    </div>
   </div>
-  <div class="page-actions">
-    <button class="btn btn-primary" id="startResponseBtn" type="button" data-permission="Crisis:Write">Start Crisis Response</button>
+  <div class="card"><h3>Crisis Checklist</h3>
+    <p>Confirm immediate safety, document contact attempt, escalate when indicated and arrange follow-up.</p>
   </div>
 </div>
 
-<!-- Protocol panel -->
-<div class="crisis-banner">
-  <h2>Immediate Action Required</h2>
-  <p>This case has been flagged as a crisis based on the risk assessment and/or current alerts.</p>
-  <ul class="ind-list" id="indicatorList"><li class="hint">Loading indicators&hellip;</li></ul>
-  <h3 style="margin:14px 0 4px;color:#a93226">Recommended Actions</h3>
-  <ol class="rec-list">
-    <li>Contact the individual immediately</li>
-    <li>Assess current safety</li>
-    <li>Activate crisis response team</li>
-    <li>Arrange urgent referral (if required)</li>
-  </ol>
+<div class="bottom-actions">
+  <button class="btn secondary" id="viewChecklistBtn" type="button">View Crisis Checklist</button>
+  <button class="btn primary" id="startResponseBtn" type="button" data-permission="Crisis:Write">Start Crisis Response</button>
 </div>
 
 <!-- Active crisis events -->
-<div class="card" style="margin-bottom:14px">
-  <div class="card-head"><h3>Crisis Events</h3></div>
-  <div class="card-body" id="crisisEvents"><p class="hint">Loading&hellip;</p></div>
-</div>
-
-<!-- Timeline -->
-<div class="card">
-  <div class="card-head"><h3>Case Timeline</h3></div>
-  <div class="card-body"><div class="timeline" id="caseTimeline"><p class="hint">Loading&hellip;</p></div></div>
-</div>
+<div class="card" style="margin-top:20px"><h3>Crisis Events</h3><div id="crisisEvents"><p class="hint">Loading&hellip;</p></div></div>
 
 <!-- Response wizard modal -->
 <div class="modal-backdrop" id="responseModal" style="display:none">
-  <div class="modal card" style="max-width:640px">
-    <div class="card-head"><h3>Crisis Response</h3></div>
-    <div class="card-body">
-      <div class="steps">
-        <div class="step active" data-step="1">1 · Contact</div>
-        <div class="step" data-step="2">2 · Assess</div>
-        <div class="step" data-step="3">3 · Escalate</div>
-        <div class="step" data-step="4">4 · Follow-up</div>
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head"><h3>Crisis Response</h3><button class="modal-x" data-close type="button">&times;</button></div>
+    <div class="modal-body">
+      <div class="steps" id="crisisSteps">
+        <div class="step current" data-step="1"><span class="circle">1</span>Contact</div><div class="step-line"></div>
+        <div class="step" data-step="2"><span class="circle">2</span>Assess</div><div class="step-line"></div>
+        <div class="step" data-step="3"><span class="circle">3</span>Escalate</div><div class="step-line"></div>
+        <div class="step" data-step="4"><span class="circle">4</span>Follow-up</div>
       </div>
 
       <div data-pane="1">

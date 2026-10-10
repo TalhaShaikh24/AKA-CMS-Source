@@ -13,4 +13,7 @@ public sealed class CasesController : Controller
 
     [HttpGet]
     public IActionResult Details() => View();
+
+    [HttpGet]
+    public IActionResult Timeline() => View();
 }

@@ -9,4 +9,5 @@ public interface IReferralRepository
     Task<(int NewReferralId, string Status)> UpdateStatusAsync(
         int referralId, string newStatus, string? rejectionReason, byte[] rowVersion, int performedBy, string ipAddress);
     Task<IReadOnlyList<Referral>> GetByCaseAsync(int caseId);
+    Task<IReadOnlyList<Referral>> GetAllAsync(int top = 100);
 }

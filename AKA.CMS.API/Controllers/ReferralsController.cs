@@ -50,6 +50,15 @@ public sealed class ReferralsController(IReferralService referralService, ICurre
     public async Task<ActionResult<IReadOnlyList<ReferralDto>>> GetByCase(int caseId)
         => Ok(await referralService.GetByCaseAsync(caseId));
 
+    /// <summary>List recent referrals across cases (queue).</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<ReferralDto>))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    [HttpGet]
+    [Authorize(Policy = PermissionPolicies.ReferralsRead)]
+    public async Task<ActionResult<IReadOnlyList<ReferralDto>>> GetAll([FromQuery] int top = 100)
+        => Ok(await referralService.GetAllAsync(top));
+
     private string ClientIpAddress =>
         HttpContext.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
 }

@@ -1,0 +1,21 @@
+@model int
+@{
+    ViewData["Title"] = "Referral Details";
+    ViewData["Breadcrumb"] = "Workspace";
+    ViewData["ActivePage"] = "referrals";
+    ViewData["RequiredPermission"] = "Referrals:Read";
+}
+<input type="hidden" id="refId" value="@Model">
+
+<div class="page-head"><div><h1>Referral Details</h1><p id="refNum"></p></div></div>
+
+<div class="card"><h3>Referral Summary</h3><div class="kv" id="refSummary"><div class="hint">Loading&hellip;</div></div></div>
+<div class="card"><h3>Referral Details</h3><div class="kv" id="refDetails"></div></div>
+
+<div class="bottom-actions">
+  <button class="btn primary" data-go="/Referrals">Close</button>
+</div>
+
+@section Scripts {
+<script src="~/js/view/referral-details.js" asp-append-version="true"></script>
+}

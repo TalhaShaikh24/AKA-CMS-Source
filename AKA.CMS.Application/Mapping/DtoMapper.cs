@@ -36,6 +36,28 @@ public static class DtoMapper
         facility.IsActive,
         facility.RowVersion);
 
+    public static RegionDto ToDto(this Region region) => new(
+        region.RegionId,
+        region.RegionName,
+        region.IsActive,
+        region.RowVersion);
+
+    public static LocalCouncilDto ToDto(this LocalCouncil council) => new(
+        council.CouncilId,
+        council.RegionId,
+        council.RegionName,
+        council.CouncilName,
+        council.IsActive,
+        council.RowVersion);
+
+    public static VillageDto ToDto(this Village village) => new(
+        village.VillageId,
+        village.CouncilId,
+        village.CouncilName,
+        village.VillageName,
+        village.IsActive,
+        village.RowVersion);
+
     public static TaskDto ToDto(this TaskItem task) => new(
         task.TaskId,
         task.Title,
@@ -116,6 +138,9 @@ public static class DtoMapper
         @case.CommunityMemberId,
         @case.MemberName,
         @case.MemberMrNo,
+        @case.MemberAge,
+        @case.MemberGender,
+        @case.MemberVillage,
         @case.SourceType,
         @case.Status,
         @case.StatusName,
@@ -218,6 +243,7 @@ public static class DtoMapper
         referral.ReferralId,
         referral.ReferralNumber,
         referral.CaseId,
+        referral.CaseNumber,
         referral.ReferredTo,
         referral.Status,
         referral.RejectionReason,

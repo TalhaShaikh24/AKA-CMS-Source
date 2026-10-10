@@ -108,6 +108,7 @@ public sealed class CaseService(
         var items = await caseRepository.ListAsync(search, page, pageSize);
         var dtos = items.Select(i => new CaseListItemDto(
             i.CaseId, i.CaseNumber, i.MemberName, i.MemberMrNo,
+            i.MemberAge, i.MemberGender, i.MemberVillage,
             i.Status, i.StatusName, i.PriorityLevel, i.CreatedAt)).ToList();
         var total = items.Count > 0 ? items[0].TotalCount : 0;
         return new CaseListResponse(dtos, total, page, pageSize);

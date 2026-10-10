@@ -12,13 +12,12 @@ $(function () {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   function goStep(n) {
-    $('[data-pane]').hide();
-    $('[data-pane="' + n + '"]').show();
-    $('.step').removeClass('active done');
-    $('.step').each(function () {
+    $('[data-pane]').prop('hidden', true);
+    $('[data-pane="' + n + '"]').prop('hidden', false);
+    $('#taskSteps .step').each(function () {
       var s = +$(this).data('step');
-      if (s < n) $(this).addClass('done');
-      if (s === n) $(this).addClass('active');
+      $(this).toggleClass('done', s < n).toggleClass('current', s === n);
+      $(this).find('.circle').text(s < n ? '✓' : s);
     });
     window.scrollTo(0, 0);
   }
@@ -115,7 +114,7 @@ $(function () {
       ['Title', $.trim($('#tTitle').val())],
       ['Patient', (c.caseNumber || '') + ' · ' + (c.memberName || '')],
       ['Type', $('#tType').val()],
-      ['Priority', $('input[name=tPri]:checked').val()],
+      ['Priority', $('#tPriority').val()],
       ['Due', $('#tDue').val()],
       ['Role', $('#tRole option:selected').text()],
       ['User', $('#tUser option:selected').text()],
@@ -123,10 +122,10 @@ $(function () {
     ];
     var html = '';
     rows.forEach(function (r) {
-      html += '<div class="review-row"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
+      html += '<div class="k">' + esc(r[0]) + '</div><div class="v">' + esc(r[1]) + '</div>';
     });
     var desc = $.trim($('#tDesc').val());
-    if (desc) html += '<div class="review-row"><span class="k">Description</span><span class="v">' + esc(desc) + '</span></div>';
+    if (desc) html += '<div class="k">Description</div><div class="v">' + esc(desc) + '</div>';
     $('#reviewBox').html(html);
   }
 
@@ -137,7 +136,7 @@ $(function () {
       description: $.trim($('#tDesc').val()) || null,
       caseId: +$case.val(),
       taskType: $('#tType').val() || null,
-      priority: $('input[name=tPri]:checked').val(),
+      priority: $('#tPriority').val(),
       dueDate: $('#tDue').val(),
       assignedToRoleId: $('#tRole').val() ? +$('#tRole').val() : null,
       assignedToUserId: $('#tUser').val() ? +$('#tUser').val() : null,
@@ -151,6 +150,7 @@ $(function () {
       success: function (res) {
         $('#successMsg').text('The task "' + (res.title || '') + '" has been assigned' +
           (res.assignedUserName ? ' to ' + res.assignedUserName : '') + '.');
+        $('#successTaskId').text(res.taskNumber ? 'Task ID: ' + res.taskNumber : '');
         goStep(4);
       },
       complete: function () { $btn.prop('disabled', false); }

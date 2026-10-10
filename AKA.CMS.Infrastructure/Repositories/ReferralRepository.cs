@@ -89,6 +89,15 @@ public sealed class ReferralRepository(DapperContext context) : IReferralReposit
         }
     }
 
+    public async Task<IReadOnlyList<Referral>> GetAllAsync(int top = 100)
+    {
+        using var connection = context.CreateConnection();
+        var referrals = await connection.QueryAsync<Referral>(
+            StoredProcedures.ReferralGetAll,
+            new { Top = top }, commandType: CommandType.StoredProcedure);
+        return referrals.ToList();
+    }
+
     public async Task<Referral> GetByIdAsync(int referralId)
     {
         using var connection = context.CreateConnection();

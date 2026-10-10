@@ -1,0 +1,57 @@
+@{
+    ViewData["Title"] = "Create Referral";
+    ViewData["Breadcrumb"] = "Workspace";
+    ViewData["ActivePage"] = "referrals";
+    ViewData["RequiredPermission"] = "Referrals:Write";
+}
+
+<div class="page-head"><div><h1>Create Referral</h1></div></div>
+
+<div class="steps" id="refSteps">
+  <div class="step current" data-step="1"><span class="circle">1</span>Referral Details</div><div class="step-line"></div>
+  <div class="step" data-step="2"><span class="circle">2</span>Select Provider</div><div class="step-line"></div>
+  <div class="step" data-step="3"><span class="circle">3</span>Review &amp; Submit</div>
+</div>
+
+<form id="refForm" data-validate novalidate>
+  <div class="ref-step" id="rf1">
+    <div class="card"><h3>1. Referral Details</h3>
+      <div class="form-grid">
+        <div class="field"><label for="rCase">Case *</label><select class="input" id="rCase" required><option value="" selected disabled>Select case</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="rService">Select Service / Specialty *</label><select class="input" id="rService" required><option value="" selected disabled>Select service</option><option>Psychiatry</option><option>Psychology</option><option>Medical</option><option>Social Work</option><option>Other</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="rReason">Reason for Referral *</label><select class="input" id="rReason" required><option value="" selected disabled>Select reason</option><option>Medication Assessment</option><option>Therapy</option><option>Crisis Support</option><option>Assessment</option><option>Other</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="rPriority">Priority *</label><select class="input" id="rPriority" required><option value="" selected disabled>Select priority</option><option>Routine</option><option>Urgent</option><option>Emergency</option></select><span class="field-error"></span></div>
+        <div class="field full"><label for="rSummary">Clinical Summary</label><textarea class="input" id="rSummary" placeholder="Free text"></textarea><span class="field-error"></span></div>
+      </div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" data-go="/Referrals">Cancel</button>
+        <button type="button" class="btn primary" id="rfNext1">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ref-step" id="rf2" hidden>
+    <div class="card"><h3>2. Select Provider</h3>
+      <input class="search" id="provSearch" placeholder="Search by name" style="width:100%;margin-bottom:15px">
+      <div class="grid" id="provList" style="gap:12px"></div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" id="rfBack2">Back</button>
+        <button type="button" class="btn primary" id="rfNext2">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ref-step" id="rf3" hidden>
+    <div class="card"><h3>3. Review &amp; Submit</h3>
+      <div class="kv" id="refReview"></div>
+      <div class="bottom-actions">
+        <button type="button" class="btn secondary" id="rfBack3">Back</button>
+        <button type="button" class="btn primary" id="rfSubmit">Submit Referral</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+@section Scripts {
+<script src="~/js/view/referral-create.js" asp-append-version="true"></script>
+}

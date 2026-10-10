@@ -5,6 +5,7 @@ public sealed class Referral
     public int ReferralId { get; set; }
     public string ReferralNumber { get; set; } = string.Empty;
     public int CaseId { get; set; }
+    public string? CaseNumber { get; set; }
     public string ReferredTo { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? RejectionReason { get; set; }
