@@ -23,12 +23,14 @@ $(function () {
   /* ---------- tabs ---------- */
   var $tabs = $('#geoTabs .tab');
   var $panels = $('.tab-panel');
+  // Force initial state via inline style so it works regardless of CSS cascade.
+  $panels.each(function (i) { this.style.display = i === 0 ? 'block' : 'none'; });
   $tabs.on('click', function () {
     var idx = $tabs.index(this);
     activeTab = $(this).attr('data-tab');
     $tabs.removeClass('active');
     $(this).addClass('active');
-    $panels.removeClass('active');
+    $panels.removeClass('active').each(function (i) { this.style.display = i === idx ? 'block' : 'none'; });
     $panels.eq(idx).addClass('active');
     $('#addGeoBtn').text('+ Add ' + META[activeTab].title);
     renderTab(activeTab); // data already loaded on page init; just re-render cached
