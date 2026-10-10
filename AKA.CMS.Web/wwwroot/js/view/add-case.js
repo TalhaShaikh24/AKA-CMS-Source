@@ -21,7 +21,7 @@ $(function () {
   (function buildAgeOptions() {
     var html = '<option value="" selected disabled>Select age</option>';
     for (var a = 1; a <= 100; a++) html += '<option value="' + a + '">' + a + '</option>';
-    $('#fAge').html(html);
+    $('#fAge').html(html).trigger('change');
   })();
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -39,7 +39,7 @@ $(function () {
     items.forEach(function (it) {
       html += '<option value="' + esc(it[textKey]) + '">' + esc(it[textKey]) + '</option>';
     });
-    $sel.html(html);
+    $sel.html(html).trigger('change');
   }
   function loadGeography() {
     cmsAjax({ url: '/api/geography/regions', method: 'GET',
