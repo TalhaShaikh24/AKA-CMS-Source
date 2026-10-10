@@ -24,12 +24,19 @@ $.fn.cmsValidate = function(opts){
 
   return this.each(function(){
     var $f = $(this);
-    if ($f.data('cmsv')) return;          // already bound
+    if ($f.data('cmsv')) {
+      // Already bound (e.g. via CMS.initValidation): just refresh the
+      // settings so a later onValid handler is not silently dropped.
+      $f.data('cmsv-settings', settings);
+      return;
+    }
     $f.data('cmsv', true);
+    $f.data('cmsv-settings', settings);
 
     $f.on('submit', function(e){
       e.preventDefault();
 
+      var s = $f.data('cmsv-settings') || settings;
       var ok = true, first = null;
       $f.find('.field').removeClass('invalid');
 
@@ -61,14 +68,14 @@ $.fn.cmsValidate = function(opts){
       });
 
       if (!ok){
-        if (settings.scroll && first && first.length){
+        if (s.scroll && first && first.length){
           $('html,body').animate({ scrollTop: first.closest('.field').offset().top - 120 }, 300);
         }
         CMS.toast('Please fix the highlighted fields.', 'error');
         return;
       }
 
-      if (settings.onValid) settings.onValid($f);
+      if (s.onValid) s.onValid($f);
     });
 
     // Live clear: remove the error state as soon as the user types

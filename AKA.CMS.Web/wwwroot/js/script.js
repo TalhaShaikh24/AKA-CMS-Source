@@ -198,7 +198,7 @@ CMS.bindLayout = function(){
   $(document).on('click', '.modal-backdrop', function(e){
     if (e.target === this) $(this).removeClass('open');
   });
-  $(document).on('click', '.modal-x, [data-modal-close]', function(){
+  $(document).on('click', '.modal-x, [data-modal-close], [data-close]', function(){
     $(this).closest('.modal-backdrop').removeClass('open');
   });
 
