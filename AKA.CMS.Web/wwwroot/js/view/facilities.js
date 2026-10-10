@@ -25,18 +25,17 @@ $(function () {
   function render() {
     var html = '';
     allFacilities.forEach(function (f) {
-      html += '<tr>' +
-        '<td><strong>' + esc(f.facilityCode) + '</strong></td>' +
-        '<td>' + esc(f.facilityName) + '</td>' +
-        '<td>' + esc(f.facilityType || '—') + '</td>' +
-        '<td>' + esc(f.region || '—') + '</td>' +
-        '<td>' + esc(f.phone || '—') + '</td>' +
-        '<td class="' + (f.isActive ? 'st-active' : 'st-inactive') + '">' + (f.isActive ? 'Active' : 'Inactive') + '</td>' +
-        '<td class="row-actions" data-permission="Facilities:Write">' +
-          '<button class="btn btn-ghost btn-sm" data-edit="' + f.facilityId + '">Edit</button>' +
-        '</td></tr>';
+      var sub = [f.facilityType, f.region].filter(Boolean).join(' · ') || '—';
+      if (f.phone) sub += ' · ' + esc(f.phone);
+      html += '<div class="geo-card">' +
+        '<div class="geo-card-main"><div class="geo-card-name">' + esc(f.facilityName) + '</div>' +
+        '<div class="geo-card-sub">' + esc(f.facilityCode) + ' · ' + sub + '</div></div>' +
+        '<div class="geo-card-side">' +
+        '<span class="badge ' + (f.isActive ? 'st-active' : 'st-ltfu') + '">' + (f.isActive ? 'Active' : 'Inactive') + '</span>' +
+        '<button class="btn btn-ghost btn-sm geo-edit" data-edit="' + f.facilityId + '" data-permission="Facilities:Write" type="button">Edit</button>' +
+        '</div></div>';
     });
-    $('#facilityRows').html(html || '<tr><td colspan="7" class="hint">No facilities found.</td></tr>');
+    $('#facilityRows').html(html || '<div class="hint geo-empty">No facilities found.</div>');
     if (window.CMS && typeof CMS.applyPermissions === 'function') CMS.applyPermissions(document);
   }
 
