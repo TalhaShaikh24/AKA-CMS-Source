@@ -28,9 +28,7 @@ $(function () {
     $('.tab-panel').removeClass('active');
     $('#panel-' + activeTab).addClass('active');
     $('#addGeoBtn').text('+ Add ' + META[activeTab].title);
-    // Show cached data instantly; refresh in background so the panel never goes blank.
-    renderTab(activeTab);
-    loadTab(activeTab);
+    renderTab(activeTab); // data already loaded on page init; just re-render cached
   });
 
   /* ---------- load ---------- */
@@ -40,19 +38,19 @@ $(function () {
         cmsAjax({ url: '/api/geography/regions?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load regions.',
           success: function (res) { regions = res || []; renderRegions(); fillParentOptions(); },
-          error: function () { $('#regionRows').html('<div class="hint geo-empty">Could not load regions.</div>'); } });
+          error: function () { $('#regionRows').html('<div class="hint geo-empty">Could not load regions. <button type="button" class="btn btn-ghost btn-sm" onclick="location.reload()">Retry</button></div>'); } });
       },
       councils: function () {
         cmsAjax({ url: '/api/geography/councils?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load local councils.',
           success: function (res) { councils = res || []; renderCouncils(); },
-          error: function () { $('#councilRows').html('<div class="hint geo-empty">Could not load local councils.</div>'); } });
+          error: function () { $('#councilRows').html('<div class="hint geo-empty">Could not load local councils. <button type="button" class="btn btn-ghost btn-sm" onclick="location.reload()">Retry</button></div>'); } });
       },
       villages: function () {
         cmsAjax({ url: '/api/geography/villages?includeInactive=true', method: 'GET',
           fallbackMsg: 'Could not load villages.',
           success: function (res) { villages = res || []; renderVillages(); },
-          error: function () { $('#villageRows').html('<div class="hint geo-empty">Could not load villages.</div>'); } });
+          error: function () { $('#villageRows').html('<div class="hint geo-empty">Could not load villages. <button type="button" class="btn btn-ghost btn-sm" onclick="location.reload()">Retry</button></div>'); } });
       }
     };
     if (loaders[kind]) loaders[kind]();
