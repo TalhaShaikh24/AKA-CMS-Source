@@ -565,3 +565,154 @@ body.nav-open .overlay{display:block}
   .page-head{flex-direction:column}
   .topbar{padding:12px 16px}
 }
+
+/* ==========================================================================
+   PREMIUM POLISH — missing layout classes + refined components
+   ========================================================================== */
+
+/* ---------- base grid (was missing) ---------- */
+.grid{display:grid;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+
+/* ---------- detail grid: 2fr / 1fr (was missing) ---------- */
+.detail-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
+.detail-grid>div{display:flex;flex-direction:column;gap:20px;min-width:0}
+.detail-grid .card{margin-bottom:0}
+
+/* ---------- filters bar (was missing) ---------- */
+.filters{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filters .search{flex:1;min-width:220px}
+
+/* ---------- premium select (all selects, not just .input) ---------- */
+select{
+  padding:11px 36px 11px 14px;
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  font:inherit;font-size:14px;
+  background-color:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23526079' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  appearance:none;-webkit-appearance:none;
+  color:var(--text);
+  cursor:pointer;
+  transition:border-color .15s,box-shadow .15s;
+  max-width:100%;
+}
+select:hover{border-color:#b9c4d6}
+select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(25,63,122,.12)}
+select:disabled{opacity:.6;cursor:not-allowed;background-color:#f4f6fa}
+select.input{width:100%}
+
+/* ---------- premium input refinements ---------- */
+.input,textarea.input{transition:border-color .15s,box-shadow .15s}
+.input:hover,textarea.input:hover{border-color:#b9c4d6}
+.input:focus,textarea.input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(25,63,122,.12)}
+textarea.input{min-height:90px;resize:vertical;line-height:1.55}
+
+/* ---------- search input ---------- */
+.search{
+  padding:11px 14px 11px 40px;
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  font:inherit;font-size:14px;
+  background-color:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238995a7' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:12px center;
+  color:var(--text);
+  transition:border-color .15s,box-shadow .15s;
+}
+.search:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(25,63,122,.12)}
+.search::placeholder{color:#9aa5b5}
+
+/* ---------- premium card ---------- */
+.card{padding:22px}
+.card:has(>.card-head),.card:has(>.card-body){padding:0}
+.card h3{margin:0 0 16px;font-size:16px;color:var(--navy);font-weight:700}
+.card p{color:var(--muted);font-size:13.5px;line-height:1.6}
+
+/* ---------- premium buttons ---------- */
+.btn{transition:transform .12s,box-shadow .15s,background .15s}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(25,63,122,.25)}
+.btn.secondary:hover{border-color:var(--navy);transform:translateY(-1px)}
+.btn.danger:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(164,43,55,.25)}
+.btn.small{padding:8px 14px;font-size:12.5px}
+
+/* ---------- premium table ---------- */
+.table-wrap{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
+.table th{background:#f8fafd;padding:12px 14px}
+.table td{padding:14px}
+.table tbody tr{transition:background .12s}
+.table tbody tr:hover{background:#f6f9ff}
+
+/* ---------- page head spacing ---------- */
+.page-head{margin-bottom:24px}
+.page-head h1{letter-spacing:-.01em}
+
+/* ---------- form grid premium spacing ---------- */
+.form-grid{gap:18px}
+.field label{margin-bottom:2px;color:#33415c}
+.field{margin-bottom:4px}
+
+/* ---------- kv premium ---------- */
+.kv{gap:14px 18px}
+.kv .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.kv .v{font-size:14.5px}
+
+/* ---------- steps premium ---------- */
+.steps{margin-bottom:26px;padding:4px 2px}
+.steps .step{font-size:13px}
+
+/* ---------- bottom actions premium ---------- */
+.bottom-actions{padding-top:24px;margin-top:26px}
+
+/* ---------- alert premium ---------- */
+.alert{border-radius:14px;box-shadow:0 4px 14px rgba(164,43,55,.08)}
+
+/* ---------- stat premium ---------- */
+.stat{transition:transform .15s,box-shadow .15s}
+.stat:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,63,122,.1)}
+
+/* ---------- modal premium ---------- */
+.modal{border-radius:20px;box-shadow:0 24px 70px rgba(15,30,60,.22)}
+.modal-head{padding:20px 24px}
+.modal-head h3{font-size:17px;color:var(--navy)}
+.modal-body{padding:22px 24px}
+.modal-foot{padding:16px 24px;background:#f8fafd;border-radius:0 0 20px 20px}
+
+/* ---------- tabs premium ---------- */
+.tabs{gap:6px}
+.tab{padding:10px 18px;border-radius:12px 12px 0 0;font-weight:600}
+.tab.active{color:var(--navy)}
+.tab-panel{padding-top:6px}
+
+/* ---------- empty state ---------- */
+.empty{padding:36px 20px;color:#9aa5b5;font-size:13.5px}
+
+/* ---------- responsive ---------- */
+@media(max-width:1100px){
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .detail-grid{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .grid-4{grid-template-columns:1fr}
+  .filters{flex-direction:column;align-items:stretch}
+  .filters .search{min-width:0}
+  .card{padding:18px}
+}
+
+/* ---------- timeline events (was missing) ---------- */
+.timeline{position:relative;margin:6px 0 0 8px;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:#e2e8f0;border-radius:2px}
+.timeline .event{position:relative;padding:10px 0}
+.timeline .event::before{content:'';position:absolute;left:-21px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--navy);box-shadow:0 0 0 3px #eef3fb}
+.timeline .event h4{margin:0 0 4px;font-size:14px;color:var(--text);font-weight:600}
+.timeline .event p{margin:0;font-size:12.5px;color:var(--muted)}
+
+/* ---------- filter selects ---------- */
+.filter-select{min-width:170px}
+
+/* ---------- cards inside grids should not have bottom margin ---------- */
+.grid>.card,.grid-2>.card,.grid-3>.card,.grid-4>.card,.grid-even>.card,
+.detail-grid .card{margin-bottom:0}
