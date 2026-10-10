@@ -145,7 +145,7 @@ $(function () {
     var $btn = $(this).prop('disabled', true);
     cmsAjax({
       url: '/api/tasks', method: 'POST',
-      data: JSON.stringify(payload),
+      data: payload, json: true,
       fallbackMsg: 'Could not create the task.',
       success: function (res) {
         $('#successMsg').text('The task "' + (res.title || '') + '" has been assigned' +

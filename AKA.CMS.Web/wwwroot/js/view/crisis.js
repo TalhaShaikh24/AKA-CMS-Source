@@ -95,7 +95,7 @@ $(function () {
   function updateEventStatus(card, newStatus) {
     cmsAjax({
       url: '/api/crisis-events/' + card.data('id') + '/status', method: 'PATCH',
-      data: JSON.stringify({ newStatus: newStatus, rowVersion: card.data('rv') }),
+      data: { newStatus: newStatus, rowVersion: card.data('rv') }, json: true,
       fallbackMsg: 'Could not update the crisis event.',
       success: function () { CMS.toast('Crisis event updated.', 'success'); loadEvents(); }
     });
@@ -142,7 +142,7 @@ $(function () {
     function escalateEvent(eventId, rowVersion) {
       cmsAjax({
         url: '/api/crisis-events/' + eventId + '/status', method: 'PATCH',
-        data: JSON.stringify({ newStatus: 'ESCALATED', rowVersion: rowVersion }),
+        data: { newStatus: 'ESCALATED', rowVersion: rowVersion }, json: true,
         fallbackMsg: 'Could not escalate the case.',
         success: function () { onEscalated(); },
         complete: function () { $btn.prop('disabled', false); }
@@ -163,11 +163,11 @@ $(function () {
       // No active event: trigger one, then escalate it.
       cmsAjax({
         url: '/api/crisis-events', method: 'POST',
-        data: JSON.stringify({
+        data: {
           caseId: caseId, crisisTypeCode: typeCode,
           severity: $('#cSeverity').val(), triggerSource: 'MANUAL',
           notes: notes + ' | Escalation: ' + $('input[name=cE]:checked').val() + '. Reason: ' + reason
-        }),
+        }, json: true,
         fallbackMsg: 'Could not record the crisis response.',
         success: function (res) { escalateEvent(res.event.crisisEventId, res.event.rowVersion); },
         error: function () { $btn.prop('disabled', false); }

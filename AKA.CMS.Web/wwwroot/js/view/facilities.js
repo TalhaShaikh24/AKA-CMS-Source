@@ -94,14 +94,14 @@ $(function () {
     if (editingId) {
       cmsAjax({
         url: '/api/facilities/' + editingId, method: 'PUT',
-        data: JSON.stringify(payload), fallbackMsg: 'Could not update the facility.',
+        data: payload, json: true, fallbackMsg: 'Could not update the facility.',
         success: function () { closeModal(); CMS.toast('Facility updated.', 'success'); load(); }
       });
     } else {
       payload.facilityCode = $.trim($('#fCode').val());
       cmsAjax({
         url: '/api/facilities', method: 'POST',
-        data: JSON.stringify(payload), fallbackMsg: 'Could not create the facility.',
+        data: payload, json: true, fallbackMsg: 'Could not create the facility.',
         success: function () { closeModal(); CMS.toast('Facility added.', 'success'); load(); }
       });
     }

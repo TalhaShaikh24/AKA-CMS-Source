@@ -170,8 +170,8 @@ $(function () {
       cmsAjax({
         url: isNew ? base : base + '/' + editing.id,
         method: isNew ? 'POST' : 'PUT',
-        data: JSON.stringify(payload),
-        contentType: 'application/json',
+        data: payload,
+        json: true,
         fallbackMsg: 'Could not save.',
         success: function () {
           CMS.toast('Saved successfully.', 'success');
