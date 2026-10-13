@@ -508,7 +508,19 @@ body.nav-open .overlay{display:block}
 .select2-container .select2-selection--multiple .select2-selection__choice{
   background:var(--blue-tint);border:0;border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:600;color:var(--navy);
 }
-.select2-container .select2-search--inline .select2-search__field{margin-top:8px!important}
+.select2-container .select2-search--inline .select2-search__field{margin-top:14px!important; margin-left: 12px;}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+    cursor: default;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    padding: 6px 8px;
+    border: none;
+}
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover, .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:focus {
+        background-color: transparent;
+    }
 
 /* ==========================================================================
    CMS DATE RANGE PICKER POPUP (.cms-dr-picker)
