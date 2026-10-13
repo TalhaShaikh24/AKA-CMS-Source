@@ -56,8 +56,8 @@ BEGIN
     SELECT
         t.[ToolCode], t.[ToolName], t.[Description], t.[ItemCount], t.[IsActive], t.[SortOrder],
         (
-            SELECT q.[QuestionId], q.[QuestionText], q.[SortOrder],
-                   JSON_QUERY(q.[OptionsJson]) AS [Options]
+            SELECT q.[QuestionId] AS [questionId], q.[QuestionText] AS [text], q.[SortOrder] AS [sortOrder],
+                   JSON_QUERY(q.[OptionsJson]) AS [options]
             FROM [dbo].[CMS_ScreeningToolQuestions] q
             WHERE q.[ToolCode] = t.[ToolCode]
             ORDER BY q.[SortOrder], q.[QuestionId]

@@ -108,9 +108,11 @@
         $('#stSort').val(t.sortOrder || 0);
         $('#stActive').prop('checked', !!t.isActive);
         var qs = [];
-        try { qs = JSON.parse(t.questionsJson || '[]'); } catch (e) { qs = []; }
+        try { qs = JSON.parse(t.questionsJson || t.QuestionsJson || '[]'); } catch (e) { qs = []; }
         $('#stQuestions').html(qs.map(function (q) {
-          return questionRow({ text: q.text, options: (q.options || []).map(function (o) { return { t: o.t, v: o.v }; }) });
+          var text = q.text || q.QuestionText || q.questionText || '';
+          var opts = q.options || q.Options || [];
+          return questionRow({ text: text, options: opts.map(function (o) { return { t: o.t, v: o.v }; }) });
         }).join(''));
         // MaxItemScore: derive from first question options if available
         $('#toolModal').addClass('open');
