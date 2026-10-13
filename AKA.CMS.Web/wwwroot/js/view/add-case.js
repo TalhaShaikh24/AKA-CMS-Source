@@ -102,10 +102,16 @@ $(function () {
 
   function renderScreenToolCards() {
     $('#screenToolCards').html(SCREEN_TOOLS.map(function (t) {
-      var done = pendingScreenings.some(function (s) { return s.toolCode === t.code; });
+      var done = pendingScreenings.filter(function (s) { return s.toolCode === t.code; })[0];
+      var scoreHtml = '';
+      if (done) {
+        var score = done.itemScores.reduce(function (a, b) { return a + b; }, 0);
+        scoreHtml = '<div class="stc-score">Score: ' + score + '</div>';
+      }
       return '<button type="button" class="screen-tool-card' + (done ? ' done' : '') + '" data-tool="' + t.code + '">' +
         '<div class="stc-name">' + esc(t.name) + '</div>' +
         '<div class="stc-desc">' + esc(t.desc) + '</div>' +
+        scoreHtml +
         (done ? '<div class="stc-badge">✓ Completed</div>' : '<div class="stc-badge stc-tap">Tap to start</div>') +
         '</button>';
     }).join(''));
@@ -118,13 +124,17 @@ $(function () {
     if (!tool || !window.CMS_SCREEN_QUESTIONS) return;
     regScreenTool = tool;
     var qs = window.CMS_SCREEN_QUESTIONS[code] || [];
+    // Restore previous answers if re-opening a completed screening.
+    var prev = pendingScreenings.filter(function (s) { return s.toolCode === code; })[0];
+    var prevScores = prev ? prev.itemScores : [];
     $('#rsmTitle').text(tool.name + ' — ' + tool.desc);
     var html = '';
     qs.forEach(function (q, qi) {
+      var cur = prevScores[qi];
       html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
       html += '<div class="seg" data-seg="rsmq' + qi + '">';
       q.options.forEach(function (o) {
-        html += '<button type="button" data-val="' + o.v + '">' + esc(o.t) + '</button>';
+        html += '<button type="button" data-val="' + o.v + '"' + (cur === o.v ? ' class="sel"' : '') + '>' + esc(o.t) + '</button>';
       });
       html += '</div><span class="field-error">Please answer this question.</span></div>';
     });

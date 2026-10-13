@@ -789,3 +789,4 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .seg button:hover{border-color:var(--navy)}
 .seg button.sel{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(25,63,122,.35);position:relative}
 .seg button.sel::after{content:'✓';position:absolute;top:-8px;right:-6px;background:var(--green);color:#fff;width:20px;height:20px;border-radius:50%;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.stc-score{font-size:13px;font-weight:800;color:var(--navy);margin-top:2px}
