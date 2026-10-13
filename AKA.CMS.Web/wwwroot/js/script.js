@@ -205,6 +205,14 @@ CMS.bindLayout = function(){
     $m.removeClass('open');
   });
 
+  // Close topmost modal on Escape.
+  $(document).off('keydown.cmsmodal').on('keydown.cmsmodal', function(e){
+    if (e.key === 'Escape' || e.keyCode === 27) {
+      var $open = $('.modal-backdrop.open').last();
+      if ($open.length) { clearModalValidation($open); $open.removeClass('open'); }
+    }
+  });
+
   // Clear stale validation errors whenever a modal closes, so reopening starts fresh.
   function clearModalValidation(modal){
     var $m = $(modal);
