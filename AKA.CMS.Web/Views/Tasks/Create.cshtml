@@ -18,12 +18,12 @@
   <div data-pane="1">
     <div class="card"><h3>1. Task Details</h3>
       <div class="form-grid">
-        <div class="field"><label for="tTitle">Task Title *</label><input class="input" id="tTitle" maxlength="200" placeholder="Complete PHQ-9 assessment" required><span class="field-error"></span></div>
+        <div class="field"><label for="tTitle">Task Title <span class="req">*</span></label><input class="input" id="tTitle" maxlength="200" placeholder="Complete PHQ-9 assessment" required><span class="field-error"></span></div>
         <div class="field"><label for="tType">Task Type</label><select class="input select2" id="tType"><option>Clinical Assessment</option><option>Follow-up Call</option><option>Screening</option><option>Referral Review</option><option>Home Visit</option><option>Documentation</option><option>Other</option></select><span class="field-error"></span></div>
         <div class="field full"><label for="tDesc">Description / Instructions</label><textarea class="input" id="tDesc" rows="3" maxlength="4000" placeholder="Free text"></textarea><span class="field-error"></span></div>
-        <div class="field"><label for="tCase">Case / Patient *</label><select class="input select2" id="tCase" style="width:100%" required></select><span class="field-error"></span></div>
+        <div class="field"><label for="tCase">Case / Patient <span class="req">*</span></label><select class="input select2" id="tCase" style="width:100%" required></select><span class="field-error"></span></div>
         <div class="field"><label for="tPriority">Priority</label><select class="input select2" id="tPriority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="tDue">Due Date *</label><input class="input" id="tDue" type="date" required><span class="field-error"></span></div>
+        <div class="field"><label for="tDue">Due Date <span class="req">*</span></label><input class="input" id="tDue" type="date" required><span class="field-error"></span></div>
       </div>
       <div class="bottom-actions">
         <a class="btn secondary" href="@Url.Action("Index", "Tasks")">Cancel</a>
