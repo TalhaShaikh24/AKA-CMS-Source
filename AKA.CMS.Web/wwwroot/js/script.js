@@ -196,11 +196,20 @@ CMS.bindLayout = function(){
     $($(this).data('modal')).addClass('open');
   });
   $(document).on('click', '.modal-backdrop', function(e){
-    if (e.target === this) $(this).removeClass('open');
+    if (e.target === this) { clearModalValidation(this); $(this).removeClass('open'); }
   });
   $(document).on('click', '.modal-x, [data-modal-close], [data-close]', function(){
-    $(this).closest('.modal-backdrop').removeClass('open');
+    var $m = $(this).closest('.modal-backdrop');
+    clearModalValidation($m);
+    $m.removeClass('open');
   });
+
+  // Clear stale validation errors whenever a modal closes, so reopening starts fresh.
+  function clearModalValidation(modal){
+    var $m = $(modal);
+    $m.find('.field.invalid').removeClass('invalid');
+    $m.find('.field-error').hide();
+  }
 
   // Generic tabs
   $(document).off('click.cmstabs').on('click.cmstabs', '.tab[data-tab]', function(){
