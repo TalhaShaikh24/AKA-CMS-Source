@@ -273,19 +273,20 @@ textarea.input{min-height:90px;resize:vertical}
 .field.invalid .field-error{display:block}
 .hint{font-size:12px;color:var(--muted)}
 .check-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;color:var(--text);cursor:pointer;margin:0;user-select:none}
-.check-row input[type="checkbox"]{
+/* Premium custom checkbox (direct-child inputs only — toggle switches excluded) */
+.check-row > input[type="checkbox"]{
   appearance:none;-webkit-appearance:none;
   width:20px;height:20px;flex-shrink:0;margin:0;cursor:pointer;
   border:2px solid #c3ccd9;border-radius:6px;background:#fff;
   position:relative;transition:border-color .15s,background .15s;
 }
-.check-row input[type="checkbox"]:hover{border-color:var(--navy)}
-.check-row input[type="checkbox"]:checked{background:var(--navy);border-color:var(--navy)}
-.check-row input[type="checkbox"]:checked::after{
+.check-row > input[type="checkbox"]:hover{border-color:var(--navy)}
+.check-row > input[type="checkbox"]:checked{background:var(--navy);border-color:var(--navy)}
+.check-row > input[type="checkbox"]:checked::after{
   content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
   color:#fff;font-size:13px;font-weight:800;line-height:1;
 }
-.check-row input[type="checkbox"]:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.check-row > input[type="checkbox"]:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 
 /* ---------- Buttons ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:800;font-size:14px;border:0;cursor:pointer;text-decoration:none;font-family:inherit}
