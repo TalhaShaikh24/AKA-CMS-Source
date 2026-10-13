@@ -92,13 +92,14 @@
             <span class="field-error"></span>
           </div>
           <div class="field">
-            <label>Email</label>
-            <input class="input" id="nuEmail" type="email" placeholder="user@example.org">
+            <label>Email <span class="req">*</span></label>
+            <input class="input" id="nuEmail" type="email" required placeholder="user@example.org">
             <span class="field-error"></span>
           </div>
           <div class="field" id="fRoles">
-            <label>Roles</label>
-            <select class="input select2" id="nuRoles" multiple></select>
+            <label>Roles <span class="req">*</span></label>
+            <select class="input select2" id="nuRoles" multiple required></select>
+            <span class="field-error">Please select at least one role.</span>
           </div>
           <div class="field" id="fActive" hidden>
             <label class="check-row"><input type="checkbox" id="euActive" checked><span class="check-label">Active</span></label>

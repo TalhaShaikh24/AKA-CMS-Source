@@ -27,6 +27,7 @@ public static class StoredProcedures
     public const string RoleGetAll = "sp_CMS_Role_GetAll";
     public const string RoleGetById = "sp_CMS_Role_GetById";
     public const string RoleCreate = "sp_CMS_Role_Create";
+    public const string RoleUpdate = "sp_CMS_Role_Update";
     public const string RoleGetPermissions = "sp_CMS_Role_GetPermissions";
     public const string RoleAssignPermission = "sp_CMS_Role_AssignPermission";
     public const string RoleRemovePermission = "sp_CMS_Role_RemovePermission";

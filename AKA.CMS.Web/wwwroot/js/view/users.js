@@ -103,6 +103,7 @@ $(function () {
     $('#userFormSubmit').text('Add User');
     $('#userForm')[0].reset();
     $('#editUserId').val('');
+    $('#nuUsername').prop('disabled', false);
     $('#nuRoles').val(null).trigger('change');
     $('#fUsername, #fPassword, #fRoles').show();
     $('#fActive, #fLocked, #fNewPass').hide();
@@ -110,26 +111,70 @@ $(function () {
     $('#userModal').addClass('open');
   });
 
+  function loadUserRoles(userId) {
+    var u = allUsers.filter(function (x) { return x.userId == userId; })[0];
+    if (!u) return;
+    // Map role names to IDs using allRoles
+    var roleNames = u.roles || [];
+    var roleIds = allRoles.filter(function (r) {
+      return roleNames.indexOf(r.description) >= 0 || roleNames.indexOf(r.roleName) >= 0;
+    }).map(function (r) { return String(r.roleId); });
+    $('#nuRoles').val(roleIds).trigger('change');
+  }
+
   $(document).on('click', '[data-edit]', function () {
     var u = allUsers.filter(function (x) { return x.userId == $(this).data('edit'); }.bind(this))[0];
     if (!u) return;
     $('#userModalTitle').text('Edit — ' + u.username);
     $('#userFormSubmit').text('Save Changes');
     $('#editUserId').val(u.userId);
+    $('#nuUsername').val(u.username).prop('disabled', true);
     $('#nuEmail').val(u.email || '');
     $('#euActive').prop('checked', !!u.isActive);
     $('#euLocked').prop('checked', !!u.isLocked);
     $('#euNewPass').val('');
-    $('#fUsername, #fPassword, #fRoles').hide();
+    // Show username (read-only) and roles on edit; hide password.
+    $('#fUsername').show();
+    $('#fPassword').hide();
+    $('#fRoles').show();
     $('#fActive, #fLocked, #fNewPass').show();
-    $('#nuUsername, #nuPassword').removeAttr('required');
+    $('#nuUsername').removeAttr('required');
+    $('#nuPassword').removeAttr('required');
+    // Load user's current roles
+    loadUserRoles(u.userId);
     $('#userModal').addClass('open');
   });
+
+  function syncUserRoles(userId, newRoleIds, done) {
+    var u = allUsers.filter(function (x) { return x.userId == userId; })[0];
+    var oldRoleIds = [];
+    if (u) {
+      var roleNames = u.roles || [];
+      oldRoleIds = allRoles.filter(function (r) {
+        return roleNames.indexOf(r.description) >= 0 || roleNames.indexOf(r.roleName) >= 0;
+      }).map(function (r) { return r.roleId; });
+    }
+    var toAdd = newRoleIds.filter(function (id) { return oldRoleIds.indexOf(id) < 0; });
+    var toRemove = oldRoleIds.filter(function (id) { return newRoleIds.indexOf(id) < 0; });
+    var queue = [];
+    toAdd.forEach(function (rid) { queue.push({ method: 'POST', url: '/api/users/' + userId + '/roles', data: { roleId: rid } }); });
+    toRemove.forEach(function (rid) { queue.push({ method: 'DELETE', url: '/api/users/' + userId + '/roles/' + rid }); });
+    (function next() {
+      var q = queue.shift();
+      if (!q) { done(); return; }
+      cmsAjax({
+        url: q.url, method: q.method, json: true, data: q.data,
+        fallbackMsg: 'Could not update user roles.',
+        success: next, error: next
+      });
+    })();
+  }
 
   $('#userForm').cmsValidate({
     onValid: function () {
       var id = $('#editUserId').val();
       if (id) {
+        var newRoleIds = ($('#nuRoles').val() || []).map(Number);
         cmsAjax({
           url: '/api/users/' + id, method: 'PUT', json: true,
           data: {
@@ -140,13 +185,21 @@ $(function () {
           },
           fallbackMsg: 'Could not update user.',
           success: function () {
-            $('#userModal').removeClass('open');
-            CMS.toast('User updated.', 'success');
-            load();
+            syncUserRoles(id, newRoleIds, function () {
+              $('#userModal').removeClass('open');
+              CMS.toast('User updated.', 'success');
+              load();
+            });
           }
         });
       } else {
         var roleIds = ($('#nuRoles').val() || []).map(Number);
+        if (!roleIds.length) {
+          $('#fRoles').addClass('invalid');
+          $('#fRoles .field-error').text('Please select at least one role.').show();
+          CMS.toast('Please select at least one role.', 'error');
+          return;
+        }
         cmsAjax({
           url: '/api/users', method: 'POST', json: true,
           data: {

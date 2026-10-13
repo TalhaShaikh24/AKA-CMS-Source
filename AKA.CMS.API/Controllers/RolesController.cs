@@ -44,6 +44,15 @@ public sealed class RolesController(IRoleService roleService, ICurrentUser curre
         return CreatedAtAction(nameof(GetById), new { id = role.RoleId }, role);
     }
 
+    /// <summary>Update a role's description.</summary>
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = PermissionPolicies.RolesWrite)]
+    public async Task<ActionResult<RoleDto>> Update(int id, [FromBody] UpdateRoleRequest request)
+    {
+        var role = await roleService.UpdateAsync(id, request, currentUser.UserId);
+        return Ok(role);
+    }
+
     /// <summary>Get permissions.</summary>
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<PermissionDto>))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]

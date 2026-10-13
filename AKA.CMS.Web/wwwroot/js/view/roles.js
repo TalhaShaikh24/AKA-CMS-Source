@@ -26,7 +26,10 @@ $(function () {
           return '<div class="role-item' + (r.roleId === selectedRoleId ? ' active' : '') + '" data-role="' + r.roleId + '">' +
             '<div><strong>' + esc(r.description) + '</strong>' +
             '<span class="hint">' + (r.isActive ? 'Active' : 'Inactive') + '</span></div>' +
-            '<span class="hint"># ' + r.roleId + '</span></div>';
+            '<div style="display:flex;align-items:center;gap:8px">' +
+            '<span class="hint"># ' + r.roleId + '</span>' +
+            '<button class="btn btn-ghost btn-sm" data-edit-role="' + r.roleId + '" type="button" data-permission="Roles:Write">Edit</button>' +
+            '</div></div>';
         }).join('') || '<p class="hint">No roles yet.</p>');
         if (selectId && roles.some(function (r) { return r.roleId === selectId; })) selectRole(selectId);
         else if (!selectedRoleId && roles.length) selectRole(roles[0].roleId);
@@ -76,7 +79,23 @@ $(function () {
     $('#permBody').html(html || '<p class="hint">No permissions in catalog.</p>');
   }
 
-  $(document).on('click', '.role-item', function () { selectRole(Number($(this).data('role'))); });
+  $(document).on('click', '.role-item', function (e) {
+    if ($(e.target).closest('[data-edit-role]').length) return;
+    selectRole(Number($(this).data('role')));
+  });
+
+  var editingRoleId = null;
+  $(document).on('click', '[data-edit-role]', function (e) {
+    e.stopPropagation();
+    var id = Number($(this).data('edit-role'));
+    var r = roles.filter(function (x) { return x.roleId === id; })[0];
+    if (!r) return;
+    editingRoleId = id;
+    $('#roleModalTitle').text('Edit Role');
+    $('#nrDesc').val(r.description);
+    $('#roleFormSubmit').text('Save Changes');
+    $('#roleModalNew').addClass('open');
+  });
 
   $(document).on('change', '[data-perm]', function () {
     var pid = Number($(this).data('perm'));
@@ -101,22 +120,40 @@ $(function () {
   });
 
   $('#addRoleBtn').on('click', function () {
+    editingRoleId = null;
+    $('#roleModalTitle').text('New Role');
     $('#roleForm')[0].reset();
+    $('#roleFormSubmit').text('Create Role');
     $('#roleModalNew').addClass('open');
   });
 
   $('#roleForm').cmsValidate({
     onValid: function () {
-      cmsAjax({
-        url: '/api/roles', method: 'POST', json: true,
-        data: { description: $.trim($('#nrDesc').val()) },
-        fallbackMsg: 'Could not create role.',
-        success: function (res) {
-          $('#roleModalNew').removeClass('open');
-          CMS.toast('Role created.', 'success');
-          loadRoles(res && res.roleId);
-        }
-      });
+      var desc = $.trim($('#nrDesc').val());
+      if (editingRoleId) {
+        cmsAjax({
+          url: '/api/roles/' + editingRoleId, method: 'PUT', json: true,
+          data: { description: desc },
+          fallbackMsg: 'Could not update role.',
+          success: function () {
+            $('#roleModalNew').removeClass('open');
+            CMS.toast('Role updated.', 'success');
+            editingRoleId = null;
+            loadRoles(selectedRoleId);
+          }
+        });
+      } else {
+        cmsAjax({
+          url: '/api/roles', method: 'POST', json: true,
+          data: { description: desc },
+          fallbackMsg: 'Could not create role.',
+          success: function (res) {
+            $('#roleModalNew').removeClass('open');
+            CMS.toast('Role created.', 'success');
+            loadRoles(res && res.roleId);
+          }
+        });
+      }
     }
   });
 

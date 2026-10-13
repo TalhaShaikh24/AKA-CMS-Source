@@ -1,6 +1,7 @@
 using AKA.CMS.Application.DTOs;
 using AKA.CMS.Application.Interfaces;
 using AKA.CMS.Application.Mapping;
+using AKA.CMS.Application.Validators;
 using FluentValidation;
 
 namespace AKA.CMS.Application.Services;
@@ -27,6 +28,13 @@ public sealed class RoleService(
     {
         await createRoleValidator.ValidateAndThrowAsync(request);
         var roleId = await roleRepository.CreateAsync(request.Description, performedBy);
+        return await GetByIdAsync(roleId);
+    }
+
+    public async Task<RoleDto> UpdateAsync(int roleId, UpdateRoleRequest request, int performedBy)
+    {
+        await new UpdateRoleRequestValidator().ValidateAndThrowAsync(request);
+        await roleRepository.UpdateAsync(roleId, request.Description, performedBy);
         return await GetByIdAsync(roleId);
     }
 

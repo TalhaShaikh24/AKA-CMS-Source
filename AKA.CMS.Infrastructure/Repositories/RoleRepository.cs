@@ -3,6 +3,7 @@ using AKA.CMS.Application.Interfaces;
 using AKA.CMS.Domain.Entities;
 using AKA.CMS.Infrastructure.Persistence;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace AKA.CMS.Infrastructure.Repositories;
 
@@ -33,6 +34,24 @@ public sealed class RoleRepository(DapperContext context) : IRoleRepository
         parameters.Add("@PerformedBy", performedBy);
         return await connection.QuerySingleAsync<int>(
             StoredProcedures.RoleCreate, parameters, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpdateAsync(int roleId, string description, int performedBy)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@RoleId", roleId);
+        parameters.Add("@Description", description);
+        parameters.Add("@PerformedBy", performedBy);
+        try
+        {
+            await connection.ExecuteAsync(
+                StoredProcedures.RoleUpdate, parameters, commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number == 50008)
+        {
+            throw new NotFoundException(ex.Message);
+        }
     }
 
     public async Task<IReadOnlyList<ControllerAction>> GetPermissionsAsync(int roleId)

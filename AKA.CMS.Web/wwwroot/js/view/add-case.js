@@ -234,6 +234,19 @@ $(function () {
     if (text('fRiskCat')) riskBits.push(text('fRiskCat') + ' risk');
     if (text('fIsCrisis') === 'Yes') riskBits.push('active crisis');
     $('#revRisk').text(riskBits.join(' / ') || '—');
+    // Screenings with scores
+    if (pendingScreenings.length) {
+      $('#revScreenings').html(pendingScreenings.map(function (s) {
+        var score = s.itemScores.reduce(function (a, b) { return a + b; }, 0);
+        return '<div class="geo-card" style="margin-bottom:8px">' +
+          '<div class="geo-card-main"><div class="geo-card-name">' + esc(s.toolName) + '</div>' +
+          '<div class="geo-card-sub">Completed</div></div>' +
+          '<div class="geo-card-side"><span class="badge st-active">Score: ' + score + '</span></div>' +
+          '</div>';
+      }).join(''));
+    } else {
+      $('#revScreenings').html('<p class="hint" style="margin:0">No screenings completed.</p>');
+    }
   }
 
   /* ---------- submit: member → case → screening ---------- */

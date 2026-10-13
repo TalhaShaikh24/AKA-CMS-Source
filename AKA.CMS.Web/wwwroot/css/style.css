@@ -74,8 +74,11 @@ a{color:var(--blue)}
 .brand .flower{width:40px;height:40px}
 .brand strong{display:block;color:#fff;font-size:17px}
 .brand span{font-size:11px;color:#93A3C4}
-.nav{flex:1;overflow-y:auto;padding:18px 14px}
-.nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-color:transparent}
+.nav{flex:1;overflow-y:auto;padding:18px 14px;scrollbar-width:thin;scrollbar-color:#c3ccd9 transparent}
+.nav::-webkit-scrollbar{width:8px}
+.nav::-webkit-scrollbar-track{background:transparent}
+.nav::-webkit-scrollbar-thumb{background:#c3ccd9;border-radius:8px;border:2px solid #fff}
+.nav::-webkit-scrollbar-thumb:hover{background:#a8b3c5}
 .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#9aa5b5;padding:12px 12px 7px}
 .nav-link{display:flex;align-items:center;gap:12px;padding:11px 12px;margin:2px 0;border-radius:10px;color:#516079;text-decoration:none;font-weight:600;position:relative}
 .nav-link svg{width:20px;height:20px;flex-shrink:0;text-align:center}
@@ -756,4 +759,5 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
   transition:border-color .15s,background .15s;
 }
 .seg button:hover{border-color:var(--navy)}
-.seg button.sel{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+.seg button.sel{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(25,63,122,.35);position:relative}
+.seg button.sel::after{content:'✓';position:absolute;top:-8px;right:-6px;background:var(--green);color:#fff;width:20px;height:20px;border-radius:50%;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:800}
