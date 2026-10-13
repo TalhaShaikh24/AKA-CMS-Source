@@ -69,7 +69,14 @@ $.fn.cmsValidate = function(opts){
 
       if (!ok){
         if (s.scroll && first && first.length){
-          $('html,body').animate({ scrollTop: first.closest('.field').offset().top - 120 }, 300);
+          var $field = first.closest('.field');
+          var $modalBody = $field.closest('.modal-backdrop.open').find('.modal-body');
+          if ($modalBody.length){
+            // Inside a modal: scroll the modal body, not the page.
+            $modalBody.animate({ scrollTop: $modalBody.scrollTop() + $field.position().top - 20 }, 300);
+          } else {
+            $('html,body').animate({ scrollTop: $field.offset().top - 120 }, 300);
+          }
         }
         CMS.toast('Please fix the highlighted fields.', 'error');
         return;
