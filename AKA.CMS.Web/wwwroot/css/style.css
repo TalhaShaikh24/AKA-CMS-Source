@@ -262,7 +262,7 @@ table.table{width:100%;border-collapse:collapse;font-size:13.5px}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
 .field.full{grid-column:1/-1}
 .field label{font-size:13px;font-weight:600}
-.field label .req{color:var(--red)}
+.field label .req, label .req{color:var(--red);font-weight:700}
 .input,select.input,textarea.input{padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;font:inherit;font-size:14px;background:#fff;width:100%;color:var(--text)}
 .input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(46,61,98,.1)}
 textarea.input{min-height:90px;resize:vertical}
