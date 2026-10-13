@@ -137,6 +137,7 @@ CMS.mountLayout = function(pageKey){
   CMS.initSelect2(document);
   CMS.initDateRange(document);
   CMS.initValidation(document);
+  if (window.CMSValidator) CMSValidator.init(document);
 };
 
 /* --------------------------------------------------------------------------

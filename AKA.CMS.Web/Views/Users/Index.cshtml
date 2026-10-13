@@ -83,17 +83,17 @@
         <div class="form-grid">
           <div class="field" id="fUsername">
             <label>Username <span class="req">*</span></label>
-            <input class="input" id="nuUsername" required placeholder="e.g. fieldworker2" autocomplete="off">
+            <input class="input" id="nuUsername" required data-validate="required" data-minlength="3" data-maxlength="50" placeholder="e.g. fieldworker2" autocomplete="off">
             <span class="field-error"></span>
           </div>
           <div class="field" id="fPassword">
             <label>Password <span class="req">*</span></label>
-            <input class="input" id="nuPassword" type="password" required placeholder="••••••••" autocomplete="new-password">
+            <input class="input" id="nuPassword" type="password" required data-validate="required" data-minlength="6" placeholder="••••••••" autocomplete="new-password">
             <span class="field-error"></span>
           </div>
           <div class="field">
             <label>Email <span class="req">*</span></label>
-            <input class="input" id="nuEmail" type="email" required placeholder="user@example.org">
+            <input class="input" id="nuEmail" type="email" required data-validate="required|email" placeholder="user@example.org">
             <span class="field-error"></span>
           </div>
           <div class="field" id="fRoles">
