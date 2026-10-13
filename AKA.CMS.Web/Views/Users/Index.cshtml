@@ -101,15 +101,15 @@
             <select class="input select2" id="nuRoles" multiple required></select>
             <span class="field-error">Please select at least one role.</span>
           </div>
-          <div class="field" id="fActive" hidden>
-            <label class="check-row"><input type="checkbox" id="euActive" checked><span class="check-label">Active</span></label>
-          </div>
-          <div class="field" id="fLocked" hidden>
-            <label class="check-row"><input type="checkbox" id="euLocked"><span class="check-label">Locked</span></label>
-          </div>
           <div class="field" id="fNewPass" hidden>
             <label>New Password <span class="hint-inline">(leave blank to keep)</span></label>
             <input class="input" id="euNewPass" type="password" placeholder="••••••••" autocomplete="new-password">
+          </div>
+          <div class="field field-span-2" id="fStatusRow" hidden>
+            <div class="status-row">
+              <label class="check-row"><input type="checkbox" id="euActive" checked><span class="check-label">Active</span></label>
+              <label class="check-row"><input type="checkbox" id="euLocked"><span class="check-label">Locked</span></label>
+            </div>
           </div>
         </div>
       </div>

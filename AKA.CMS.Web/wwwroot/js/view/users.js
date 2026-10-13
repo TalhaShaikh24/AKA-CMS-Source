@@ -106,7 +106,7 @@ $(function () {
     $('#nuUsername').prop('disabled', false);
     $('#nuRoles').val(null).trigger('change');
     $('#fUsername, #fPassword, #fRoles').show();
-    $('#fActive, #fLocked, #fNewPass').hide();
+    $('#fStatusRow, #fNewPass').hide();
     $('#nuUsername, #nuPassword').attr('required', 'required');
     $('#userModal').addClass('open');
   });
@@ -137,7 +137,7 @@ $(function () {
     $('#fUsername').show();
     $('#fPassword').hide();
     $('#fRoles').show();
-    $('#fActive, #fLocked, #fNewPass').show();
+    $('#fStatusRow, #fNewPass').show();
     $('#nuUsername').removeAttr('required');
     $('#nuPassword').removeAttr('required');
     // Load user's current roles
