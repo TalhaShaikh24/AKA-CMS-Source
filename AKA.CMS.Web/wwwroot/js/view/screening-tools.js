@@ -80,6 +80,12 @@
   }
 
   /* ---------- add / edit ---------- */
+  // Direct close handler as backup (in addition to the global one in script.js).
+  $(document).on('click', '#toolModal .modal-x, #toolModal [data-close]', function (e) {
+    e.stopPropagation();
+    $('#toolModal').removeClass('open');
+  });
+
   $('#addToolBtn').on('click', function () {
     editingCode = null;
     $('#toolModalTitle').text('New Screening Tool');
