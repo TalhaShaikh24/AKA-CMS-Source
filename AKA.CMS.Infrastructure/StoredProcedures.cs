@@ -76,6 +76,11 @@ public static class StoredProcedures
     public const string CaseHistoryGetByCase = "sp_CMS_CaseHistory_GetByCase";
 
     public const string ScreeningToolGetAll = "sp_CMS_ScreeningTool_GetAll";
+    public const string ScreeningToolGetActive = "sp_CMS_ScreeningTool_GetActive";
+    public const string ScreeningToolGetAllAdmin = "sp_CMS_ScreeningTool_GetAllAdmin";
+    public const string ScreeningToolGetDetail = "sp_CMS_ScreeningTool_GetDetail";
+    public const string ScreeningToolCreateFull = "sp_CMS_ScreeningTool_CreateFull";
+    public const string ScreeningToolUpdateFull = "sp_CMS_ScreeningTool_UpdateFull";
     public const string ScreeningSubmit = "sp_CMS_Screening_Submit";
     public const string ScreeningUpdate = "sp_CMS_Screening_Update";
     public const string ScreeningGetById = "sp_CMS_Screening_GetById";

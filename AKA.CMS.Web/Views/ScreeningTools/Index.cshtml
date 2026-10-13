@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "Screening Tools";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "screeningtools";
+    ViewData["RequiredPermission"] = "Screenings:Write";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Screening Tools</h1>
+    <p class="sub">Manage screening questionnaires — used by registration and screening pages</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" id="addToolBtn" type="button" data-permission="Screenings:Write">+ Add Tool</button>
+  </div>
+</div>
+
+<div class="geo-grid" id="toolRows"><div class="hint geo-empty">Loading&hellip;</div></div>
+
+<div class="modal-backdrop" id="toolModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <h3 id="toolModalTitle">New Screening Tool</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <form id="toolForm" data-validate novalidate>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Tool Code <span class="req">*</span></label>
+            <input class="input" id="stCode" required data-validate="required" data-maxlength="20" placeholder="e.g. PHQ9" style="text-transform:uppercase">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Tool Name <span class="req">*</span></label>
+            <input class="input" id="stName" required data-validate="required" data-maxlength="100" placeholder="e.g. Patient Health Questionnaire-9">
+            <span class="field-error"></span>
+          </div>
+          <div class="field field-span-2">
+            <label>Description</label>
+            <input class="input" id="stDesc" data-maxlength="500" placeholder="e.g. Depression screening">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Max Item Score <span class="req">*</span></label>
+            <input class="input" id="stMaxScore" type="number" required data-validate="required|integer" data-min="1" data-max="10" value="3" data-mask="number">
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label>Sort Order</label>
+            <input class="input" id="stSort" type="number" data-validate="integer" value="0" data-mask="number">
+            <span class="field-error"></span>
+          </div>
+          <div class="field field-span-2" id="fToolActive">
+            <div class="status-row">
+              <label class="check-row"><input type="checkbox" id="stActive" checked><span class="check-label">Active</span></label>
+            </div>
+          </div>
+        </div>
+        <h4 style="margin:18px 0 10px">Questions</h4>
+        <div id="stQuestions"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addQuestionBtn">+ Add Question</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="toolFormSubmit">Create Tool</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/screening-tools.js" asp-append-version="true"></script>
+}

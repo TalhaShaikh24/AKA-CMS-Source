@@ -92,13 +92,15 @@ $(function () {
   var pendingScreenings = []; // {toolCode, toolName, itemScores}
   var regScreenTool = null;
 
-  var SCREEN_TOOLS = [
-    { code: 'PHQ9',   name: 'PHQ-9',   desc: 'Depression' },
-    { code: 'GAD7',   name: 'GAD-7',   desc: 'Anxiety' },
-    { code: 'DASS21', name: 'DASS-21', desc: 'Stress / Depression / Anxiety' },
-    { code: 'SBQR',   name: 'SBQ-R',   desc: 'Suicide Risk' },
-    { code: 'CSSRS',  name: 'C-SSRS',  desc: 'Suicidal Ideation / Behavior' }
-  ];
+  var SCREEN_TOOLS = [];
+
+  // Load tools dynamically from API (falls back to hardcoded bank).
+  if (window.CMS_SCREEN_TOOLS) {
+    CMS_SCREEN_TOOLS.load(function (tools) {
+      SCREEN_TOOLS = tools;
+      renderScreenToolCards();
+    });
+  }
 
   function renderScreenToolCards() {
     $('#screenToolCards').html(SCREEN_TOOLS.map(function (t) {
@@ -121,9 +123,9 @@ $(function () {
   $(document).on('click', '.screen-tool-card', function () {
     var code = $(this).data('tool');
     var tool = SCREEN_TOOLS.filter(function (t) { return t.code === code; })[0];
-    if (!tool || !window.CMS_SCREEN_QUESTIONS) return;
+    if (!tool) return;
     regScreenTool = tool;
-    var qs = window.CMS_SCREEN_QUESTIONS[code] || [];
+    var qs = tool.questions || [];
     // Restore previous answers if re-opening a completed screening.
     var prev = pendingScreenings.filter(function (s) { return s.toolCode === code; })[0];
     var prevScores = prev ? prev.itemScores : [];
@@ -143,8 +145,8 @@ $(function () {
   });
 
   $('#rsmComplete').on('click', function () {
-    if (!regScreenTool || !window.CMS_SCREEN_QUESTIONS) return;
-    var qs = window.CMS_SCREEN_QUESTIONS[regScreenTool.code] || [];
+    if (!regScreenTool) return;
+    var qs = regScreenTool.questions || [];
     var answers = [], ok = true;
     qs.forEach(function (q, qi) {
       var $f = $('#rsmQuestions .field[data-q="' + qi + '"]');

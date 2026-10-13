@@ -191,11 +191,13 @@ $(function () {
     var id = parseInt($(this).data('edit-screening'), 10);
     var list = window._cdScreenings || [];
     var s = list.filter(function (x) { return x.screeningId === id; })[0];
-    if (!s || !window.CMS_SCREEN_QUESTIONS) return;
-    editingScreening = s;
-    var qs = window.CMS_SCREEN_QUESTIONS[s.toolCode] || [];
-    $('#esTitle').text('Edit ' + (s.toolName || s.toolCode));
-    var html = '';
+    if (!s) return;
+    // Ensure dynamic questions are loaded before opening the editor.
+    var openEditor = function () {
+      editingScreening = s;
+      var qs = (window.CMS_SCREEN_QUESTIONS || {})[s.toolCode] || [];
+      $('#esTitle').text('Edit ' + (s.toolName || s.toolCode));
+      var html = '';
     qs.forEach(function (q, qi) {
       var cur = (s.itemScores || [])[qi];
       html += '<div class="field" data-q="' + qi + '" style="margin-bottom:14px"><label>' + (qi + 1) + '. ' + esc(q.text) + ' *</label>';
@@ -207,11 +209,17 @@ $(function () {
     });
     $('#esQuestions').html(html);
     $('#editScreeningModal').addClass('open');
+    };
+    if (window.CMS_SCREEN_TOOLS) {
+      CMS_SCREEN_TOOLS.load(function () { openEditor(); });
+    } else {
+      openEditor();
+    }
   });
 
   $('#esSave').on('click', function () {
-    if (!editingScreening || !window.CMS_SCREEN_QUESTIONS) return;
-    var qs = window.CMS_SCREEN_QUESTIONS[editingScreening.toolCode] || [];
+    if (!editingScreening) return;
+    var qs = ((window.CMS_SCREEN_QUESTIONS || {})[editingScreening.toolCode] || []);
     var answers = [], ok = true;
     qs.forEach(function (q, qi) {
       var $f = $('#esQuestions .field[data-q="' + qi + '"]');

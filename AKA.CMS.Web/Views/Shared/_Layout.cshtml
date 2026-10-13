@@ -75,6 +75,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3m-4 2 3 3"/></svg>
         <span>Roles &amp; Permissions</span>
       </a>
+      <a href="@Url.Action("Index", "ScreeningTools")" class="@NavCls("screeningtools")" data-key="screeningtools" data-permission="Screenings:Write">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Screening Tools</span>
+      </a>
       <a href="@Url.Action("Index", "Reports")" class="@NavCls("reports")" data-key="reports" data-permission="Reports:Read">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
         <span>Reports</span>
@@ -149,6 +153,7 @@
 <script src="~/js/auth-guard.js" asp-append-version="true"></script>
 <script src="~/js/validation.js" asp-append-version="true"></script>
 <script src="~/js/validator.js" asp-append-version="true"></script>
+<script src="~/js/screening-tools-loader.js" asp-append-version="true"></script>
 <script src="~/js/filters.js" asp-append-version="true"></script>
 <script>
 // Fills the user chip from the JWT login session stored by cmsAuth.
