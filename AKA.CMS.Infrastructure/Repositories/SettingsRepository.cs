@@ -16,6 +16,7 @@ public sealed class SettingsRepository(DapperContext context) : ISettingsReposit
         public string? DisplayName { get; set; }
         public string? Phone { get; set; }
         public string? Region { get; set; }
+        public string? Regions { get; set; }
         public string? Bio { get; set; }
         public bool EmailAlerts { get; set; }
         public bool SmsReminders { get; set; }
@@ -43,6 +44,9 @@ public sealed class SettingsRepository(DapperContext context) : ISettingsReposit
             DisplayName = row.DisplayName,
             Phone = row.Phone,
             Region = row.Region,
+            Regions = string.IsNullOrWhiteSpace(row.Regions)
+                ? new List<string>()
+                : row.Regions.Split(',').Select(r => r.Trim()).Where(r => r.Length > 0).ToList(),
             Bio = row.Bio
         };
     }
@@ -55,6 +59,9 @@ public sealed class SettingsRepository(DapperContext context) : ISettingsReposit
         p.Add("@DisplayName", request.DisplayName);
         p.Add("@Phone", request.Phone);
         p.Add("@Region", request.Region);
+        p.Add("@Regions", request.Regions != null && request.Regions.Count > 0
+            ? string.Join(",", request.Regions)
+            : null);
         p.Add("@Bio", request.Bio);
         p.Add("@Email", request.Email);
         await connection.ExecuteAsync(

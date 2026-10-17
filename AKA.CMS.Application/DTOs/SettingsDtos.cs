@@ -8,6 +8,7 @@ public sealed class UserProfileDto
     public string? DisplayName { get; set; }
     public string? Phone { get; set; }
     public string? Region { get; set; }
+    public List<string> Regions { get; set; } = new();
     public string? Bio { get; set; }
 }
 
@@ -17,6 +18,7 @@ public sealed class UpdateProfileRequest
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? Region { get; set; }
+    public List<string>? Regions { get; set; }
     public string? Bio { get; set; }
 }
 

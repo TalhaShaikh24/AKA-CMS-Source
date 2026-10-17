@@ -21,22 +21,31 @@ $(function () {
   initSelect2($('#sysRegion'), { placeholder: 'Select region' });
 
   // Regions for both dropdowns (dynamic geography).
-  function loadRegions() {
+  // Profile regions load FIRST, then profile — so saved regions pre-select correctly.
+  function loadRegions(done) {
     cmsAjax({
       url: '/api/geography/regions', method: 'GET',
       success: function (res) {
         var regions = res || [];
-        ['#pfRegion', '#sysRegion'].forEach(function (sel) {
-          var $sel = $(sel);
-          var cur = $sel.val();
-          $sel.find('option[value!=""]').remove();
-          regions.forEach(function (r) {
-            var name = r.regionName || r.name;
-            if (name) $sel.append($('<option>').text(name));
-          });
-          if (cur) $sel.val(cur).trigger('change');
+        // Profile: multi-select.
+        var $pf = $('#pfRegion');
+        $pf.find('option').remove();
+        regions.forEach(function (r) {
+          var name = r.regionName || r.name;
+          if (name) $pf.append($('<option>').text(name));
         });
-      }
+        // System: single-select.
+        var $sys = $('#sysRegion');
+        var curSys = $sys.val();
+        $sys.find('option[value!=""]').remove();
+        regions.forEach(function (r) {
+          var name = r.regionName || r.name;
+          if (name) $sys.append($('<option>').text(name));
+        });
+        if (curSys) $sys.val(curSys).trigger('change');
+        if (typeof done === 'function') done();
+      },
+      error: function () { if (typeof done === 'function') done(); }
     });
   }
 
@@ -60,7 +69,8 @@ $(function () {
         $('#pfEmail').val(p.email || '');
         $('#pfPhone').val(p.phone || '');
         $('#pfUsername').val(p.username || '');
-        if (p.region) $('#pfRegion').val(p.region).trigger('change');
+        var regions = p.regions && p.regions.length ? p.regions : (p.region ? [p.region] : []);
+        if (regions.length) $('#pfRegion').val(regions).trigger('change');
         $('#pfBio').val(p.bio || '');
         $('#pfAvatar').text(initials(name));
         $('#pfDisplayTitle').text(name || '—');
@@ -89,7 +99,7 @@ $(function () {
         displayName: $.trim($('#pfName').val()),
         email: $.trim($('#pfEmail').val()),
         phone: $.trim($('#pfPhone').val()) || null,
-        region: $('#pfRegion').val() || null,
+        regions: $('#pfRegion').val() || [],
         bio: $.trim($('#pfBio').val()) || null
       },
       fallbackMsg: 'Could not save profile.',
@@ -184,8 +194,10 @@ $(function () {
     }
   });
 
-  loadRegions();
-  loadProfile();
+  // Load order matters: regions first, then profile (so saved regions pre-select).
+  loadRegions(function () {
+    loadProfile();
+    loadSystem();
+  });
   loadNotifications();
-  loadSystem();
 });
