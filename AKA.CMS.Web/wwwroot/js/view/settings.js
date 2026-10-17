@@ -1,19 +1,9 @@
-/* Settings — demo-only port of the template view script — no API calls. Persists to localStorage only. */
+/* Settings — wired to /api/settings (profile, notifications, system). */
 $(function () {
-
-  var KEY = 'cms_settings';
 
   function initSelect2($el, opts) {
     if (!$el.length || !$.fn.select2 || $el.data('select2')) return;
     $el.select2($.extend({ width: '100%' }, opts || {}));
-  }
-  function loadSettings() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
-  }
-  function saveSettings(patch) {
-    var s = $.extend(loadSettings(), patch || {});
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
-    return s;
   }
 
   /* ------------------------------------------------------------------ *
@@ -30,52 +20,156 @@ $(function () {
   initSelect2($('#pfRegion'), { placeholder: 'Select region' });
   initSelect2($('#sysRegion'), { placeholder: 'Select region' });
 
+  // Regions for both dropdowns (dynamic geography).
+  function loadRegions() {
+    cmsAjax({
+      url: '/api/geography/regions', method: 'GET',
+      success: function (res) {
+        var regions = res || [];
+        ['#pfRegion', '#sysRegion'].forEach(function (sel) {
+          var $sel = $(sel);
+          var cur = $sel.val();
+          $sel.find('option[value!=""]').remove();
+          regions.forEach(function (r) {
+            var name = r.regionName || r.name;
+            if (name) $sel.append($('<option>').text(name));
+          });
+          if (cur) $sel.val(cur).trigger('change');
+        });
+      }
+    });
+  }
+
+  function initials(name) {
+    if (!name) return '–';
+    var parts = $.trim(name).split(/\s+/);
+    return (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase();
+  }
+
   /* ------------------------------------------------------------------ *
-   * Profile form
+   * Profile — GET/PUT /api/settings/profile
    * ------------------------------------------------------------------ */
+  function loadProfile() {
+    cmsAjax({
+      url: '/api/settings/profile', method: 'GET',
+      fallbackMsg: 'Could not load profile.',
+      success: function (p) {
+        p = p || {};
+        var name = p.displayName || p.username || '';
+        $('#pfName').val(name);
+        $('#pfEmail').val(p.email || '');
+        $('#pfPhone').val(p.phone || '');
+        $('#pfUsername').val(p.username || '');
+        if (p.region) $('#pfRegion').val(p.region).trigger('change');
+        $('#pfBio').val(p.bio || '');
+        $('#pfAvatar').text(initials(name));
+        $('#pfDisplayTitle').text(name || '—');
+        $('#pfDisplaySub').text(p.username ? '@' + p.username : '');
+      }
+    });
+  }
+
   $('#profileForm').on('submit', function (e) {
     e.preventDefault();
-    saveSettings({
-      profile: {
-        name: $('#pfName').val(),
-        email: $('#pfEmail').val(),
-        phone: $('#pfPhone').val(),
-        region: $('#pfRegion').val(),
-        bio: $('#pfBio').val()
+    var $f = $(this);
+    $f.find('.field').removeClass('invalid');
+    var ok = true;
+    $f.find('[required]').each(function () {
+      if (!$.trim($(this).val() || '')) {
+        $(this).closest('.field').addClass('invalid');
+        $(this).closest('.field').find('.field-error').text('This field is required.');
+        ok = false;
       }
     });
-    CMS.toast('Profile updated', 'success');
+    if (!ok) return;
+    CMS.loader(true);
+    cmsAjax({
+      url: '/api/settings/profile', method: 'PUT', json: true,
+      data: {
+        displayName: $.trim($('#pfName').val()),
+        email: $.trim($('#pfEmail').val()),
+        phone: $.trim($('#pfPhone').val()) || null,
+        region: $('#pfRegion').val() || null,
+        bio: $.trim($('#pfBio').val()) || null
+      },
+      fallbackMsg: 'Could not save profile.',
+      success: function (p) {
+        CMS.loader(false);
+        CMS.toast('Profile updated', 'success');
+        var name = (p && p.displayName) || $.trim($('#pfName').val());
+        $('#pfAvatar').text(initials(name));
+        $('#pfDisplayTitle').text(name || '—');
+      },
+      error: function () { CMS.loader(false); }
+    });
   });
 
   /* ------------------------------------------------------------------ *
-   * Notification toggles
+   * Notifications — GET/PUT /api/settings/notifications
    * ------------------------------------------------------------------ */
-  var saved = loadSettings().notifications || {};
-  $('#panel-notif .switch input').each(function () {
-    var id = this.id;
-    if (saved[id] !== undefined) this.checked = !!saved[id];
-  });
+  var notifMap = { ntEmail: 'emailAlerts', ntSms: 'smsReminders', ntDigest: 'followUpDigests', ntCrisis: 'crisisAlerts' };
+
+  function loadNotifications() {
+    cmsAjax({
+      url: '/api/settings/notifications', method: 'GET',
+      fallbackMsg: 'Could not load notification preferences.',
+      success: function (n) {
+        n = n || {};
+        Object.keys(notifMap).forEach(function (id) {
+          $('#' + id).prop('checked', !!n[notifMap[id]]);
+        });
+      }
+    });
+  }
+
   $('#panel-notif .switch input').on('change', function () {
+    var id = this.id;
+    var on = $(this).is(':checked');
     var label = $(this).closest('.check-row').find('b').text();
-    var patch = { notifications: {} };
-    patch.notifications[this.id] = $(this).is(':checked');
-    saveSettings(patch);
-    CMS.toast(label + ': ' + ($(this).is(':checked') ? 'On' : 'Off'), 'info');
+    cmsAjax({
+      url: '/api/settings/notifications', method: 'PUT', json: true,
+      data: {
+        emailAlerts: $('#ntEmail').is(':checked'),
+        smsReminders: $('#ntSms').is(':checked'),
+        followUpDigests: $('#ntDigest').is(':checked'),
+        crisisAlerts: $('#ntCrisis').is(':checked')
+      },
+      fallbackMsg: 'Could not save notification preferences.',
+      success: function () { CMS.toast(label + ': ' + (on ? 'On' : 'Off'), 'info'); },
+      error: function () { $('#' + id).prop('checked', !on); }
+    });
   });
 
   /* ------------------------------------------------------------------ *
-   * System form
+   * System — GET/PUT /api/settings/system
    * ------------------------------------------------------------------ */
+  function loadSystem() {
+    cmsAjax({
+      url: '/api/settings/system', method: 'GET',
+      fallbackMsg: 'Could not load system settings.',
+      success: function (s) {
+        s = s || {};
+        if (s.defaultRegion) $('#sysRegion').val(s.defaultRegion).trigger('change');
+        $('#sysTimeout').val(String(s.sessionTimeout || 30));
+        $('#sysRetention').val(s.dataRetentionMonths || 24);
+      }
+    });
+  }
+
   $('#systemForm').on('submit', function (e) {
     e.preventDefault();
-    saveSettings({
-      system: {
-        region: $('#sysRegion').val(),
-        timeout: $('#sysTimeout').val(),
-        retention: $('#sysRetention').val()
-      }
+    CMS.loader(true);
+    cmsAjax({
+      url: '/api/settings/system', method: 'PUT', json: true,
+      data: {
+        defaultRegion: $('#sysRegion').val() || null,
+        sessionTimeout: parseInt($('#sysTimeout').val(), 10) || 30,
+        dataRetentionMonths: parseInt($('#sysRetention').val(), 10) || 24
+      },
+      fallbackMsg: 'Could not save system settings.',
+      success: function () { CMS.loader(false); CMS.toast('System settings saved', 'success'); },
+      error: function () { CMS.loader(false); }
     });
-    CMS.toast('System settings saved', 'success');
   });
 
   /* ------------------------------------------------------------------ *
@@ -89,4 +183,9 @@ $(function () {
       CMS.toast('Local data cleared', 'success');
     }
   });
+
+  loadRegions();
+  loadProfile();
+  loadNotifications();
+  loadSystem();
 });

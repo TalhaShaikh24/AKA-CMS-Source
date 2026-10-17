@@ -78,6 +78,11 @@ public static class StoredProcedures
     public const string ScreeningToolGetAll = "sp_CMS_ScreeningTool_GetAll";
     public const string RiskAssessmentSave = "sp_CMS_RiskAssessment_Save";
     public const string RiskAssessmentGetByCase = "sp_CMS_RiskAssessment_GetByCase";
+    public const string UserSettingsGet = "sp_CMS_UserSettings_Get";
+    public const string UserSettingsSaveProfile = "sp_CMS_UserSettings_SaveProfile";
+    public const string UserSettingsSaveNotifications = "sp_CMS_UserSettings_SaveNotifications";
+    public const string SystemSettingsGet = "sp_CMS_SystemSettings_Get";
+    public const string SystemSettingsSave = "sp_CMS_SystemSettings_Save";
     public const string ScreeningToolGetActive = "sp_CMS_ScreeningTool_GetActive";
     public const string ScreeningToolGetAllAdmin = "sp_CMS_ScreeningTool_GetAllAdmin";
     public const string ScreeningToolGetDetail = "sp_CMS_ScreeningTool_GetDetail";
