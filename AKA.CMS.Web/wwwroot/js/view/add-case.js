@@ -385,10 +385,13 @@ $(function () {
     });
   });
 
-  // Age Group auto-suggest from Age (sheet: Youth 0–17 / Adult 18+).
+  // Age Group auto-suggest from Age (sheet: Youth 0–17 / Adult 18+), editable override.
   $('#fAge').on('change', function () {
     var a = parseInt($(this).val(), 10);
-    $('#fAgeGroup').val(isNaN(a) ? '' : (a <= 17 ? 'Youth (0–17)' : 'Adult (18+)'));
+    var sug = isNaN(a) ? '' : (a <= 17 ? 'Youth (0–17)' : 'Adult (18+)');
+    var $g = $('#fAgeGroup');
+    if (sug && !$g.val()) $g.val(sug).trigger('change');
+    else if (!sug) $g.val('').trigger('change');
   });
 
   loadGeography();
