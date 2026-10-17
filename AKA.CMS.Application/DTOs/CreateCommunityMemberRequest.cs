@@ -24,4 +24,10 @@ public sealed record CreateCommunityMemberRequest(
     string? GpUsualCare,
     string? PriorMhTreatment,
     string? ConnectedToMhCare,
-    string? CareProviderName);
+    string? CareProviderName,
+    string? FirstName,
+    string? LastName,
+    DateTime? DateOfCall,
+    string? EntryPoint,
+    string? ReturningCaller,
+    string? ConsentToProceed);

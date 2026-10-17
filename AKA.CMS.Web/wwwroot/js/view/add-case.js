@@ -221,7 +221,7 @@ $(function () {
   }
 
   $('#rsNext1').on('click', function () { if (validateStep(1)) showStep(2); });
-  $('#rsNext2').on('click', function () { showStep(3); });
+  $('#rsNext2').on('click', function () { if (validateStep(2)) showStep(3); });
   $('#rsNext3').on('click', function () { showStep(4); });
   $('#rsBack2').on('click', function () { showStep(1); });
   $('#rsBack3').on('click', function () { showStep(2); });
@@ -235,16 +235,26 @@ $(function () {
   }
   function buildReview() {
     $('#revPersonal').html(
-      kvRow('Name', val('fName')) +
+      kvRow('Name', [val('fFirstName'), val('fLastName')].filter(Boolean).join(' ')) +
+      kvRow('Date of Call', val('fCallDate')) +
+      kvRow('Entry Point', text('fEntryPoint')) +
+      kvRow('Returning Caller', text('fReturning')) +
+      kvRow('Consent', text('fConsent')) +
       kvRow('Age', val('fAge')) +
+      kvRow('Age Group', val('fAgeGroup')) +
       kvRow('Gender', text('fGender')) +
       kvRow('Phone', val('fPhone')) +
-      kvRow('Location', [text('fVillage'), text('fLocalCouncil'), text('fRegion')].filter(Boolean).join(', '))
+      kvRow('Location', [text('fVillage'), text('fLocalCouncil'), text('fRegion')].filter(Boolean).join(', ')) +
+      kvRow('Marital Status', text('fMarital')) +
+      kvRow('No. of Children', text('fChildren')) +
+      kvRow('Prior MH Treatment', text('fPriorMh')) +
+      kvRow('Connected to MH Care', text('fConnectedMh'))
     );
     $('#revConcern').text(val('fConcern') || '—');
     var riskBits = [];
-    if (text('fRiskCat')) riskBits.push(text('fRiskCat') + ' risk');
-    if (text('fIsCrisis') === 'Yes') riskBits.push('active crisis');
+    if (text('fRiskCat')) riskBits.push(text('fRiskCat'));
+    if (text('fIsCrisis')) riskBits.push('Crisis: ' + text('fIsCrisis'));
+    if (text('fPrimaryIssue')) riskBits.push(text('fPrimaryIssue'));
     $('#revRisk').text(riskBits.join(' / ') || '—');
     // Screenings with scores
     if (pendingScreenings.length) {
@@ -261,39 +271,71 @@ $(function () {
     }
   }
 
-  /* ---------- submit: member → case → screening ---------- */
+  /* ---------- submit: member → case → risk assessment → screening ---------- */
   $('#rsSubmit').on('click', function () {
     if (!validateStep(1)) { showStep(1); return; }
+    if (!validateStep(2)) { showStep(2); return; }
 
     var ageVal = val('fAge');
+    var firstName = val('fFirstName'), lastName = val('fLastName');
+    var childrenVal = text('fChildren');
     var memberPayload = {
-      fullName: val('fName'),
+      firstName: firstName || null,
+      lastName: lastName || null,
+      fullName: [firstName, lastName].filter(Boolean).join(' ') || null,
       gender: text('fGender') || null,
       phone: val('fPhone') || null,
       age: ageVal ? parseInt(ageVal, 10) : null,
+      dateOfCall: val('fCallDate') || null,
+      entryPoint: text('fEntryPoint') || null,
+      returningCaller: text('fReturning') || null,
+      consentToProceed: text('fConsent') || null,
       regionCouncil: text('fRegion') || null,
       localCouncil: text('fLocalCouncil') || null,
       village: text('fVillage') || null,
-      jkAttend: text('fJk') || null,
-      employmentEducation: text('fEmployment') || null,
+      jkAttend: val('fJk') || null,
+      employmentEducation: val('fEmployment') || null,
       maritalStatus: text('fMarital') || null,
+      numberOfChildren: childrenVal === '6+' ? 6 : (childrenVal ? parseInt(childrenVal, 10) : null),
       languagesSpoken: val('fLanguages') || null,
       healthInsurance: text('fInsurance') || null,
-      gpUsualCare: text('fGp') || null,
+      gpUsualCare: val('fGp') || null,
       priorMhTreatment: text('fPriorMh') || null,
-      connectedToMhCare: text('fConnectedMh') || null
+      connectedToMhCare: text('fConnectedMh') || null,
+      careProviderName: val('fCareProvider') || null
     };
     var riskCat = text('fRiskCat');
-    var priorityMap = { 'Low': 'Low', 'Moderate': 'Moderate', 'High': 'High', 'Critical': 'High' };
-    var notesBits = [];
-    if (val('fConcern')) notesBits.push(val('fConcern'));
-    if (text('fIsCrisis')) notesBits.push('Crisis: ' + text('fIsCrisis'));
-    if (riskCat) notesBits.push('Risk: ' + riskCat);
-    if (val('fAssessor')) notesBits.push('Assessor: ' + val('fAssessor'));
+    var priorityMap = { 'Crisis': 'High', 'High Risk': 'High', 'Moderate Risk': 'Moderate', 'Low Risk': 'Low' };
     var casePayload = {
-      sourceType: 'WalkIn',
+      sourceType: text('fEntryPoint') || 'WalkIn',
       priorityLevel: priorityMap[riskCat] || null,
-      notes: notesBits.join(' | ') || null
+      notes: val('fConcern') || null
+    };
+    // Structured risk assessment payload (sheet fields).
+    var riskPayload = {
+      presentingConcern: val('fConcern') || null,
+      primaryMhIssue: text('fPrimaryIssue') || null,
+      primaryMhIssueOther: val('fPrimaryIssueOther') || null,
+      isCrisis: text('fIsCrisis') || null,
+      crisisType: text('fCrisisType') || null,
+      riskCategory: riskCat || null,
+      suicidalIdeation: text('fSuicidal') || null,
+      selfHarmRisk: text('fSelfHarm') || null,
+      violenceRisk: text('fViolence') || null,
+      severityImmediacy: text('fSeverity') || null,
+      accessToMeans: text('fMeans') || null,
+      safeguardingConcerns: val('fSafeguarding') || null,
+      previousAttempts: val('fPrevAttempts') || null,
+      currentSupports: val('fSupports') || null,
+      protectiveFactors: val('fProtective') || null,
+      barriersToCare: val('fBarriers') || null,
+      safetyPlanFilled: text('fSafetyPlan') || null,
+      socialDeterminantIssues: text('fSocialDet') || null,
+      socialDeterminantOther: val('fSocialDetOther') || null,
+      supervisorNotified: text('fSupNotified') || null,
+      supervisorNotifiedAt: val('fSupNotifiedAt') || null,
+      assessorName: val('fAssessor') || null,
+      assessedAt: val('fAssessTime') || null
     };
 
     CMS.loader(true);
@@ -312,10 +354,28 @@ $(function () {
           data: casePayload,
           fallbackMsg: 'Patient registered, but the case could not be created.',
           success: function (c) {
-            submitPendingScreenings(c.caseId, function () {
-              CMS.loader(false);
-              CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
-              location.href = '/Screening?caseId=' + c.caseId;
+            // Save structured risk assessment, then screenings.
+            cmsAjax({
+              url: '/api/cases/' + c.caseId + '/risk-assessment',
+              method: 'PUT',
+              json: true,
+              data: riskPayload,
+              fallbackMsg: 'Case created, but risk assessment could not be saved.',
+              success: function () {
+                submitPendingScreenings(c.caseId, function () {
+                  CMS.loader(false);
+                  CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
+                  location.href = '/Screening?caseId=' + c.caseId;
+                });
+              },
+              error: function () {
+                // Continue even if risk assessment save fails.
+                submitPendingScreenings(c.caseId, function () {
+                  CMS.loader(false);
+                  CMS.toast('Case ' + (c.caseNumber || ('#' + c.caseId)) + ' registered.', 'success');
+                  location.href = '/Screening?caseId=' + c.caseId;
+                });
+              }
             });
           },
           error: function () { CMS.loader(false); }
@@ -323,6 +383,12 @@ $(function () {
       },
       error: function () { CMS.loader(false); }
     });
+  });
+
+  // Age Group auto-suggest from Age (sheet: Youth 0–17 / Adult 18+).
+  $('#fAge').on('change', function () {
+    var a = parseInt($(this).val(), 10);
+    $('#fAgeGroup').val(isNaN(a) ? '' : (a <= 17 ? 'Youth (0–17)' : 'Adult (18+)'));
   });
 
   loadGeography();

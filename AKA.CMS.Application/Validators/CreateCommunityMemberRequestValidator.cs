@@ -7,7 +7,13 @@ public sealed class CreateCommunityMemberRequestValidator : AbstractValidator<Cr
 {
     public CreateCommunityMemberRequestValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.FullName).NotEmpty().MaximumLength(200)
+            .When(x => string.IsNullOrWhiteSpace(x.FirstName) && string.IsNullOrWhiteSpace(x.LastName));
+        RuleFor(x => x.FirstName).MaximumLength(100);
+        RuleFor(x => x.LastName).MaximumLength(100);
+        RuleFor(x => x.EntryPoint).MaximumLength(50);
+        RuleFor(x => x.ReturningCaller).MaximumLength(50);
+        RuleFor(x => x.ConsentToProceed).MaximumLength(50);
         RuleFor(x => x.FatherName).MaximumLength(200);
         RuleFor(x => x.Gender).MaximumLength(10);
         RuleFor(x => x.Cnic).MaximumLength(15);

@@ -37,6 +37,12 @@ public sealed class PatientRepository(DapperContext context) : IPatientRepositor
         parameters.Add("@PriorMhTreatment", member.PriorMhTreatment);
         parameters.Add("@ConnectedToMhCare", member.ConnectedToMhCare);
         parameters.Add("@CareProviderName", member.CareProviderName);
+        parameters.Add("@FirstName", member.FirstName);
+        parameters.Add("@LastName", member.LastName);
+        parameters.Add("@DateOfCall", member.DateOfCall);
+        parameters.Add("@EntryPoint", member.EntryPoint);
+        parameters.Add("@ReturningCaller", member.ReturningCaller);
+        parameters.Add("@ConsentToProceed", member.ConsentToProceed);
         parameters.Add("@CreatedBy", performedBy);
         parameters.Add("@IpAddress", ipAddress);
         parameters.Add("@NewMemberId", dbType: DbType.Int32, direction: ParameterDirection.Output);

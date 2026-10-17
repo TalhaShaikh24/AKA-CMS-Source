@@ -83,11 +83,39 @@ $(function () {
         if (c.communityMemberId) loadMemberDetails(c.communityMemberId);
         loadTimeline();
         loadScreenings();
+        loadRiskAssessment();
       },
       error: function (xhr) {
         CMS.loader(false);
         if (xhr && xhr.status === 404) location.href = '/Cases';
       }
+    });
+  }
+
+  function loadRiskAssessment() {
+    cmsAjax({
+      url: '/api/cases/' + caseId + '/risk-assessment', method: 'GET',
+      fallbackMsg: null,
+      success: function (r) {
+        if (!r) { $('#cdRiskAssessmentKv').html('<div class="hint">No risk assessment recorded.</div>'); return; }
+        $('#cdRiskAssessmentKv').html(
+          kv('Presenting Concern', r.presentingConcern) +
+          kv('Primary MH Issue', r.primaryMhIssue) +
+          kv('Is Crisis', r.isCrisis) +
+          kv('Crisis Type', r.crisisType) +
+          kv('Risk Category', r.riskCategory) +
+          kv('Suicidal Ideation', r.suicidalIdeation) +
+          kv('Self-Harm Risk', r.selfHarmRisk) +
+          kv('Violence Risk', r.violenceRisk) +
+          kv('Severity & Immediacy', r.severityImmediacy) +
+          kv('Access to Means', r.accessToMeans) +
+          kv('Safety Plan Filled', r.safetyPlanFilled) +
+          kv('Social Determinants', r.socialDeterminantIssues) +
+          kv('Supervisor Notified', r.supervisorNotified) +
+          kv('Assessor', r.assessorName)
+        );
+      },
+      error: function () { $('#cdRiskAssessmentKv').html('<div class="hint">No risk assessment recorded.</div>'); }
     });
   }
 
@@ -126,12 +154,18 @@ $(function () {
       method: 'GET',
       success: function (m) {
         var loc = [m.village, m.localCouncil, m.regionCouncil].filter(function (x) { return x; }).join(', ');
+        var name = [m.firstName, m.lastName].filter(function (x) { return x; }).join(' ') || m.fullName;
         $('#cdPatientKv').html(
-          kv('Name', m.fullName) +
+          kv('Name', name) +
           kv('Age', m.age != null ? m.age + ' years' : null) +
           kv('Gender', m.gender) +
           kv('Location', loc || null) +
-          kv('Phone', m.phone)
+          kv('Phone', m.phone) +
+          kv('Date of Call', fmtDate(m.dateOfCall)) +
+          kv('Entry Point', m.entryPoint) +
+          kv('Consent', m.consentToProceed) +
+          kv('Marital Status', m.maritalStatus) +
+          kv('Prior MH Treatment', m.priorMhTreatment)
         );
       },
       error: function () { /* keep case-level data */ }

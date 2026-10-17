@@ -19,23 +19,39 @@
 <form id="regForm" data-validate novalidate>
   <!-- STEP 1: Personal Info -->
   <div class="reg-step" id="rs1">
+    <div class="card"><h3>Call / Intake Information</h3>
+      <div class="form-grid">
+        <div class="field"><label for="fCallDate">Date of Call / Contact <span class="req">*</span></label><input class="input" type="date" id="fCallDate" required><span class="field-error"></span></div>
+        <div class="field"><label for="fEntryPoint">Entry Point / Referral Source</label><select class="input select2" id="fEntryPoint"><option value="" selected disabled>Select source</option><option>Helpline</option><option>Community</option><option>Health Facility</option><option>School</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fReturning">Returning Caller?</label><select class="input select2" id="fReturning"><option value="" selected disabled>Select option</option><option>No — first contact</option><option>Yes — previous case on file</option><option>Unsure</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fConsent">Consent to Proceed? <span class="req">*</span></label><select class="input select2" id="fConsent" required><option value="" selected disabled>Select option</option><option>Yes — verbal consent given</option><option>Yes — written consent given</option><option>No</option><option>N/A — minor/guardian consent</option></select><span class="field-error"></span></div>
+      </div>
+    </div>
     <div class="card"><h3>Personal Information</h3>
       <div class="form-grid">
-        <div class="field"><label for="fName">Full Name <span class="req">*</span></label><input class="input" id="fName" placeholder="Enter full name" required><span class="field-error"></span></div>
+        <div class="field"><label for="fFirstName">First Name <span class="req">*</span></label><input class="input" id="fFirstName" placeholder="Enter first name" required><span class="field-error"></span></div>
+        <div class="field"><label for="fLastName">Last Name <span class="req">*</span></label><input class="input" id="fLastName" placeholder="Enter last name" required><span class="field-error"></span></div>
+        <div class="field"><label for="fPhone">Phone Number <span class="req">*</span></label><input class="input" id="fPhone" placeholder="03xx xxx xxxx" required data-validate="phone"><span class="field-error"></span></div>
         <div class="field"><label for="fAge">Age <span class="req">*</span></label><select class="input select2" id="fAge" required><option value="" selected disabled>Select age</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fPhone">Phone Number</label><input class="input" id="fPhone" placeholder="03xx xxx xxxx" data-validate="phone"><span class="field-error"></span></div>
+        <div class="field"><label for="fAgeGroup">Age Group</label><input class="input" id="fAgeGroup" readonly placeholder="Auto from age"><span class="field-error"></span></div>
         <div class="field"><label for="fGender">Gender <span class="req">*</span></label><select class="input select2" id="fGender" required><option value="" selected disabled>Select gender</option><option>Female</option><option>Male</option><option>Other</option><option>Prefer not to say</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fRegion">Region</label><select class="input select2" id="fRegion"><option value="" selected disabled>Select region</option></select><span class="field-error"></span></div>
+      </div>
+    </div>
+    <div class="card"><h3>Demographics</h3>
+      <div class="form-grid">
+        <div class="field"><label for="fRegion">Region Council</label><select class="input select2" id="fRegion"><option value="" selected disabled>Select region</option></select><span class="field-error"></span></div>
         <div class="field"><label for="fLocalCouncil">Local Council</label><select class="input select2" id="fLocalCouncil"><option value="" selected disabled>Select local council</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fVillage">Village</label><select class="input select2" id="fVillage"><option value="" selected disabled>Select village</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fJk">JK / Attend</label><select class="input select2" id="fJk"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fEmployment">Employment / Education</label><select class="input select2" id="fEmployment"><option value="" selected disabled>Select status</option><option>Student</option><option>Employed</option><option>Self-employed</option><option>Unemployed</option><option>Not applicable</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fMarital">Marital Status</label><select class="input select2" id="fMarital"><option value="" selected disabled>Select marital status</option><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fVillage">Village / JK / Muhalla</label><select class="input select2" id="fVillage"><option value="" selected disabled>Select village</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fJk">JK Attended</label><input class="input" id="fJk" placeholder="Free text"><span class="field-error"></span></div>
+        <div class="field"><label for="fEmployment">Employment / Education</label><input class="input" id="fEmployment" placeholder="Free text"><span class="field-error"></span></div>
+        <div class="field"><label for="fMarital">Marital Status</label><select class="input select2" id="fMarital"><option value="" selected disabled>Select marital status</option><option>Single</option><option>Married / Partnered</option><option>Separated</option><option>Divorced</option><option>Widowed</option><option>Prefer not to say</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fChildren">No. of Children</label><select class="input select2" id="fChildren"><option value="" selected disabled>Select</option><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6+</option></select><span class="field-error"></span></div>
         <div class="field"><label for="fLanguages">Language(s) Spoken</label><input class="input" id="fLanguages" placeholder="Languages"><span class="field-error"></span></div>
-        <div class="field"><label for="fInsurance">Health Insurance</label><select class="input select2" id="fInsurance"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>Unknown</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fGp">GP / Usual Source of Care</label><select class="input select2" id="fGp"><option value="" selected disabled>Select source</option><option>GP</option><option>Hospital</option><option>Clinic</option><option>Community Health Worker</option><option>None</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fPriorMh">Prior MH Treatment</label><select class="input select2" id="fPriorMh"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>Unknown</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fConnectedMh">Connected to MH Care?</label><select class="input select2" id="fConnectedMh"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fInsurance">Health Insurance</label><select class="input select2" id="fInsurance"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fGp">GP / Usual Source of Care</label><input class="input" id="fGp" placeholder="Free text"><span class="field-error"></span></div>
+        <div class="field"><label for="fPriorMh">Prior MH Treatment</label><select class="input select2" id="fPriorMh"><option value="" selected disabled>Select option</option><option>No</option><option>Yes — past only</option><option>Yes — currently</option><option>On waitlist</option><option>Decline to answer</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fConnectedMh">Connected to MH Care?</label><select class="input select2" id="fConnectedMh"><option value="" selected disabled>Select option</option><option>Yes — regular</option><option>Yes — not seen recently</option><option>No</option><option>Unsure</option><option>Decline to answer</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fCareProvider">Name of Care Provider</label><input class="input" id="fCareProvider" placeholder="Free text"><span class="field-error"></span></div>
       </div>
       <div class="bottom-actions">
         <button type="button" class="btn secondary" data-go="/Dashboard">Cancel</button>
@@ -46,13 +62,35 @@
 
   <!-- STEP 2: Risk Assessment -->
   <div class="reg-step" id="rs2" hidden>
-    <div class="card"><h3>Presenting Concern / History</h3>
+    <div class="card"><h3>Presenting Concern / History <span class="req">*</span></h3>
       <div class="form-grid">
-        <div class="field full"><label for="fConcern">Presenting Concern / History</label><textarea class="input" id="fConcern" placeholder="Free text"></textarea><span class="field-error"></span></div>
-        <div class="field"><label for="fIsCrisis">Is this a Crisis?</label><select class="input select2" id="fIsCrisis"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option></select><span class="field-error"></span></div>
-        <div class="field"><label for="fRiskCat">Risk Category</label><select class="input select2" id="fRiskCat"><option value="" selected disabled>Select risk</option><option>Low</option><option>Moderate</option><option>High</option><option>Critical</option></select><span class="field-error"></span></div>
+        <div class="field full"><label for="fConcern">Presenting Concern / History <span class="req">*</span></label><textarea class="input" id="fConcern" placeholder="Free text" required></textarea><span class="field-error"></span></div>
+        <div class="field"><label for="fPrimaryIssue">Primary MH Issue / Symptom</label><select class="input select2" id="fPrimaryIssue"><option value="" selected disabled>Select issue</option><option>Depression</option><option>Anxiety</option><option>Psychosis</option><option>Suicidal Ideation</option><option>PTSD/Trauma</option><option>Loneliness</option><option>Grief</option><option>Substance Use</option><option>Bullying</option><option>Other</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fPrimaryIssueOther">Specify Other (MH Issue)</label><input class="input" id="fPrimaryIssueOther" placeholder="Free text"><span class="field-error"></span></div>
+      </div>
+    </div>
+    <div class="card"><h3>Comprehensive Risk Assessment &amp; Safety</h3>
+      <div class="form-grid">
+        <div class="field"><label for="fIsCrisis">Is this a Crisis? <span class="req">*</span></label><select class="input select2" id="fIsCrisis" required><option value="" selected disabled>Select option</option><option>No</option><option>Yes — acute crisis</option><option>Unsure</option><option>Yes</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fCrisisType">Type of Crisis</label><select class="input select2" id="fCrisisType"><option value="" selected disabled>Select type</option><option>Active Crisis</option><option>Non-Active Crisis</option><option>Non-MH Crisis</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fRiskCat">Risk Category <span class="req">*</span></label><select class="input select2" id="fRiskCat" required><option value="" selected disabled>Select risk</option><option>Crisis</option><option>High Risk</option><option>Moderate Risk</option><option>Low Risk</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSuicidal">Suicidal Ideation / Behaviour</label><select class="input select2" id="fSuicidal"><option value="" selected disabled>Select option</option><option>None</option><option>Passive ideation</option><option>Active ideation — no plan</option><option>Active ideation — plan/intent</option><option>Unsure</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSelfHarm">Self-Harm Risk</label><select class="input select2" id="fSelfHarm"><option value="" selected disabled>Select option</option><option>None</option><option>Past</option><option>Current</option><option>Unsure</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fViolence">Violence / Aggression Risk</label><select class="input select2" id="fViolence"><option value="" selected disabled>Select option</option><option>None</option><option>Low</option><option>Moderate</option><option>High</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSeverity">Severity &amp; Immediacy</label><select class="input select2" id="fSeverity"><option value="" selected disabled>Select option</option><option>Immediate</option><option>Short-term (within days)</option><option>Longer-term</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fMeans">Access to Means (if applicable)</label><select class="input select2" id="fMeans"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>N/A</option><option>Unsure</option></select><span class="field-error"></span></div>
+        <div class="field full"><label for="fSafeguarding">Safeguarding Concern(s)</label><textarea class="input" id="fSafeguarding" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field full"><label for="fPrevAttempts">Previous Attempts / History</label><textarea class="input" id="fPrevAttempts" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field full"><label for="fSupports">Current Supports</label><textarea class="input" id="fSupports" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field full"><label for="fProtective">Protective Factors / Current Supports</label><textarea class="input" id="fProtective" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field full"><label for="fBarriers">Barriers to Care</label><textarea class="input" id="fBarriers" placeholder="Free text"></textarea><span class="field-error"></span></div>
+        <div class="field"><label for="fSafetyPlan">Safety Plan Filled?</label><select class="input select2" id="fSafetyPlan"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>In progress</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSocialDet">Social Determinant Issue(s)</label><select class="input select2" id="fSocialDet"><option value="" selected disabled>Select option</option><option>Poverty</option><option>Domestic Violence</option><option>Housing Instability</option><option>Food Insecurity</option><option>Behavioural Issue</option><option>Other</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSocialDetOther">Specify Other (Social Determinant)</label><input class="input" id="fSocialDetOther" placeholder="Free text"><span class="field-error"></span></div>
+        <div class="field"><label for="fSupNotified">Supervisor Notified?</label><select class="input select2" id="fSupNotified"><option value="" selected disabled>Select option</option><option>Yes</option><option>No</option><option>N/A</option></select><span class="field-error"></span></div>
+        <div class="field"><label for="fSupNotifiedAt">Date/Time Supervisor Notified</label><input class="input" type="datetime-local" id="fSupNotifiedAt"><span class="field-error"></span></div>
         <div class="field"><label for="fAssessor">Assessor Name</label><input class="input" id="fAssessor" placeholder="Free text"><span class="field-error"></span></div>
-        <div class="field"><label for="fAssessTime">Time of Assessment</label><input class="input" type="date" id="fAssessTime"><span class="field-error"></span></div>
+        <div class="field"><label for="fAssessTime">Date/Time of Assessment</label><input class="input" type="datetime-local" id="fAssessTime"><span class="field-error"></span></div>
       </div>
       <div class="bottom-actions">
         <button type="button" class="btn secondary" id="rsBack2">Back</button>

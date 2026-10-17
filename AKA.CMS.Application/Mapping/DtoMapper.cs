@@ -101,7 +101,13 @@ public static class DtoMapper
         member.GpUsualCare,
         member.PriorMhTreatment,
         member.ConnectedToMhCare,
-        member.CareProviderName);
+        member.CareProviderName,
+        member.FirstName,
+        member.LastName,
+        member.DateOfCall,
+        member.EntryPoint,
+        member.ReturningCaller,
+        member.ConsentToProceed);
 
     public static PatientSearchResultDto ToDto(this PatientSearchHit hit) => new(
         hit.Source,

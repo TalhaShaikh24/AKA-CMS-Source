@@ -101,9 +101,16 @@ $(function () {
   function buildReview() {
     $('#refReview').html(
       kv('Case', $('#rCase option:selected').text()) +
-      kv('Service / Specialty', val('rService')) +
+      kv('Destination / Service', val('rService')) +
+      kv('Referral to Psychologist', val('rToPsych')) +
       kv('Reason', val('rReason')) +
-      kv('Priority', val('rPriority')) +
+      kv('Urgency', val('rPriority')) +
+      kv('Consent for Referral', val('rConsent')) +
+      kv('Date of Referral', val('rDate')) +
+      kv('Psychologist / Provider', val('rProvider')) +
+      kv('Appointment Date', val('rApptDate')) +
+      kv('Appointment Status', val('rApptStatus')) +
+      kv('Other Referrals', val('rOtherRef')) +
       kv('Provider', selectedProvider) +
       kv('Clinical Summary', val('rSummary'))
     );
@@ -115,8 +122,12 @@ $(function () {
       caseId: parseInt(val('rCase'), 10),
       referredTo: selectedProvider,
       slaDueAt: null,
-      notes: ['Service: ' + val('rService'), 'Reason: ' + val('rReason'), 'Priority: ' + val('rPriority'), val('rSummary')]
-        .filter(Boolean).join(' | ')
+      notes: ['Destination: ' + val('rService'), 'To Psychologist: ' + val('rToPsych'),
+        'Reason: ' + val('rReason'), 'Urgency: ' + val('rPriority'),
+        'Consent: ' + val('rConsent'), 'Date: ' + val('rDate'),
+        'Provider: ' + val('rProvider'), 'Appt: ' + val('rApptDate') + ' (' + val('rApptStatus') + ')',
+        'Other: ' + val('rOtherRef') + ' ' + val('rOtherRefSpecify'), val('rSummary')]
+        .filter(function (x) { return x && x.indexOf(': ') < x.length - 2; }).join(' | ')
     };
     CMS.loader(true);
     cmsAjax({

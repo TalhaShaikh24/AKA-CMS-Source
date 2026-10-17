@@ -27,6 +27,12 @@ public sealed class CommunityMember
     public string? PriorMhTreatment { get; set; }
     public string? ConnectedToMhCare { get; set; }
     public string? CareProviderName { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public DateTime? DateOfCall { get; set; }
+    public string? EntryPoint { get; set; }
+    public string? ReturningCaller { get; set; }
+    public string? ConsentToProceed { get; set; }
     public bool IsActive { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }

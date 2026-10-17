@@ -58,6 +58,12 @@ public sealed class PatientService(
                 PriorMhTreatment = request.PriorMhTreatment,
                 ConnectedToMhCare = request.ConnectedToMhCare,
                 CareProviderName = request.CareProviderName,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                DateOfCall = request.DateOfCall,
+                EntryPoint = request.EntryPoint,
+                ReturningCaller = request.ReturningCaller,
+                ConsentToProceed = request.ConsentToProceed,
                 IsActive = true
             },
             performedBy,

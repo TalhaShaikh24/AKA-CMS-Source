@@ -76,6 +76,8 @@ public static class StoredProcedures
     public const string CaseHistoryGetByCase = "sp_CMS_CaseHistory_GetByCase";
 
     public const string ScreeningToolGetAll = "sp_CMS_ScreeningTool_GetAll";
+    public const string RiskAssessmentSave = "sp_CMS_RiskAssessment_Save";
+    public const string RiskAssessmentGetByCase = "sp_CMS_RiskAssessment_GetByCase";
     public const string ScreeningToolGetActive = "sp_CMS_ScreeningTool_GetActive";
     public const string ScreeningToolGetAllAdmin = "sp_CMS_ScreeningTool_GetAllAdmin";
     public const string ScreeningToolGetDetail = "sp_CMS_ScreeningTool_GetDetail";
