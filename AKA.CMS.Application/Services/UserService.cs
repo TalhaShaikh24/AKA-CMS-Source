@@ -47,8 +47,9 @@ public sealed class UserService(
                 UserType = isAd ? "AD" : "System",
                 IsAdUser = isAd
             },
-            // AD users have no local password — AD authenticates them.
-            isAd ? null : passwordHasher.Hash(request.Password!),
+            // Local password for every user for now — AD users sign in with it
+            // until real AD (LDAP) authentication is connected.
+            passwordHasher.Hash(request.Password!),
             performedBy);
 
         if (request.RoleIds is not null)

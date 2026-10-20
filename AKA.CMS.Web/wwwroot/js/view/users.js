@@ -115,13 +115,17 @@ $(function () {
     var isAd = selectedUserType() === 'AD';
     // NOTE: .field{display:flex} overrides the [hidden] attribute — toggle inline.
     $('#fAdPicker').css('display', isAd ? '' : 'none');
-    $('#fUsername, #fPassword').toggle(!isAd);
+    // Username comes from the AD picker; the password field stays visible —
+    // AD users sign in with this initial password until AD login is connected.
+    $('#fUsername').toggle(!isAd);
+    $('#fPassword').show();
     if (isAd) {
-      $('#nuUsername, #nuPassword').removeAttr('required');
+      $('#nuUsername').removeAttr('required');
       loadAdUsers();
     } else {
-      $('#nuUsername, #nuPassword').attr('required', 'required');
+      $('#nuUsername').attr('required', 'required');
     }
+    $('#nuPassword').attr('required', 'required');
   }
 
   function loadAdUsers() {
@@ -201,8 +205,8 @@ $(function () {
     $('#fPassword').hide();
     $('#fRoles').show();
     $('#fStatusRow').show();
-    // AD users have no local password — AD manages it.
-    $('#fNewPass').toggle(u.userType !== 'AD');
+    // Password reset works for both types (AD users sign in locally for now).
+    $('#fNewPass').show();
     $('#nuUsername').removeAttr('required');
     $('#nuPassword').removeAttr('required');
     // Load user's current roles
@@ -277,6 +281,7 @@ $(function () {
           }
           payload = {
             username: adUsername,
+            password: $('#nuPassword').val(),
             userType: 'AD',
             email: $.trim($('#nuEmail').val()) || null,
             roleIds: roleIds
