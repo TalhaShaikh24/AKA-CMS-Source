@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using AKA.CMS.API.Auth;
 using AKA.CMS.API.Middleware;
+using AKA.CMS.API.Services;
 using AKA.CMS.Application.Interfaces;
 using AKA.CMS.Application.Validators;
 using AKA.CMS.Infrastructure;
@@ -114,6 +115,9 @@ builder.Services.AddSwaggerGen(options =>
         options.IncludeXmlComments(xmlPath);
 });
 
+// Dynamic Postman collection download (built live from the OpenAPI document).
+builder.Services.AddScoped<PostmanCollectionBuilder>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -132,7 +136,7 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(ConfigureSwaggerUi);
 }
 
 // Swagger visibility is driven by appsettings ("Swagger" section), not by
@@ -142,7 +146,7 @@ var swaggerAsDefault = builder.Configuration.GetValue<bool>("Swagger:ServeAsDefa
 if (swaggerEnabled || swaggerAsDefault)
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(ConfigureSwaggerUi);
 }
 if (swaggerAsDefault)
 {
@@ -156,3 +160,34 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Adds a "Download Postman Collection" button to the Swagger UI topbar.
+// The collection itself is generated live at /api/postman-collection.
+static void ConfigureSwaggerUi(Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIOptions options)
+{
+    options.HeadContent = """
+        <script>
+        window.addEventListener('load', function () {
+          var tries = 0;
+          var timer = setInterval(function () {
+            tries++;
+            var bar = document.querySelector('.swagger-ui .topbar .topbar-wrapper');
+            if (bar) {
+              clearInterval(timer);
+              if (!document.getElementById('postmanDownloadBtn')) {
+                var a = document.createElement('a');
+                a.id = 'postmanDownloadBtn';
+                a.href = '/api/postman-collection';
+                a.textContent = '\u2B07 Download Postman Collection';
+                a.setAttribute('style', 'margin-left:16px;background:#ff6c37;color:#fff;' +
+                  'padding:8px 16px;border-radius:6px;font-weight:600;text-decoration:none;' +
+                  'font-size:14px;align-self:center;white-space:nowrap');
+                bar.appendChild(a);
+              }
+            }
+            if (tries > 40) clearInterval(timer);
+          }, 250);
+        });
+        </script>
+        """;
+}
