@@ -12,9 +12,8 @@ public static class StoredProcedures
     public const string AuthSaveRefreshToken = "sp_CMS_Auth_SaveRefreshToken";
     public const string AuthGetRefreshToken = "sp_CMS_Auth_GetRefreshToken";
     public const string AuthRevokeRefreshToken = "sp_CMS_Auth_RevokeRefreshToken";
-    public const string PasswordResetCreate = "sp_CMS_PasswordReset_Create";
-    public const string PasswordResetComplete = "sp_CMS_PasswordReset_Complete";
     public const string PasswordResetOtpCreate = "sp_CMS_PasswordResetOtp_Create";
+    public const string PasswordResetOtpVerify = "sp_CMS_PasswordResetOtp_Verify";
     public const string PasswordResetOtpComplete = "sp_CMS_PasswordResetOtp_Complete";
 
     public const string UserGetById = "sp_CMS_User_GetById";

@@ -1,8 +1,8 @@
 /* ==========================================================================
-   CMS · Forgot Password (OTP flow) — js/view/forgot-password.js
-   API: POST /api/auth/forgot-password-otp { email }  (anonymous)
+   CMS · Forgot Password — js/view/forgot-password.js
+   API: POST /api/auth/forgot-password { email }  (anonymous)
    The API never reveals whether the email belongs to an account; on success
-   we move to the OTP screen (mobile design: Forget Pass -> OTP).
+   we move to the OTP screen (Forget Pass -> OTP -> Reset Pass).
    ========================================================================== */
 $(function () {
   'use strict';
@@ -20,7 +20,7 @@ $(function () {
       $btn.prop('disabled', true).text('Sending…');
 
       cmsAjax({
-        url: '/api/auth/forgot-password-otp',
+        url: '/api/auth/forgot-password',
         method: 'POST',
         json: true,
         auth: false,

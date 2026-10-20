@@ -11,18 +11,19 @@ public sealed class ForgotPasswordRequestValidator : AbstractValidator<ForgotPas
     }
 }
 
-public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
+public sealed class VerifyResetOtpRequestValidator : AbstractValidator<VerifyResetOtpRequest>
 {
-    public ResetPasswordRequestValidator()
+    public VerifyResetOtpRequestValidator()
     {
-        RuleFor(x => x.Token).NotEmpty().MaximumLength(256);
-        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8).MaximumLength(200);
+        RuleFor(x => x.Email).NotEmpty().MaximumLength(255).EmailAddress();
+        RuleFor(x => x.Otp).NotEmpty().Matches(@"^\d{4}$")
+            .WithMessage("The OTP must be a 4-digit code.");
     }
 }
 
-public sealed class ResetPasswordOtpRequestValidator : AbstractValidator<ResetPasswordOtpRequest>
+public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
 {
-    public ResetPasswordOtpRequestValidator()
+    public ResetPasswordRequestValidator()
     {
         RuleFor(x => x.Email).NotEmpty().MaximumLength(255).EmailAddress();
         RuleFor(x => x.Otp).NotEmpty().Matches(@"^\d{4}$")

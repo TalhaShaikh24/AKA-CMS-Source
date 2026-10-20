@@ -49,9 +49,9 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     }
 
     /// <summary>
-    /// Starts the forgot-password flow: e-mails a single-use reset link when the
-    /// e-mail belongs to an active account. Always returns success so accounts
-    /// cannot be enumerated.
+    /// Forgot-password step 1: e-mails a 4-digit OTP when the e-mail belongs
+    /// to an active account. Always returns success so accounts cannot be
+    /// enumerated.
     /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
@@ -65,9 +65,25 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     }
 
     /// <summary>
-    /// Completes the forgot-password flow: sets a new password using the token
-    /// from the reset e-mail. The token is single-use and expires; all existing
-    /// sessions of the user are signed out.
+    /// Forgot-password step 2: verifies the 4-digit OTP against the database.
+    /// An invalid or expired code returns 401; a valid code is NOT consumed
+    /// yet — the reset call consumes it. A wrong code counts an attempt.
+    /// </summary>
+    [HttpPost("verify-reset-otp")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(VerifyResetOtpResponse))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<VerifyResetOtpResponse>> VerifyResetOtp([FromBody] VerifyResetOtpRequest request)
+    {
+        var response = await authService.VerifyResetOtpAsync(request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Forgot-password step 3: sets a new password with the verified OTP.
+    /// The code is single-use and expires; all existing sessions of the user
+    /// are signed out.
     /// </summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]
@@ -77,38 +93,6 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<ResetPasswordResponse>> ResetPassword([FromBody] ResetPasswordRequest request)
     {
         var response = await authService.ResetPasswordAsync(request);
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Starts the OTP forgot-password flow (mobile design: Forget Pass):
-    /// e-mails a 4-digit verification code when the e-mail belongs to an
-    /// active account. Always returns success so accounts cannot be enumerated.
-    /// </summary>
-    [HttpPost("forgot-password-otp")]
-    [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ForgotPasswordResponse))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<ForgotPasswordResponse>> ForgotPasswordOtp([FromBody] ForgotPasswordRequest request)
-    {
-        var requestIp = HttpContext.Connection.RemoteIpAddress?.ToString();
-        var response = await authService.RequestPasswordResetOtpAsync(request, requestIp);
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Completes the OTP forgot-password flow (mobile design: Reset Pass):
-    /// verifies the 4-digit code and sets the new password. The code is
-    /// single-use and expires; all existing sessions are signed out.
-    /// </summary>
-    [HttpPost("reset-password-otp")]
-    [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResetPasswordResponse))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<ResetPasswordResponse>> ResetPasswordOtp([FromBody] ResetPasswordOtpRequest request)
-    {
-        var response = await authService.ResetPasswordWithOtpAsync(request);
         return Ok(response);
     }
 }

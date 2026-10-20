@@ -13,8 +13,10 @@ public interface IAuthRepository
     Task<RefreshToken?> GetRefreshTokenAsync(string token);
     Task RevokeRefreshTokenAsync(string token, string? replacedByToken);
     Task<IReadOnlyList<ControllerAction>> GetAllPermissionsAsync();
-    Task CreatePasswordResetAsync(int userId, string tokenHash, DateTime expiresAtUtc, string? requestIp);
-    Task<PasswordResetToken?> CompletePasswordResetAsync(string tokenHash, string passwordHash);
     Task CreatePasswordResetOtpAsync(int userId, string otpHash, DateTime expiresAtUtc, string? requestIp);
+
+    /// <summary>Checks an OTP without consuming it (wrong codes count an
+    /// attempt). Returns true when the code is valid.</summary>
+    Task<bool> VerifyPasswordResetOtpAsync(int userId, string otpHash);
     Task<PasswordResetToken?> CompletePasswordResetOtpAsync(int userId, string otpHash, string passwordHash);
 }

@@ -1,9 +1,12 @@
 /* ==========================================================================
    CMS · OTP verification — js/view/otp.js
-   Mobile design: Enter OTP -> Continue -> Reset Pass.
-   The 4-digit code is kept in sessionStorage (never in the URL) and carried
-   to the Reset Password screen, which posts it together with the new password.
-   API: POST /api/auth/forgot-password-otp { email }  (resend, anonymous)
+   Enter OTP -> the code is VERIFIED against the database
+   (POST /api/auth/verify-reset-otp) -> only then the Reset Password
+   screen opens. An invalid code shows the error right here.
+   The verified code is kept in sessionStorage (never in the URL) and
+   carried to the Reset Password screen, which posts it together with
+   the new password (the reset call consumes it).
+   API: POST /api/auth/forgot-password { email }  (resend, anonymous)
    ========================================================================== */
 $(function () {
   'use strict';
@@ -61,15 +64,37 @@ $(function () {
       $boxes.first().focus();
       return;
     }
-    try { sessionStorage.setItem('cms_otp', c); } catch (err) { /* private mode */ }
-    window.location.href = '/Account/ResetPassword?mode=otp&email=' + encodeURIComponent(email);
+    var $btn = $('#otpForm').find('button[type="submit"]');
+    $btn.prop('disabled', true).text('Verifying…');
+    cmsAjax({
+      url: '/api/auth/verify-reset-otp',
+      method: 'POST',
+      json: true,
+      auth: false,
+      data: { email: email, otp: c },
+      fallbackMsg: 'Could not verify the code.',
+      success: function () {
+        try { sessionStorage.setItem('cms_otp', c); } catch (err) { /* private mode */ }
+        window.location.href = '/Account/ResetPassword?email=' + encodeURIComponent(email);
+      },
+      error: function (xhr) {
+        $btn.prop('disabled', false).text('Continue');
+        var msg = 'The verification code is invalid or has expired.';
+        try {
+          var body = JSON.parse(xhr.responseText);
+          if (body && (body.detail || body.title)) msg = body.detail || body.title;
+        } catch (err) { /* keep default message */ }
+        $('#otpError').text(msg);
+        return true; // error shown inline — suppress the toast
+      }
+    });
   });
 
   $('#resendOtp').on('click', function (e) {
     e.preventDefault();
     var $link = $(this);
     cmsAjax({
-      url: '/api/auth/forgot-password-otp',
+      url: '/api/auth/forgot-password',
       method: 'POST',
       json: true,
       auth: false,

@@ -95,28 +95,6 @@ public sealed class AuthRepository(DapperContext context) : IAuthRepository
         return user;
     }
 
-    public async Task CreatePasswordResetAsync(int userId, string tokenHash, DateTime expiresAtUtc, string? requestIp)
-    {
-        using var connection = context.CreateConnection();
-        var parameters = new DynamicParameters();
-        parameters.Add("@UserId", userId);
-        parameters.Add("@TokenHash", tokenHash);
-        parameters.Add("@ExpiresAtUtc", expiresAtUtc);
-        parameters.Add("@RequestIp", requestIp);
-        await connection.ExecuteAsync(
-            StoredProcedures.PasswordResetCreate, parameters, commandType: CommandType.StoredProcedure);
-    }
-
-    public async Task<PasswordResetToken?> CompletePasswordResetAsync(string tokenHash, string passwordHash)
-    {
-        using var connection = context.CreateConnection();
-        var parameters = new DynamicParameters();
-        parameters.Add("@TokenHash", tokenHash);
-        parameters.Add("@PasswordHash", passwordHash);
-        return await connection.QuerySingleOrDefaultAsync<PasswordResetToken>(
-            StoredProcedures.PasswordResetComplete, parameters, commandType: CommandType.StoredProcedure);
-    }
-
     public async Task CreatePasswordResetOtpAsync(int userId, string otpHash, DateTime expiresAtUtc, string? requestIp)
     {
         using var connection = context.CreateConnection();
@@ -127,6 +105,17 @@ public sealed class AuthRepository(DapperContext context) : IAuthRepository
         parameters.Add("@IpAddress", requestIp);
         await connection.ExecuteAsync(
             StoredProcedures.PasswordResetOtpCreate, parameters, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<bool> VerifyPasswordResetOtpAsync(int userId, string otpHash)
+    {
+        using var connection = context.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("@UserId", userId);
+        parameters.Add("@OtpHash", otpHash);
+        var row = await connection.QuerySingleOrDefaultAsync<int?>(
+            StoredProcedures.PasswordResetOtpVerify, parameters, commandType: CommandType.StoredProcedure);
+        return row is not null;
     }
 
     public async Task<PasswordResetToken?> CompletePasswordResetOtpAsync(int userId, string otpHash, string passwordHash)
