@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "Form Preview";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "dynamicforms";
+    ViewData["RequiredPermission"] = "DynamicForms:Read";
+    var formId = ViewBag.FormId as int?;
+}
+
+<input type="hidden" id="dfFormId" value="@(formId?.ToString() ?? "")">
+
+<div class="page-head">
+  <div class="page-title">
+    <h1 id="dfTitle">Form</h1>
+    <p class="sub" id="dfDesc"></p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="@Url.Action("Index", "DynamicForms")">Back to Forms</a>
+    <a class="btn btn-ghost" href="@Url.Action("Builder", "DynamicForms", new { id = formId })" data-permission="DynamicForms:Write">Open in Builder</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form id="dfRenderForm" novalidate>
+      <div id="dfRenderBody"><div class="hint">Loading&hellip;</div></div>
+      <div style="margin-top:18px;display:flex;gap:10px">
+        <button class="btn btn-primary" type="submit">Submit</button>
+        <button class="btn btn-ghost" type="reset">Reset</button>
+      </div>
+    </form>
+    <div id="dfResult" hidden style="margin-top:18px">
+      <h3 style="margin-bottom:8px">Submitted values</h3>
+      <pre id="dfResultJson" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto;font-size:13px"></pre>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/form-renderer.js" asp-append-version="true"></script>
+<script src="~/js/view/form-render-page.js" asp-append-version="true"></script>
+}

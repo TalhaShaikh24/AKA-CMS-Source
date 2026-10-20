@@ -21,6 +21,10 @@ public static class StoredProcedures
     public const string UserGetAll = "sp_CMS_User_GetAll";
     public const string UserCreate = "sp_CMS_User_Create";
     public const string AdDirectoryGetAll = "sp_CMS_AdDirectory_GetAll";
+    public const string DynamicFormGetAll = "sp_CMS_DynamicForm_GetAll";
+    public const string DynamicFormGetById = "sp_CMS_DynamicForm_GetById";
+    public const string DynamicFormSave = "sp_CMS_DynamicForm_Save";
+    public const string DynamicFormDelete = "sp_CMS_DynamicForm_Delete";
     public const string UserUpdate = "sp_CMS_User_Update";
     public const string UserAssignRole = "sp_CMS_User_AssignRole";
     public const string UserRemoveRole = "sp_CMS_User_RemoveRole";

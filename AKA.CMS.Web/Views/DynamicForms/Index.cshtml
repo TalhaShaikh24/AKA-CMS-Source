@@ -1,0 +1,35 @@
+@{
+    ViewData["Title"] = "Form Builder";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "dynamicforms";
+    ViewData["RequiredPermission"] = "DynamicForms:Read";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Dynamic Form Builder</h1>
+    <p class="sub">Create and manage custom forms — they render in the app theme</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="@Url.Action("Builder", "DynamicForms")" data-permission="DynamicForms:Write">+ New Form</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Forms</h3>
+    <span class="hint" id="dfCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="dfTable">
+      <thead>
+        <tr><th>Form</th><th>Key</th><th>Fields</th><th>Status</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody id="dfTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/dynamic-forms.js" asp-append-version="true"></script>
+}
