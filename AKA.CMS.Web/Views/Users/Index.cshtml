@@ -64,7 +64,7 @@
   <div class="card-body">
     <table class="table" id="userTable">
       <thead>
-        <tr><th>User</th><th>Roles</th><th>Status</th><th></th></tr>
+        <tr><th>User</th><th>Type</th><th>Roles</th><th>Status</th><th></th></tr>
       </thead>
       <tbody id="userTbody"></tbody>
     </table>
@@ -81,6 +81,23 @@
       <input type="hidden" id="editUserId">
       <div class="modal-body">
         <div class="form-grid">
+          <div class="field field-span-2" id="fUserType">
+            <label>User Type</label>
+            <div class="seg" id="nuTypeSeg">
+              <button type="button" class="sel" data-utype="System">System User</button>
+              <button type="button" data-utype="AD">AD User</button>
+            </div>
+          </div>
+          <div class="field field-span-2" id="fAdPicker" hidden>
+            <label>Active Directory User <span class="req">*</span></label>
+            <select class="input select2" id="nuAdUser"></select>
+            <span class="field-error">Please select an AD user.</span>
+            <span class="hint">AD users sign in with their domain account — no local password is set.</span>
+          </div>
+          <div class="field field-span-2" id="fEditType" hidden>
+            <label>Type</label>
+            <div><span class="pill" id="euTypeBadge">System</span></div>
+          </div>
           <div class="field" id="fUsername">
             <label>Username <span class="req">*</span></label>
             <input class="input" id="nuUsername" required data-validate="required" data-minlength="3" data-maxlength="50" placeholder="e.g. fieldworker2" autocomplete="off">

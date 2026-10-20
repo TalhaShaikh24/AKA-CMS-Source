@@ -33,7 +33,7 @@ public sealed class UserRepository(DapperContext context) : IUserRepository
         return users;
     }
 
-    public async Task<int> CreateAsync(User user, string passwordHash, int performedBy)
+    public async Task<int> CreateAsync(User user, string? passwordHash, int performedBy)
     {
         using var connection = context.CreateConnection();
         var parameters = new DynamicParameters();
@@ -41,6 +41,7 @@ public sealed class UserRepository(DapperContext context) : IUserRepository
         parameters.Add("@PasswordHash", passwordHash);
         parameters.Add("@CreatedBy", performedBy);
         parameters.Add("@Email", user.Email);
+        parameters.Add("@UserType", string.IsNullOrWhiteSpace(user.UserType) ? "System" : user.UserType);
         parameters.Add("@NewUserId", dbType: DbType.Int32, direction: ParameterDirection.Output);
         await connection.ExecuteAsync(
             StoredProcedures.UserCreate, parameters, commandType: CommandType.StoredProcedure);
@@ -89,6 +90,14 @@ public sealed class UserRepository(DapperContext context) : IUserRepository
     {
         var user = await GetByIdAsync(userId);
         return user?.Roles ?? [];
+    }
+
+    public async Task<IReadOnlyList<AKA.CMS.Application.DTOs.AdDirectoryUserDto>> GetAdDirectoryAsync()
+    {
+        using var connection = context.CreateConnection();
+        var rows = await connection.QueryAsync<AKA.CMS.Application.DTOs.AdDirectoryUserDto>(
+            StoredProcedures.AdDirectoryGetAll, commandType: CommandType.StoredProcedure);
+        return rows.ToList();
     }
 
     private sealed class UserRoleRow

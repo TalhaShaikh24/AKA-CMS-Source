@@ -12,7 +12,8 @@ public static class DtoMapper
         user.IsActive,
         user.IsLocked,
         user.IsAdmin,
-        user.Roles);
+        user.Roles,
+        string.IsNullOrWhiteSpace(user.UserType) ? "System" : user.UserType);
 
     public static RoleDto ToDto(this Role role) => new(
         role.RoleId,

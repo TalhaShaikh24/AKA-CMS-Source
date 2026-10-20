@@ -38,9 +38,17 @@ public sealed class UserService(
 
         await EnsureEmailAvailableAsync(request.Email, null);
 
+        var isAd = string.Equals(request.UserType, "AD", StringComparison.OrdinalIgnoreCase);
         var userId = await userRepository.CreateAsync(
-            new User { Username = request.Username, Email = request.Email?.Trim() },
-            passwordHasher.Hash(request.Password),
+            new User
+            {
+                Username = request.Username,
+                Email = request.Email?.Trim(),
+                UserType = isAd ? "AD" : "System",
+                IsAdUser = isAd
+            },
+            // AD users have no local password — AD authenticates them.
+            isAd ? null : passwordHasher.Hash(request.Password!),
             performedBy);
 
         if (request.RoleIds is not null)
@@ -111,4 +119,7 @@ public sealed class UserService(
             ?? throw new NotFoundException($"User {userId} not found.");
         await userRepository.RemoveRoleAsync(userId, roleId, performedBy);
     }
+
+    public Task<IReadOnlyList<AdDirectoryUserDto>> GetAdDirectoryAsync()
+        => userRepository.GetAdDirectoryAsync();
 }

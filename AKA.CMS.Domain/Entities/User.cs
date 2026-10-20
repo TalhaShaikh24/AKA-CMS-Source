@@ -12,6 +12,8 @@ public sealed class User
     public bool IsActive { get; set; }
     public bool IsAdUser { get; set; }
     public bool IsAdmin { get; set; }
+    /// <summary>'System' (local account) or 'AD' (Active Directory user).</summary>
+    public string UserType { get; set; } = "System";
     public string? PasswordHash { get; set; }
     public List<string> Roles { get; set; } = new();
 }

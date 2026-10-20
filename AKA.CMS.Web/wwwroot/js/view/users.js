@@ -66,6 +66,12 @@ $(function () {
     return u.isActive ? '<span class="st-active">Active</span>' : '<span class="st-inactive">Inactive</span>';
   }
 
+  function typeBadge(u) {
+    return u.userType === 'AD'
+      ? '<span class="pill" style="background:#e7f5ff;color:#1971c2">AD</span>'
+      : '<span class="pill">System</span>';
+  }
+
   function render() {
     var q = filterState.q.toLowerCase();
     var rows = allUsers.filter(function (u) {
@@ -83,13 +89,14 @@ $(function () {
       return '<tr>' +
         '<td><div class="u-cell"><div class="avatar">' + initials + '</div>' +
         '<div><strong>' + esc(u.username) + '</strong><br><span class="hint">' + esc(u.email || '—') + '</span></div></div></td>' +
+        '<td>' + typeBadge(u) + '</td>' +
         '<td>' + pills + '</td>' +
         '<td>' + statusOf(u) + '</td>' +
         '<td class="row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-edit="' + u.userId + '" type="button">Edit</button>' +
         '<button class="btn btn-ghost btn-sm" data-roles="' + u.userId + '" type="button">Roles</button>' +
         '</td></tr>';
-    }).join('') || '<tr><td colspan="4" class="hint">No users found.</td></tr>');
+    }).join('') || '<tr><td colspan="5" class="hint">No users found.</td></tr>');
 
     $('#kpiTotal').text(allUsers.length);
     $('#kpiActive').text(allUsers.filter(function (u) { return u.isActive && !u.isLocked; }).length);
@@ -98,6 +105,52 @@ $(function () {
   }
 
   /* ---------- add / edit ---------- */
+  var adUsers = null; // loaded lazily from /api/users/ad-directory
+
+  function selectedUserType() {
+    return $('#nuTypeSeg button.sel').data('utype') || 'System';
+  }
+
+  function applyTypeUI() {
+    var isAd = selectedUserType() === 'AD';
+    $('#fAdPicker').prop('hidden', !isAd);
+    $('#fUsername, #fPassword').toggle(!isAd);
+    if (isAd) {
+      $('#nuUsername, #nuPassword').removeAttr('required');
+      loadAdUsers();
+    } else {
+      $('#nuUsername, #nuPassword').attr('required', 'required');
+    }
+  }
+
+  function loadAdUsers() {
+    if (adUsers) { fillAdUsers(); return; }
+    cmsAjax({
+      url: '/api/users/ad-directory', method: 'GET',
+      fallbackMsg: 'Could not load AD users.',
+      success: function (res) { adUsers = res || []; fillAdUsers(); }
+    });
+  }
+
+  function fillAdUsers() {
+    var $sel = $('#nuAdUser');
+    $sel.html('<option value="">Select AD user…</option>' + (adUsers || []).map(function (a) {
+      var label = a.displayName + ' (' + a.username + ')' +
+        (a.department ? ' · ' + a.department : '') +
+        (a.alreadyAdded ? ' — already added' : '');
+      return '<option value="' + esc(a.username) + '"' +
+        (a.alreadyAdded ? ' disabled' : '') +
+        ' data-email="' + esc(a.email || '') + '">' + esc(label) + '</option>';
+    }).join(''));
+    $sel.val(null).trigger('change');
+  }
+
+  $('#nuTypeSeg').on('click', 'button', function () { setTimeout(applyTypeUI, 0); });
+  $('#nuAdUser').on('change', function () {
+    var email = $(this).find('option:selected').data('email') || '';
+    if (email) $('#nuEmail').val(email);
+  });
+
   $('#addUserBtn').on('click', function () {
     $('#userModalTitle').text('Add User');
     $('#userFormSubmit').text('Add User');
@@ -105,9 +158,14 @@ $(function () {
     $('#editUserId').val('');
     $('#nuUsername').prop('disabled', false);
     $('#nuRoles').val(null).trigger('change');
+    $('#fUserType').show();
+    $('#fEditType').hide();
+    $('#nuTypeSeg button').removeClass('sel');
+    $('#nuTypeSeg button[data-utype="System"]').addClass('sel');
     $('#fUsername, #fPassword, #fRoles').show();
     $('#fStatusRow, #fNewPass').hide();
     $('#nuUsername, #nuPassword').attr('required', 'required');
+    applyTypeUI();
     $('#userModal').addClass('open');
   });
 
@@ -134,10 +192,16 @@ $(function () {
     $('#euLocked').prop('checked', !!u.isLocked);
     $('#euNewPass').val('');
     // Show username (read-only) and roles on edit; hide password.
+    $('#fUserType').hide();
+    $('#fAdPicker').hide();
+    $('#fEditType').show();
+    $('#euTypeBadge').text(u.userType === 'AD' ? 'AD User' : 'System User');
     $('#fUsername').show();
     $('#fPassword').hide();
     $('#fRoles').show();
-    $('#fStatusRow, #fNewPass').show();
+    $('#fStatusRow').show();
+    // AD users have no local password — AD manages it.
+    $('#fNewPass').toggle(u.userType !== 'AD');
     $('#nuUsername').removeAttr('required');
     $('#nuPassword').removeAttr('required');
     // Load user's current roles
@@ -200,18 +264,39 @@ $(function () {
           CMS.toast('Please select at least one role.', 'error');
           return;
         }
-        cmsAjax({
-          url: '/api/users', method: 'POST', json: true,
-          data: {
-            username: $.trim($('#nuUsername').val()),
-            password: $('#nuPassword').val(),
+        var isAd = selectedUserType() === 'AD';
+        var payload;
+        if (isAd) {
+          var adUsername = $('#nuAdUser').val();
+          if (!adUsername) {
+            $('#fAdPicker').addClass('invalid');
+            $('#fAdPicker .field-error').text('Please select an AD user.').show();
+            CMS.toast('Please select an AD user.', 'error');
+            return;
+          }
+          payload = {
+            username: adUsername,
+            userType: 'AD',
             email: $.trim($('#nuEmail').val()) || null,
             roleIds: roleIds
-          },
+          };
+        } else {
+          payload = {
+            username: $.trim($('#nuUsername').val()),
+            password: $('#nuPassword').val(),
+            userType: 'System',
+            email: $.trim($('#nuEmail').val()) || null,
+            roleIds: roleIds
+          };
+        }
+        cmsAjax({
+          url: '/api/users', method: 'POST', json: true,
+          data: payload,
           fallbackMsg: 'Could not create user.',
           success: function () {
+            adUsers = null; // refresh already-added flags next time
             $('#userModal').removeClass('open');
-            CMS.toast('User created.', 'success');
+            CMS.toast(isAd ? 'AD user added.' : 'User created.', 'success');
             load();
           }
         });

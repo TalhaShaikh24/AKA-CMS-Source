@@ -20,6 +20,7 @@ public static class StoredProcedures
     public const string UserGetById = "sp_CMS_User_GetById";
     public const string UserGetAll = "sp_CMS_User_GetAll";
     public const string UserCreate = "sp_CMS_User_Create";
+    public const string AdDirectoryGetAll = "sp_CMS_AdDirectory_GetAll";
     public const string UserUpdate = "sp_CMS_User_Update";
     public const string UserAssignRole = "sp_CMS_User_AssignRole";
     public const string UserRemoveRole = "sp_CMS_User_RemoveRole";

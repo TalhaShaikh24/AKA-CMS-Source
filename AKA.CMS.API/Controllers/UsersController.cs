@@ -41,6 +41,16 @@ public sealed class UsersController(IUserService userService, ICurrentUser curre
     public async Task<ActionResult<UserDto>> UpdateMe([FromBody] UpdateMyProfileRequest request)
         => Ok(await userService.UpdateMyProfileAsync(currentUser.UserId, request));
 
+    /// <summary>Active Directory user list (dummy data until real AD config is
+    /// provided) — pick a user here and create them with UserType = "AD".</summary>
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<AdDirectoryUserDto>))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    [HttpGet("ad-directory")]
+    [Authorize(Policy = PermissionPolicies.UsersWrite)]
+    public async Task<ActionResult<IReadOnlyList<AdDirectoryUserDto>>> GetAdDirectory()
+        => Ok(await userService.GetAdDirectoryAsync());
+
     /// <summary>Get by id.</summary>
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDto))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]

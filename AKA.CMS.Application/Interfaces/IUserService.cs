@@ -11,4 +11,5 @@ public interface IUserService
     Task<UserDto> UpdateMyProfileAsync(int userId, UpdateMyProfileRequest request);
     Task AssignRoleAsync(int userId, AssignRoleRequest request, int performedBy, string performedByName);
     Task RemoveRoleAsync(int userId, int roleId, int performedBy);
+    Task<IReadOnlyList<AdDirectoryUserDto>> GetAdDirectoryAsync();
 }
