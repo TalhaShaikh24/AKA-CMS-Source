@@ -113,7 +113,8 @@ $(function () {
 
   function applyTypeUI() {
     var isAd = selectedUserType() === 'AD';
-    $('#fAdPicker').prop('hidden', !isAd);
+    // NOTE: .field{display:flex} overrides the [hidden] attribute — toggle inline.
+    $('#fAdPicker').css('display', isAd ? '' : 'none');
     $('#fUsername, #fPassword').toggle(!isAd);
     if (isAd) {
       $('#nuUsername, #nuPassword').removeAttr('required');
