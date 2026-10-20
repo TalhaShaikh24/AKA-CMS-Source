@@ -34,7 +34,7 @@ public sealed class AuthService(
             || !passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid username or password.");
 
-        return await IssueTokensAsync(user);
+        return await IssueTokensAsync(user, request.RememberMe);
     }
 
     public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest request)
@@ -50,7 +50,10 @@ public sealed class AuthService(
         if (user is null || !user.IsActive || user.IsLocked)
             throw new UnauthorizedException("User is no longer active.");
 
-        var response = await IssueTokensAsync(user);
+        // Preserve the original choice: a remember-me token (issued with the
+        // long lifetime) renews long; a normal token renews normal.
+        var wasRemembered = (stored.ExpiresAt - stored.CreatedAt).TotalDays > jwtOptions.RefreshTokenDays + 1;
+        var response = await IssueTokensAsync(user, wasRemembered);
         await authRepository.RevokeRefreshTokenAsync(refreshToken, response.RefreshToken);
         return response;
     }
@@ -196,17 +199,18 @@ public sealed class AuthService(
     private static string HashToken(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-    private async Task<LoginResponse> IssueTokensAsync(User user)
+    private async Task<LoginResponse> IssueTokensAsync(User user, bool rememberMe)
     {
         var permissions = await authRepository.GetUserPermissionClaimsAsync(user.UserId);
         var accessToken = jwtTokenService.CreateAccessToken(user, permissions);
         var expiresAt = DateTime.UtcNow.AddMinutes(jwtOptions.AccessTokenMinutes);
+        var refreshDays = rememberMe ? jwtOptions.RememberMeRefreshTokenDays : jwtOptions.RefreshTokenDays;
 
         var refreshToken = new RefreshToken
         {
             Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
             UserId = user.UserId,
-            ExpiresAt = DateTime.UtcNow.AddDays(jwtOptions.RefreshTokenDays),
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshDays),
             CreatedAt = DateTime.UtcNow
         };
         await authRepository.SaveRefreshTokenAsync(refreshToken);

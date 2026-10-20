@@ -29,7 +29,7 @@ $(function () {
                 method: 'POST',
                 json: true,
                 auth: false, // no token yet
-                data: { username: username, password: password },
+                data: { username: username, password: password, rememberMe: remember },
                 fallbackMsg: 'Sign in failed.',
                 success: function (resp) {
                     window.cmsAuth.save(resp, remember);

@@ -8,4 +8,6 @@ public sealed class JwtOptions
     public string SigningKey { get; set; } = string.Empty;
     public int AccessTokenMinutes { get; set; } = 60;
     public int RefreshTokenDays { get; set; } = 7;
+    /// <summary>Refresh-token lifetime when the user ticks "Remember me" at login.</summary>
+    public int RememberMeRefreshTokenDays { get; set; } = 30;
 }
