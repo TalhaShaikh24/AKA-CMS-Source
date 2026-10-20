@@ -8,72 +8,48 @@
 
 <input type="hidden" id="dfbFormId" value="@(formId?.ToString() ?? "")">
 
-<div class="page-head">
-  <div class="page-title">
-    <h1 id="dfbPageTitle">New Form</h1>
-    <p class="sub">Drag fields from the palette, arrange them on the grid, then set their properties</p>
-  </div>
-  <div class="page-actions">
-    <a class="btn btn-ghost" href="@Url.Action("Index", "DynamicForms")">Back to Forms</a>
+<div class="dfb-shell">
+  <div class="dfb-toolbar">
+    <a class="btn btn-ghost btn-sm" href="@Url.Action("Index", "DynamicForms")">← Forms</a>
+    <input class="input dfb-tb-title" id="dfbTitle" placeholder="Form title — e.g. Intake Assessment">
+    <input class="input dfb-tb-key" id="dfbKey" placeholder="form-key">
+    <label class="check-row dfb-tb-active"><input type="checkbox" id="dfbActive" checked><span class="check-label">Active</span></label>
+    <button class="btn btn-ghost btn-sm" id="dfbDescToggle" type="button">Description</button>
+    <span class="dfb-tb-spacer"></span>
     <button class="btn btn-ghost" id="dfbPreviewBtn" type="button">Preview</button>
     <button class="btn btn-primary" id="dfbSaveBtn" type="button">Save Form</button>
+    <div class="dfb-tb-desc" id="dfbDescRow" hidden>
+      <input class="input" id="dfbDesc" placeholder="What is this form for? (optional)">
+    </div>
   </div>
-</div>
 
-<div class="card" style="margin-bottom:18px">
-  <div class="card-body">
-    <div class="form-grid">
-      <div class="field">
-        <label>Form Title <span class="req">*</span></label>
-        <input class="input" id="dfbTitle" placeholder="e.g. Intake Assessment">
+  <div class="dfb-layout">
+    <div class="card dfb-pane">
+      <div class="card-head"><h3>Fields</h3></div>
+      <div class="card-body dfb-pane-body">
+        <div id="dfbPalette"></div>
+        <p class="hint" style="margin-top:10px">Drag a field onto the canvas, or click to add it.</p>
       </div>
-      <div class="field">
-        <label>Form Key <span class="req">*</span></label>
-        <input class="input" id="dfbKey" placeholder="e.g. intake-assessment">
-        <span class="hint">Lowercase letters, digits and hyphens — unique per form.</span>
+    </div>
+
+    <div class="card dfb-pane">
+      <div class="card-head"><h3>Canvas</h3><span class="hint" id="dfbFieldCount"></span></div>
+      <div class="card-body dfb-pane-body">
+        <div class="dfb-canvas" id="dfbCanvas">
+          <div class="dfb-grid" id="dfbGrid"></div>
+          <div class="dfb-empty" id="dfbEmpty">Drop fields here to start building your form.</div>
+        </div>
       </div>
-      <div class="field field-span-2">
-        <label>Description</label>
-        <input class="input" id="dfbDesc" placeholder="What is this form for?">
-      </div>
-      <div class="field">
-        <label class="check-row"><input type="checkbox" id="dfbActive" checked><span class="check-label">Active</span></label>
+    </div>
+
+    <div class="card dfb-pane">
+      <div class="card-head"><h3>Properties</h3><span class="hint" id="dfbPropsType"></span></div>
+      <div class="card-body dfb-pane-body" id="dfbProps">
+        <p class="hint">Select a field on the canvas to edit its properties.</p>
       </div>
     </div>
   </div>
 </div>
-
-<div class="dfb-layout">
-  <div class="card dfb-palette-card">
-    <div class="card-head"><h3>Fields</h3></div>
-    <div class="card-body">
-      <div id="dfbPalette"></div>
-      <p class="hint" style="margin-top:10px">Drag a field onto the canvas, or click to add it.</p>
-    </div>
-  </div>
-
-  <div class="card dfb-canvas-card">
-    <div class="card-head"><h3>Canvas</h3><span class="hint" id="dfbFieldCount"></span></div>
-    <div class="card-body">
-      <div class="dfb-canvas" id="dfbCanvas">
-        <div class="dfb-grid" id="dfbGrid"></div>
-        <div class="dfb-empty" id="dfbEmpty">Drop fields here to start building your form.</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card dfb-props-card">
-    <div class="card-head"><h3>Properties</h3></div>
-    <div class="card-body" id="dfbProps">
-      <p class="hint">Select a field on the canvas to edit its properties.</p>
-    </div>
-  </div>
-</div>
-
-@section Scripts {
-<script src="~/js/view/form-renderer.js" asp-append-version="true"></script>
-<script src="~/js/view/form-builder.js" asp-append-version="true"></script>
-}
 
 <div class="modal-backdrop" id="dfbPreviewModal">
   <div class="modal" style="max-width:900px">
@@ -91,3 +67,8 @@
     </div>
   </div>
 </div>
+
+@section Scripts {
+<script src="~/js/view/form-renderer.js" asp-append-version="true"></script>
+<script src="~/js/view/form-builder.js" asp-append-version="true"></script>
+}

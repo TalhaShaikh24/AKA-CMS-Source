@@ -119,6 +119,7 @@ $(function () {
   function renderProps() {
     var $p = $('#dfbProps');
     var f = fields[selected];
+    $('#dfbPropsType').text(f ? (TYPE_LABELS[f.fieldType] || f.fieldType) : '');
     if (!f) { $p.html('<p class="hint">Select a field on the canvas to edit its properties.</p>'); return; }
     var isStatic = f.fieldType === 'heading' || f.fieldType === 'paragraph';
     var html = '';
@@ -273,7 +274,20 @@ $(function () {
   });
   $(document).on('dragend', function () { dragState = null; $('#dfbCanvas').removeClass('dfb-over'); });
 
+  /* Delete key removes the selected field (when not typing in an input). */
+  $(document).on('keydown', function (e) {
+    if (e.key !== 'Delete' || selected < 0) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    deleteField(selected);
+  });
+
   /* ---------------- form settings ---------------- */
+  $('#dfbDescToggle').on('click', function () {
+    var $row = $('#dfbDescRow');
+    $row.prop('hidden', !$row.prop('hidden'));
+    if (!$row.prop('hidden')) $('#dfbDesc').focus();
+  });
   $('#dfbTitle').on('input', function () {
     var $key = $('#dfbKey');
     if (formId === '' && !$key.data('touched')) $key.val(slug($(this).val()));
@@ -287,10 +301,11 @@ $(function () {
       url: '/api/dynamic-forms/' + formId, method: 'GET',
       fallbackMsg: 'Could not load form.',
       success: function (f) {
-        $('#dfbPageTitle').text('Edit Form — ' + f.title);
+        document.title = 'Edit — ' + f.title + ' · Form Builder';
         $('#dfbTitle').val(f.title);
         $('#dfbKey').val(f.formKey).data('touched', true);
         $('#dfbDesc').val(f.description || '');
+        if (f.description) $('#dfbDescRow').prop('hidden', false);
         $('#dfbActive').prop('checked', !!f.isActive);
         fields = (f.fields || []).map(function (x) {
           return {
