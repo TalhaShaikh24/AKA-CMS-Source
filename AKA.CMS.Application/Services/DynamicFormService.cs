@@ -67,6 +67,8 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' needs at least one option.");
             if (field.ColumnSpan is < 1 or > 12)
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' column span must be between 1 and 12.");
+            if (field.ChoiceLayout is not null and not "Vertical" and not "Horizontal")
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' choice layout must be 'Vertical' or 'Horizontal'.");
         }
     }
 

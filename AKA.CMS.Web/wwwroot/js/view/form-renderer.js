@@ -52,14 +52,14 @@ window.CMSFormRenderer = (function () {
           optionsHtml(f, null) + '</select>' + helpHtml(f);
         break;
       case 'radio':
-        inner = labelHtml(f) + '<div class="dfb-choices">' + (f.options || []).map(function (o) {
+        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '">' + (f.options || []).map(function (o) {
           var chk = f.defaultValue != null && String(f.defaultValue) === String(o.value) ? ' checked' : '';
           return '<label class="check-row"><input type="radio" name="' + key + '" value="' + esc(o.value) + '"' + chk + dis + '>' +
             '<span class="check-label">' + esc(o.label) + '</span></label>';
         }).join('') + '</div>' + helpHtml(f);
         break;
       case 'checkboxGroup':
-        inner = labelHtml(f) + '<div class="dfb-choices">' + (f.options || []).map(function (o) {
+        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '">' + (f.options || []).map(function (o) {
           return '<label class="check-row"><input type="checkbox" name="' + key + '" value="' + esc(o.value) + '"' + dis + '>' +
             '<span class="check-label">' + esc(o.label) + '</span></label>';
         }).join('') + '</div>' + helpHtml(f);

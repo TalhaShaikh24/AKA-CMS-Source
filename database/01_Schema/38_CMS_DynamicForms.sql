@@ -45,6 +45,7 @@ BEGIN
         [MinValue]    DECIMAL(18,4) NULL,
         [MaxValue]    DECIMAL(18,4) NULL,
         [Accept]      NVARCHAR(200) NULL,     -- file input accept, e.g. .pdf,image/*
+        [ChoiceLayout] VARCHAR(10) NULL,      -- radio/checkboxGroup: 'Vertical' (default) | 'Horizontal'
         [ColumnSpan]  TINYINT NOT NULL CONSTRAINT [DF_CMS_DynamicFormFields_ColumnSpan] DEFAULT (6),  -- of 12
         [SortOrder]   INT NOT NULL CONSTRAINT [DF_CMS_DynamicFormFields_SortOrder] DEFAULT (0),
         CONSTRAINT [PK_CMS_DynamicFormFields] PRIMARY KEY CLUSTERED ([FieldId]),
@@ -95,4 +96,10 @@ EXEC [dbo].[sp_CMS_Role_AssignPermission] @RoleId = 2, @ControllerActionId = @Df
 EXEC [dbo].[sp_CMS_Role_AssignPermission] @RoleId = 3, @ControllerActionId = @DfRead, @CreatedBy = 'seed', @PerformedBy = 1;
 EXEC [dbo].[sp_CMS_Role_AssignPermission] @RoleId = 4, @ControllerActionId = @DfRead, @CreatedBy = 'seed', @PerformedBy = 1;
 EXEC [dbo].[sp_CMS_Role_AssignPermission] @RoleId = 5, @ControllerActionId = @DfRead, @CreatedBy = 'seed', @PerformedBy = 1;
+GO
+
+/* ---- ChoiceLayout column (radio/checkbox groups) — idempotent for DBs
+   where the tables were created before this column existed ---- */
+IF COL_LENGTH('dbo.CMS_DynamicFormFields', 'ChoiceLayout') IS NULL
+    ALTER TABLE [dbo].[CMS_DynamicFormFields] ADD [ChoiceLayout] VARCHAR(10) NULL;
 GO

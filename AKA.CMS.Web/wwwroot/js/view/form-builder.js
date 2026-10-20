@@ -52,7 +52,8 @@ $(function () {
       fieldKey: uniqueKey(slug(label)), label: label, fieldType: type,
       placeholder: '', helpText: '', isRequired: false, defaultValue: '',
       options: [], minLength: null, maxLength: null, minValue: null, maxValue: null,
-      accept: '', columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
+      accept: '', choiceLayout: 'Vertical',
+      columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
     };
     if (CMSFormRenderer.OPTION_TYPES[type]) {
       f.options = [ { value: 'option-1', label: 'Option 1' }, { value: 'option-2', label: 'Option 2' } ];
@@ -137,6 +138,13 @@ $(function () {
       html += '<div class="field"><label>Options</label><textarea class="input" id="ppOptions" rows="5">' + esc(optionsToText(f.options)) + '</textarea>' +
         '<span class="hint">One per line. Use <code>value | Label</code> for a separate value.</span></div>';
     }
+    if (f.fieldType === 'radio' || f.fieldType === 'checkboxGroup') {
+      var lay = f.choiceLayout || 'Vertical';
+      html += '<div class="field"><label>Layout</label><div class="seg" id="ppLayoutSeg">' +
+        '<button type="button" data-layout="Vertical"' + (lay === 'Vertical' ? ' class="sel"' : '') + '>Vertical</button>' +
+        '<button type="button" data-layout="Horizontal"' + (lay === 'Horizontal' ? ' class="sel"' : '') + '>Horizontal</button>' +
+        '</div><span class="hint">Vertical stacks options; Horizontal places them side by side.</span></div>';
+    }
     if (f.fieldType === 'text' || f.fieldType === 'textarea' || f.fieldType === 'email' || f.fieldType === 'password') {
       html += '<div class="form-grid"><div class="field"><label>Min Length</label><input class="input" type="number" id="ppMinLen" value="' + (f.minLength == null ? '' : f.minLength) + '"></div>' +
         '<div class="field"><label>Max Length</label><input class="input" type="number" id="ppMaxLen" value="' + (f.maxLength == null ? '' : f.maxLength) + '"></div></div>';
@@ -179,6 +187,12 @@ $(function () {
 
   $('#dfbProps').on('click', '#ppDel', function () { deleteField(selected); });
   $('#dfbProps').on('click', '#ppDup', function () { duplicateField(selected); });
+  $('#dfbProps').on('click', '#ppLayoutSeg button', function () {
+    var f = fields[selected];
+    if (!f) return;
+    f.choiceLayout = $(this).data('layout');
+    renderCanvas();
+  });
 
   function deleteField(i) {
     if (i < 0 || i >= fields.length) return;
@@ -285,6 +299,7 @@ $(function () {
             isRequired: !!x.isRequired, defaultValue: x.defaultValue || '',
             options: x.options || [], minLength: x.minLength, maxLength: x.maxLength,
             minValue: x.minValue, maxValue: x.maxValue, accept: x.accept || '',
+            choiceLayout: x.choiceLayout || 'Vertical',
             columnSpan: x.columnSpan || 6
           };
         });
@@ -311,7 +326,8 @@ $(function () {
           options: CMSFormRenderer.OPTION_TYPES[f.fieldType] ? (f.options || []) : [],
           minLength: f.minLength, maxLength: f.maxLength,
           minValue: f.minValue, maxValue: f.maxValue,
-          accept: f.accept || null, columnSpan: f.columnSpan || 6, sortOrder: i
+          accept: f.accept || null, choiceLayout: f.choiceLayout || 'Vertical',
+          columnSpan: f.columnSpan || 6, sortOrder: i
         };
       })
     };

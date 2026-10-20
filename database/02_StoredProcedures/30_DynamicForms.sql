@@ -41,7 +41,7 @@ BEGIN
     SELECT  [FieldId], [FormId], [FieldKey], [Label], [FieldType], [Placeholder],
             [HelpText], [IsRequired], [DefaultValue], [OptionsJson],
             [MinLength], [MaxLength], [MinValue], [MaxValue], [Accept],
-            [ColumnSpan], [SortOrder]
+            [ChoiceLayout], [ColumnSpan], [SortOrder]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
     ORDER BY [SortOrder], [FieldId];
@@ -87,11 +87,12 @@ BEGIN
             INSERT INTO [dbo].[CMS_DynamicFormFields]
                 ([FormId], [FieldKey], [Label], [FieldType], [Placeholder], [HelpText],
                  [IsRequired], [DefaultValue], [OptionsJson], [MinLength], [MaxLength],
-                 [MinValue], [MaxValue], [Accept], [ColumnSpan], [SortOrder])
+                 [MinValue], [MaxValue], [Accept], [ChoiceLayout], [ColumnSpan], [SortOrder])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
                     j.[MinLength], j.[MaxLength], j.[MinValue], j.[MaxValue], j.[Accept],
+                    j.[ChoiceLayout],
                     ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
             FROM OPENJSON(@FieldsJson)
             WITH (
@@ -108,6 +109,7 @@ BEGIN
                 [MinValue]    DECIMAL(18,4) '$.minValue',
                 [MaxValue]    DECIMAL(18,4) '$.maxValue',
                 [Accept]      NVARCHAR(200) '$.accept',
+                [ChoiceLayout] VARCHAR(10)  '$.choiceLayout',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
                 [SortOrder]   INT           '$.sortOrder'
             ) AS j

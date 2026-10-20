@@ -23,6 +23,8 @@ public sealed class DynamicFormFieldDto
     public decimal? MinValue { get; set; }
     public decimal? MaxValue { get; set; }
     public string? Accept { get; set; }
+    /// <summary>For radio / checkbox groups: 'Vertical' (default) or 'Horizontal'.</summary>
+    public string? ChoiceLayout { get; set; }
     public int ColumnSpan { get; set; } = 6;
     public int SortOrder { get; set; }
 }

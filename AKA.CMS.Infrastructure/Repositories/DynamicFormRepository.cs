@@ -37,6 +37,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public decimal? MinValue { get; set; }
         public decimal? MaxValue { get; set; }
         public string? Accept { get; set; }
+        public string? ChoiceLayout { get; set; }
         public int ColumnSpan { get; set; }
         public int SortOrder { get; set; }
     }
@@ -76,7 +77,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 Options = ParseOptions(f.OptionsJson),
                 MinLength = f.MinLength, MaxLength = f.MaxLength,
                 MinValue = f.MinValue, MaxValue = f.MaxValue,
-                Accept = f.Accept, ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
+                Accept = f.Accept, ChoiceLayout = f.ChoiceLayout,
+                ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
     }
@@ -101,6 +103,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             minValue = f.MinValue,
             maxValue = f.MaxValue,
             accept = f.Accept,
+            choiceLayout = string.IsNullOrWhiteSpace(f.ChoiceLayout) ? "Vertical" : f.ChoiceLayout,
             columnSpan = f.ColumnSpan,
             sortOrder = i
         });
