@@ -74,3 +74,20 @@
 <script src="~/js/view/form-renderer.js" asp-append-version="true"></script>
 <script src="~/js/view/form-builder.js" asp-append-version="true"></script>
 }
+
+<div class="modal-backdrop" id="dfbPreviewModal">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-head">
+      <h3 id="dfbPreviewTitle">Form Preview</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint" id="dfbPreviewDesc" style="margin-bottom:14px"></p>
+      <div id="dfbPreviewBody"></div>
+      <p class="hint" style="margin-top:16px">Preview of your current changes — the form is <strong>not saved yet</strong>. Close this and click “Save Form” when it looks right.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Close</button>
+    </div>
+  </div>
+</div>

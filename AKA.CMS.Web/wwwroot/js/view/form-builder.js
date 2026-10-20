@@ -331,8 +331,23 @@ $(function () {
   });
 
   $('#dfbPreviewBtn').on('click', function () {
-    if (!formId) { CMS.toast('Save the form first, then preview it.', 'error'); return; }
-    window.open('/DynamicForms/Render/' + formId, '_blank');
+    // Preview the CURRENT in-memory definition (unsaved changes included),
+    // so the user can verify the form before saving it.
+    if (!fields.length) { CMS.toast('Add at least one field to preview.', 'error'); return; }
+    var formDef = {
+      title: $.trim($('#dfbTitle').val()) || 'Untitled Form',
+      description: $.trim($('#dfbDesc').val()),
+      fields: fields.map(function (f, i) {
+        var c = JSON.parse(JSON.stringify(f));
+        c.sortOrder = i;
+        return c;
+      })
+    };
+    $('#dfbPreviewTitle').text(formDef.title);
+    $('#dfbPreviewDesc').text(formDef.description || '');
+    $('#dfbPreviewModal').addClass('open');
+    // Render after the modal is visible so Select2 measures widths correctly.
+    setTimeout(function () { CMSFormRenderer.render($('#dfbPreviewBody'), formDef); }, 30);
   });
 
   loadForm();
