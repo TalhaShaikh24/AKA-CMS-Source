@@ -19,6 +19,9 @@
   .otp-box:focus{border-color:#1b2a4a;background:#fff}
   .otp-box.filled{border-color:#1b2a4a;background:#eef3fb}
   .resend{text-align:center;margin-top:16px}
+  /* The OTP error is a standalone .field-error (not inside a .field), and the
+     global rule hides those until .field.invalid — force it visible here. */
+  #otpError{display:block;min-height:18px;margin:-6px 0 10px}
 </style>
 </head>
 <body class="auth-page">
