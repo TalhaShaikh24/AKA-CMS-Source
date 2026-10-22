@@ -16,6 +16,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsActive { get; set; }
+        public bool IsMultiStep { get; set; }
         public int FieldCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -38,6 +39,11 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public decimal? MaxValue { get; set; }
         public string? Accept { get; set; }
         public string? ChoiceLayout { get; set; }
+        public string? ButtonAction { get; set; }
+        public string? RegexPattern { get; set; }
+        public string? ValidationMessage { get; set; }
+        public int? LookupFormId { get; set; }
+        public string? LookupFieldKey { get; set; }
         public int ColumnSpan { get; set; }
         public int SortOrder { get; set; }
     }
@@ -50,7 +56,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         return rows.Select(r => new DynamicFormListItemDto
         {
             FormId = r.FormId, FormKey = r.FormKey, Title = r.Title, Description = r.Description,
-            IsActive = r.IsActive, FieldCount = r.FieldCount, CreatedAt = r.CreatedAt, UpdatedAt = r.UpdatedAt
+            IsActive = r.IsActive, IsMultiStep = r.IsMultiStep, FieldCount = r.FieldCount, CreatedAt = r.CreatedAt, UpdatedAt = r.UpdatedAt
         }).ToList();
     }
 
@@ -67,17 +73,21 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         return new DynamicFormDetailDto
         {
             FormId = form.FormId, FormKey = form.FormKey, Title = form.Title,
-            Description = form.Description, IsActive = form.IsActive,
+            Description = form.Description, IsActive = form.IsActive, IsMultiStep = form.IsMultiStep,
             FieldCount = form.FieldCount, CreatedAt = form.CreatedAt, UpdatedAt = form.UpdatedAt,
             Fields = fields.Select(f => new DynamicFormFieldDto
             {
                 FieldId = f.FieldId, FieldKey = f.FieldKey, Label = f.Label, FieldType = f.FieldType,
                 Placeholder = f.Placeholder, HelpText = f.HelpText, IsRequired = f.IsRequired,
                 DefaultValue = f.DefaultValue,
-                Options = ParseOptions(f.OptionsJson),
+                Options = f.FieldType == "grid" ? new List<DynamicFormFieldOptionDto>() : ParseOptions(f.OptionsJson),
+                GridColumns = f.FieldType == "grid" ? ParseGridColumns(f.OptionsJson) : new List<DynamicFormGridColumnDto>(),
                 MinLength = f.MinLength, MaxLength = f.MaxLength,
                 MinValue = f.MinValue, MaxValue = f.MaxValue,
                 Accept = f.Accept, ChoiceLayout = f.ChoiceLayout,
+                ButtonAction = f.ButtonAction, RegexPattern = f.RegexPattern,
+                ValidationMessage = f.ValidationMessage,
+                LookupFormId = f.LookupFormId, LookupFieldKey = f.LookupFieldKey,
                 ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
@@ -94,10 +104,23 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             helpText = f.HelpText,
             isRequired = f.IsRequired,
             defaultValue = f.DefaultValue,
-            // Real JSON array (not a serialized string) — the SP reads it AS JSON.
-            optionsJson = DynamicFormFieldTypes.HasOptions(f.FieldType)
-                ? f.Options.Select(o => new { value = o.Value, label = o.Label }).ToList()
-                : null,
+            // Real JSON (not a serialized string) — the SP reads it AS JSON.
+            // Option fields store [{value,label}]; grid fields store their
+            // columns [{key,label,type,options}] in the same column.
+            optionsJson = f.FieldType == "grid"
+                ? (object)f.GridColumns.Select(c => new
+                    {
+                        key = c.Key, label = c.Label, type = c.Type,
+                        options = c.Options.Select(o => new { value = o.Value, label = o.Label }).ToList()
+                    }).ToList()
+                : DynamicFormFieldTypes.HasOptions(f.FieldType)
+                    ? f.Options.Select(o => new { value = o.Value, label = o.Label }).ToList()
+                    : null,
+            buttonAction = f.ButtonAction,
+            regexPattern = f.RegexPattern,
+            validationMessage = f.ValidationMessage,
+            lookupFormId = f.LookupFormId,
+            lookupFieldKey = f.LookupFieldKey,
             minLength = f.MinLength,
             maxLength = f.MaxLength,
             minValue = f.MinValue,
@@ -115,6 +138,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         p.Add("@Title", request.Title.Trim());
         p.Add("@Description", request.Description);
         p.Add("@IsActive", request.IsActive);
+        p.Add("@IsMultiStep", request.IsMultiStep);
         p.Add("@FieldsJson", JsonSerializer.Serialize(fieldPayload));
         p.Add("@PerformedBy", performedBy);
         p.Add("@NewFormId", dbType: DbType.Int32, direction: ParameterDirection.Output);
@@ -131,6 +155,20 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         p.Add("@PerformedBy", performedBy);
         await connection.ExecuteAsync(
             StoredProcedures.DynamicFormDelete, p, commandType: CommandType.StoredProcedure);
+    }
+
+    private static List<DynamicFormGridColumnDto> ParseGridColumns(string? optionsJson)
+    {
+        if (string.IsNullOrWhiteSpace(optionsJson)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<DynamicFormGridColumnDto>>(optionsJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch (JsonException)
+        {
+            return new();
+        }
     }
 
     private static List<DynamicFormFieldOptionDto> ParseOptions(string? optionsJson)

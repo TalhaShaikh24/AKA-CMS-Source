@@ -25,6 +25,17 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
     public async Task<ActionResult<DynamicFormDetailDto>> GetById(int id)
         => Ok(await service.GetByIdAsync(id));
 
+    /// <summary>Lookup options: the configured options of a field in another
+    /// form (SharePoint-style lookup source). Empty when the source field
+    /// has no configured options.</summary>
+    [HttpGet("lookup-options")]
+    [Authorize(Policy = PermissionPolicies.DynamicFormsRead)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<DynamicFormFieldOptionDto>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<IReadOnlyList<DynamicFormFieldOptionDto>>> LookupOptions(
+        [FromQuery] int formId, [FromQuery] string fieldKey)
+        => Ok(await service.GetLookupOptionsAsync(formId, fieldKey));
+
     [HttpPost]
     [Authorize(Policy = PermissionPolicies.DynamicFormsWrite)]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(DynamicFormDetailDto))]

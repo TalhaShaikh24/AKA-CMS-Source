@@ -28,19 +28,14 @@ $(function () {
   $('#dfRenderForm').on('submit', function (e) {
     e.preventDefault();
     if (!formDef) return;
-    // Required-field validation against the definition.
-    var data = CMSFormRenderer.collect($('#dfRenderForm'));
-    var missing = [];
-    (formDef.fields || []).forEach(function (f) {
-      if (!f.isRequired) return;
-      if (f.fieldType === 'heading' || f.fieldType === 'paragraph') return;
-      var v = data[f.fieldKey];
-      if (v == null || v === '' || (Array.isArray(v) && !v.length) || v === false) missing.push(f.label);
-    });
-    if (missing.length) {
-      CMS.toast('Required: ' + missing.join(', '), 'error');
+    // Validate against the definition: required fields + custom regex.
+    var errors = CMSFormRenderer.validate($('#dfRenderForm'), formDef);
+    if (errors.length) {
+      CMS.toast(errors.map(function (x) { return x.message; }).slice(0, 3).join(' '), 'error');
+      CMSFormRenderer.showField($('#dfRenderBody'), errors[0].fieldKey);
       return;
     }
+    var data = CMSFormRenderer.collect($('#dfRenderForm'));
     $('#dfResultJson').text(JSON.stringify(data, null, 2));
     $('#dfResult').prop('hidden', false);
     CMS.toast('Form submitted (preview).', 'success');

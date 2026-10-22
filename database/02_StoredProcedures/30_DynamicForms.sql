@@ -15,7 +15,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT  f.[FormId], f.[FormKey], f.[Title], f.[Description], f.[IsActive],
+    SELECT  f.[FormId], f.[FormKey], f.[Title], f.[Description], f.[IsActive], f.[IsMultiStep],
             f.[CreatedAt], f.[UpdatedAt],
             (SELECT COUNT(*) FROM [dbo].[CMS_DynamicFormFields] ff
              WHERE ff.[FormId] = f.[FormId]) AS [FieldCount]
@@ -31,7 +31,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT  f.[FormId], f.[FormKey], f.[Title], f.[Description], f.[IsActive],
+    SELECT  f.[FormId], f.[FormKey], f.[Title], f.[Description], f.[IsActive], f.[IsMultiStep],
             f.[CreatedAt], f.[UpdatedAt],
             (SELECT COUNT(*) FROM [dbo].[CMS_DynamicFormFields] ff
              WHERE ff.[FormId] = f.[FormId]) AS [FieldCount]
@@ -41,7 +41,8 @@ BEGIN
     SELECT  [FieldId], [FormId], [FieldKey], [Label], [FieldType], [Placeholder],
             [HelpText], [IsRequired], [DefaultValue], [OptionsJson],
             [MinLength], [MaxLength], [MinValue], [MaxValue], [Accept],
-            [ChoiceLayout], [ColumnSpan], [SortOrder]
+            [ChoiceLayout], [ButtonAction], [RegexPattern], [ValidationMessage],
+            [LookupFormId], [LookupFieldKey], [ColumnSpan], [SortOrder]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
     ORDER BY [SortOrder], [FieldId];
@@ -55,6 +56,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_DynamicForm_Save]
     @Title NVARCHAR(200),
     @Description NVARCHAR(1000) = NULL,
     @IsActive BIT = 1,
+    @IsMultiStep BIT = 0,
     @FieldsJson NVARCHAR(MAX) = NULL,   -- array of field objects
     @PerformedBy INT,
     @NewFormId INT OUTPUT
@@ -67,15 +69,15 @@ BEGIN
 
         IF @FormId = 0
         BEGIN
-            INSERT INTO [dbo].[CMS_DynamicForms] ([FormKey], [Title], [Description], [IsActive], [CreatedBy])
-            VALUES (@FormKey, @Title, @Description, @IsActive, @PerformedBy);
+            INSERT INTO [dbo].[CMS_DynamicForms] ([FormKey], [Title], [Description], [IsActive], [IsMultiStep], [CreatedBy])
+            VALUES (@FormKey, @Title, @Description, @IsActive, @IsMultiStep, @PerformedBy);
             SET @NewFormId = CAST(SCOPE_IDENTITY() AS INT);
         END
         ELSE
         BEGIN
             UPDATE [dbo].[CMS_DynamicForms]
             SET [FormKey] = @FormKey, [Title] = @Title, [Description] = @Description,
-                [IsActive] = @IsActive, [UpdatedAt] = SYSUTCDATETIME()
+                [IsActive] = @IsActive, [IsMultiStep] = @IsMultiStep, [UpdatedAt] = SYSUTCDATETIME()
             WHERE [FormId] = @FormId;
             SET @NewFormId = @FormId;
 
@@ -87,12 +89,15 @@ BEGIN
             INSERT INTO [dbo].[CMS_DynamicFormFields]
                 ([FormId], [FieldKey], [Label], [FieldType], [Placeholder], [HelpText],
                  [IsRequired], [DefaultValue], [OptionsJson], [MinLength], [MaxLength],
-                 [MinValue], [MaxValue], [Accept], [ChoiceLayout], [ColumnSpan], [SortOrder])
+                 [MinValue], [MaxValue], [Accept], [ChoiceLayout], [ButtonAction],
+                 [RegexPattern], [ValidationMessage], [LookupFormId], [LookupFieldKey],
+                 [ColumnSpan], [SortOrder])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
                     j.[MinLength], j.[MaxLength], j.[MinValue], j.[MaxValue], j.[Accept],
-                    j.[ChoiceLayout],
+                    j.[ChoiceLayout], j.[ButtonAction], j.[RegexPattern], j.[ValidationMessage],
+                    j.[LookupFormId], j.[LookupFieldKey],
                     ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
             FROM OPENJSON(@FieldsJson)
             WITH (
@@ -110,6 +115,11 @@ BEGIN
                 [MaxValue]    DECIMAL(18,4) '$.maxValue',
                 [Accept]      NVARCHAR(200) '$.accept',
                 [ChoiceLayout] VARCHAR(10)  '$.choiceLayout',
+                [ButtonAction] VARCHAR(20)  '$.buttonAction',
+                [RegexPattern] NVARCHAR(500) '$.regexPattern',
+                [ValidationMessage] NVARCHAR(300) '$.validationMessage',
+                [LookupFormId] INT          '$.lookupFormId',
+                [LookupFieldKey] VARCHAR(100) '$.lookupFieldKey',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
                 [SortOrder]   INT           '$.sortOrder'
             ) AS j
