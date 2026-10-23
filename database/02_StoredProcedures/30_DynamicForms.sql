@@ -42,7 +42,8 @@ BEGIN
             [HelpText], [IsRequired], [DefaultValue], [OptionsJson],
             [MinLength], [MaxLength], [MinValue], [MaxValue], [Accept],
             [ChoiceLayout], [ButtonAction], [RegexPattern], [ValidationMessage],
-            [LookupFormId], [LookupFieldKey], [ColumnSpan], [SortOrder]
+            [LookupFormId], [LookupFieldKey], [SectionColumns], [ColumnIndex],
+            [ColumnSpan], [SortOrder]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
     ORDER BY [SortOrder], [FieldId];
@@ -91,13 +92,13 @@ BEGIN
                  [IsRequired], [DefaultValue], [OptionsJson], [MinLength], [MaxLength],
                  [MinValue], [MaxValue], [Accept], [ChoiceLayout], [ButtonAction],
                  [RegexPattern], [ValidationMessage], [LookupFormId], [LookupFieldKey],
-                 [ColumnSpan], [SortOrder])
+                 [SectionColumns], [ColumnIndex], [ColumnSpan], [SortOrder])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
                     j.[MinLength], j.[MaxLength], j.[MinValue], j.[MaxValue], j.[Accept],
                     j.[ChoiceLayout], j.[ButtonAction], j.[RegexPattern], j.[ValidationMessage],
-                    j.[LookupFormId], j.[LookupFieldKey],
+                    j.[LookupFormId], j.[LookupFieldKey], j.[SectionColumns], j.[ColumnIndex],
                     ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
             FROM OPENJSON(@FieldsJson)
             WITH (
@@ -120,6 +121,8 @@ BEGIN
                 [ValidationMessage] NVARCHAR(300) '$.validationMessage',
                 [LookupFormId] INT          '$.lookupFormId',
                 [LookupFieldKey] VARCHAR(100) '$.lookupFieldKey',
+                [SectionColumns] TINYINT    '$.sectionColumns',
+                [ColumnIndex] TINYINT       '$.columnIndex',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
                 [SortOrder]   INT           '$.sortOrder'
             ) AS j

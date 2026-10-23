@@ -66,12 +66,13 @@ $(function () {
       accept: '', choiceLayout: 'Vertical',
       buttonAction: null, regexPattern: '', validationMessage: '',
       lookupFormId: null, lookupFieldKey: '', gridColumns: [],
+      sectionColumns: null, columnIndex: null,
       columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
     };
     if (CMSFormRenderer.OPTION_TYPES[type]) {
       f.options = [ { value: 'option-1', label: 'Option 1' }, { value: 'option-2', label: 'Option 2' } ];
     }
-    if (type === 'section') { f.label = 'New Section'; f.columnSpan = 12; }
+    if (type === 'section') { f.label = 'New Section'; f.columnSpan = 12; f.sectionColumns = 2; }
     if (type === 'hidden') { f.label = 'Hidden Field'; f.columnSpan = 12; }
     if (type === 'button') { f.label = 'Submit'; f.buttonAction = 'submit'; f.columnSpan = 12; }
     if (type === 'grid') {
@@ -91,28 +92,115 @@ $(function () {
     }).join(''));
   }
 
-  /* ---------------- canvas ---------------- */
+  /* ---------------- canvas ----------------
+     The canvas is a stack of areas: a leading "top" area (fields before the
+     first section, span-grid layout), then one box per section. A section
+     either keeps the legacy span-grid layout (sectionColumns = null) or an
+     Elementor-style column layout (1-4 columns; fields stack per column). */
+  function segments() {
+    var segs = [{ kind: 'top', secIndex: -1, fields: [] }];
+    fields.forEach(function (f, i) {
+      if (f.fieldType === 'section') segs.push({ kind: 'section', secIndex: i, fields: [] });
+      else segs[segs.length - 1].fields.push(i);
+    });
+    return segs;
+  }
+
+  function columnsOf(seg, n) {
+    var cols = [];
+    for (var c = 0; c < n; c++) cols.push([]);
+    seg.fields.forEach(function (i) {
+      var ci = fields[i].columnIndex == null ? 0 : Math.min(n - 1, Math.max(0, fields[i].columnIndex));
+      cols[ci].push(i);
+    });
+    return cols;
+  }
+
+  function layoutSegHtml(sf, secIdx) {
+    var cur = sf.sectionColumns || '';
+    return [{ v: '', l: 'Grid' }, { v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }].map(function (o) {
+      return '<button type="button" data-seclayout="' + o.v + '" data-secidx="' + secIdx + '"' +
+        (String(cur) === String(o.v) ? ' class="sel"' : '') + '>' + o.l + '</button>';
+    }).join('');
+  }
+
+  function cardHtml(f, i, inColumn) {
+    var preview = CMSFormRenderer.fieldHtml(f, true);
+    return '<div class="dfb-card' + (i === selected ? ' sel' : '') + '" data-index="' + i + '"' +
+        (inColumn ? '' : ' style="grid-column: span ' + (f.columnSpan || 6) + '"') + '>' +
+      '<div class="dfb-card-bar">' +
+        '<span class="dfb-drag" draggable="true" data-drag="' + i + '" title="Drag to move">⠿</span>' +
+        '<span class="dfb-card-type">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span>' +
+        '<span class="dfb-card-actions">' +
+          '<button type="button" data-dup="' + i + '" title="Duplicate">⧉</button>' +
+          '<button type="button" data-del="' + i + '" title="Delete">✕</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="dfb-card-body">' + preview + '</div>' +
+    '</div>';
+  }
+
   function renderCanvas() {
     var $grid = $('#dfbGrid');
     $('#dfbEmpty').toggle(fields.length === 0);
     $('#dfbFieldCount').text(fields.length ? fields.length + ' field' + (fields.length === 1 ? '' : 's') : '');
-    $grid.html(fields.map(function (f, i) {
-      var preview = CMSFormRenderer.fieldHtml(f, true);
-      return '<div class="dfb-card' + (i === selected ? ' sel' : '') + '" data-index="' + i + '"' +
-          ' style="grid-column: span ' + (f.columnSpan || 6) + '">' +
-        '<div class="dfb-card-bar">' +
-          '<span class="dfb-drag" draggable="true" data-drag="' + i + '" title="Drag to reorder">⠿</span>' +
-          '<span class="dfb-card-type">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span>' +
+    var segs = segments();
+    var html = '';
+    segs.forEach(function (seg) {
+      if (seg.kind === 'top') {
+        if (seg.fields.length || segs.length === 1) {
+          html += '<div class="dfb-grid dfb-area" data-area="top">' +
+            seg.fields.map(function (i) { return cardHtml(fields[i], i, false); }).join('') + '</div>';
+        } else {
+          html += '<div class="dfb-grid dfb-area dfb-area-empty" data-area="top">' +
+            '<div class="dfb-col-empty" style="grid-column:1/-1">Drop fields here (before the first section)</div></div>';
+        }
+        return;
+      }
+      var sf = fields[seg.secIndex];
+      var layout = sf.sectionColumns || null;
+      html += '<div class="dfb-section-box' + (seg.secIndex === selected ? ' sel' : '') + '" data-secbox="' + seg.secIndex + '">' +
+        '<div class="dfb-section-bar">' +
+          '<span class="dfb-drag" draggable="true" data-secdrag="' + seg.secIndex + '" title="Drag to move section">⠿</span>' +
+          '<strong>' + esc(sf.label) + '</strong><span class="pill">Section</span>' +
+          '<span class="dfb-layout-seg seg">' + layoutSegHtml(sf, seg.secIndex) + '</span>' +
           '<span class="dfb-card-actions">' +
-            '<button type="button" data-dup="' + i + '" title="Duplicate">⧉</button>' +
-            '<button type="button" data-del="' + i + '" title="Delete">✕</button>' +
+            '<button type="button" data-dup="' + seg.secIndex + '" title="Duplicate section">⧉</button>' +
+            '<button type="button" data-del="' + seg.secIndex + '" title="Delete section">✕</button>' +
           '</span>' +
-        '</div>' +
-        '<div class="dfb-card-body">' + preview + '</div>' +
-      '</div>';
-    }).join(''));
+        '</div>';
+      if (layout) {
+        html += '<div class="dfb-cols-row" style="grid-template-columns:repeat(' + layout + ',1fr)">' +
+          columnsOf(seg, layout).map(function (colIdxs, c) {
+            return '<div class="dfb-col-zone" data-secidx="' + seg.secIndex + '" data-col="' + c + '">' +
+              (colIdxs.length ? colIdxs.map(function (i) { return cardHtml(fields[i], i, true); }).join('')
+                              : '<div class="dfb-col-empty">Drop fields here</div>') +
+              '</div>';
+          }).join('') + '</div>';
+      } else {
+        html += '<div class="dfb-grid dfb-area" data-area="section" data-secidx="' + seg.secIndex + '">' +
+          seg.fields.map(function (i) { return cardHtml(fields[i], i, false); }).join('') + '</div>';
+      }
+      html += '</div>';
+    });
+    $grid.html(html);
     // The renderer wraps fields in its own grid cell — unwrap one level for the card body.
     $grid.find('.dfb-card-body > .dfb-cell, .dfb-card-body > .field').css('grid-column', 'auto');
+  }
+
+  /* Switch a section between the legacy grid layout and column layouts.
+     Grid -> columns distributes fields round-robin; fewer columns clamps
+     overflow into the last column; columns -> Grid clears the assignment. */
+  function applySectionLayout(secIdx, newLayout) {
+    var sf = fields[secIdx];
+    if (!sf || sf.fieldType !== 'section') return;
+    var oldLayout = sf.sectionColumns || null;
+    sf.sectionColumns = newLayout;
+    var idxs = [];
+    for (var i = secIdx + 1; i < fields.length && fields[i].fieldType !== 'section'; i++) idxs.push(i);
+    if (!newLayout) { idxs.forEach(function (i) { fields[i].columnIndex = null; }); return; }
+    if (!oldLayout) { idxs.forEach(function (i, k) { fields[i].columnIndex = k % newLayout; }); return; }
+    idxs.forEach(function (i) { if ((fields[i].columnIndex || 0) >= newLayout) fields[i].columnIndex = newLayout - 1; });
   }
 
   function selectField(i) {
@@ -191,6 +279,10 @@ $(function () {
       html += '<div class="field"><label>Default Value</label><input class="input" id="ppDefault" value="' + esc(f.defaultValue || '') + '"></div>';
     }
     html += '<div class="field"><label>Help Text</label><input class="input" id="ppHelp" value="' + esc(f.helpText || '') + '"></div>';
+    if (isSection) {
+      html += '<div class="field"><label>Columns</label><div class="seg">' + layoutSegHtml(f, selected) + '</div>' +
+        '<span class="hint">Grid = fields flow by width (old layout). 1–4 = columns: drag fields into each column, Elementor-style.</span></div>';
+    }
     if (isButton) {
       var ba = f.buttonAction || 'button';
       html += '<div class="field"><label>Button Type</label><div class="seg" id="ppBtnSeg">' +
@@ -364,15 +456,78 @@ $(function () {
   $('#dfbGrid').on('click', '[data-del]', function (e) { e.stopPropagation(); deleteField(Number($(this).data('del'))); });
   $('#dfbGrid').on('click', '[data-dup]', function (e) { e.stopPropagation(); duplicateField(Number($(this).data('dup'))); });
 
-  function dropIndexFor(e) {
-    // Insert position = first card whose vertical middle is below the cursor.
-    var y = e.originalEvent.clientY;
-    var idx = fields.length;
-    $('#dfbGrid .dfb-card').each(function (i) {
+  /* ---------------- drag & drop with drop-zone highlight ---------------- */
+  var hotEl = null;
+  function setHot(el) {
+    if (hotEl === el) return;
+    clearHot();
+    hotEl = el || null;
+    if (hotEl) hotEl.classList.add('dfb-hot');
+  }
+  function clearHot() { if (hotEl) { hotEl.classList.remove('dfb-hot'); hotEl = null; } }
+
+  /* Insertion flat-index for a span-grid area (top / legacy section). */
+  function areaInsertIndex($area, y) {
+    var $cards = $area.find('.dfb-card');
+    var idx = null;
+    $cards.each(function () {
       var r = this.getBoundingClientRect();
-      if (y < r.top + r.height / 2) { idx = Math.min(idx, i); }
+      if (y < r.top + r.height / 2) { idx = Number($(this).data('index')); return false; }
     });
-    return idx;
+    if (idx !== null) return idx;
+    if ($cards.length) return Number($cards.last().data('index')) + 1;
+    if ($area.data('area') === 'section') return Number($area.data('secidx')) + 1;
+    return 0; // empty top area
+  }
+
+  /* Insertion flat-index inside one column of a column-layout section. */
+  function columnInsertIndex(secIdx, col, y) {
+    var $zone = $('.dfb-col-zone[data-secidx="' + secIdx + '"][data-col="' + col + '"]');
+    var before = null;
+    $zone.find('.dfb-card').each(function () {
+      var r = this.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = Number($(this).data('index')); return false; }
+    });
+    if (before !== null) return before;
+    var seg = segments().filter(function (sg) { return sg.secIndex === secIdx; })[0];
+    var cols = columnsOf(seg, fields[secIdx].sectionColumns);
+    var mine = cols[col];
+    if (mine.length) return mine[mine.length - 1] + 1;
+    for (var c = col + 1; c < cols.length; c++) if (cols[c].length) return cols[c][0];
+    return seg.fields.length ? seg.fields[seg.fields.length - 1] + 1 : secIdx + 1;
+  }
+
+  function placeField(idx, colIdx) {
+    if (dragState.kind === 'new') {
+      var nf = newField(dragState.type);
+      nf.columnIndex = nf.fieldType === 'section' ? null : colIdx;
+      fields.splice(idx, 0, nf);
+      selectField(idx);
+    } else {
+      var from = dragState.index;
+      var item = fields.splice(from, 1)[0];
+      if (from < idx) idx--;
+      item.columnIndex = item.fieldType === 'section' ? null : colIdx;
+      fields.splice(idx, 0, item);
+      selectField(idx);
+    }
+  }
+
+  function dropSectionBlock(y) {
+    var from = dragState.index;
+    var end = from + 1;
+    while (end < fields.length && fields[end].fieldType !== 'section') end++;
+    var target = fields.length;
+    $('#dfbGrid .dfb-section-box').each(function () {
+      var bi = Number($(this).data('secbox'));
+      if (bi === from) return;
+      var r = this.getBoundingClientRect();
+      if (y < r.top + r.height / 2) target = Math.min(target, bi);
+    });
+    var block = fields.splice(from, end - from);
+    if (from < target) target -= block.length;
+    fields.splice.apply(fields, [target, 0].concat(block));
+    selectField(target);
   }
 
   /* palette drag + click */
@@ -386,9 +541,14 @@ $(function () {
     selectField(fields.length - 1);
   });
 
-  /* canvas reorder drag */
+  /* canvas reorder drag (field cards + section headers) */
   $('#dfbGrid').on('dragstart', '[data-drag]', function (e) {
     dragState = { kind: 'move', index: Number($(this).data('drag')) };
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
+  });
+  $('#dfbGrid').on('dragstart', '[data-secdrag]', function (e) {
+    dragState = { kind: 'section', index: Number($(this).data('secdrag')) };
     e.originalEvent.dataTransfer.effectAllowed = 'move';
     e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
   });
@@ -398,26 +558,47 @@ $(function () {
     e.preventDefault();
     e.originalEvent.dataTransfer.dropEffect = dragState.kind === 'new' ? 'copy' : 'move';
     $(this).addClass('dfb-over');
+    var target = null;
+    if (dragState.kind === 'section') target = $(e.target).closest('.dfb-section-box, .dfb-area')[0] || null;
+    else target = $(e.target).closest('.dfb-col-zone, .dfb-area')[0] || null;
+    setHot(target);
   });
-  $('#dfbCanvas').on('dragleave', function () { $(this).removeClass('dfb-over'); });
+  $('#dfbCanvas').on('dragleave', function (e) {
+    if (!$(e.target).closest('#dfbCanvas').length || e.relatedTarget && !$.contains(this, e.relatedTarget)) {
+      $(this).removeClass('dfb-over'); clearHot();
+    }
+  });
   $('#dfbCanvas').on('drop', function (e) {
     e.preventDefault();
     $(this).removeClass('dfb-over');
     if (!dragState) return;
-    var idx = dropIndexFor(e);
-    if (dragState.kind === 'new') {
-      fields.splice(idx, 0, newField(dragState.type));
-      selectField(idx);
+    var y = e.originalEvent.clientY;
+    if (dragState.kind === 'section') {
+      dropSectionBlock(y);
     } else {
-      var from = dragState.index;
-      var item = fields.splice(from, 1)[0];
-      if (from < idx) idx--;
-      fields.splice(idx, 0, item);
-      selectField(idx);
+      var $zone = $(e.target).closest('.dfb-col-zone');
+      var $area = $(e.target).closest('.dfb-area');
+      if ($zone.length) placeField(columnInsertIndex(Number($zone.data('secidx')), Number($zone.data('col')), y), Number($zone.data('col')));
+      else if ($area.length) placeField(areaInsertIndex($area, y), null);
     }
+    clearHot();
     dragState = null;
   });
-  $(document).on('dragend', function () { dragState = null; $('#dfbCanvas').removeClass('dfb-over'); });
+  $(document).on('dragend', function () { dragState = null; clearHot(); $('#dfbCanvas').removeClass('dfb-over'); });
+
+  /* Section bar: click selects the section; layout buttons switch its layout. */
+  $('#dfbGrid').on('click', '.dfb-section-bar', function (e) {
+    if ($(e.target).closest('[data-del],[data-dup],[data-seclayout],[data-secdrag]').length) return;
+    selectField(Number($(this).closest('.dfb-section-box').data('secbox')));
+  });
+  $(document).on('click', '[data-seclayout]', function (e) {
+    e.stopPropagation();
+    var secIdx = Number($(this).data('secidx'));
+    if (isNaN(secIdx) || !fields[secIdx]) secIdx = selected;
+    var v = $(this).data('seclayout');
+    applySectionLayout(secIdx, v === '' || v == null ? null : Number(v));
+    selectField(secIdx);
+  });
 
   /* Delete key removes the selected field (when not typing in an input). */
   $(document).on('keydown', function (e) {
@@ -470,6 +651,8 @@ $(function () {
             validationMessage: x.validationMessage || '',
             lookupFormId: x.lookupFormId || null, lookupFieldKey: x.lookupFieldKey || '',
             gridColumns: x.gridColumns || [],
+            sectionColumns: x.sectionColumns == null ? null : x.sectionColumns,
+            columnIndex: x.columnIndex == null ? null : x.columnIndex,
             columnSpan: x.columnSpan || 6
           };
         });
@@ -517,6 +700,8 @@ $(function () {
           lookupFormId: f.fieldType === 'lookup' ? (f.lookupFormId || null) : null,
           lookupFieldKey: f.fieldType === 'lookup' ? (f.lookupFieldKey || null) : null,
           gridColumns: f.fieldType === 'grid' ? (f.gridColumns || []) : [],
+          sectionColumns: f.fieldType === 'section' ? (f.sectionColumns || null) : null,
+          columnIndex: f.fieldType === 'section' ? null : (f.columnIndex == null ? null : f.columnIndex),
           columnSpan: (f.fieldType === 'section' || f.fieldType === 'hidden') ? 12 : (f.columnSpan || 6),
           sortOrder: i
         };

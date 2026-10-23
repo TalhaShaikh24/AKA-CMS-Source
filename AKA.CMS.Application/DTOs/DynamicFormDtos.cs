@@ -48,6 +48,12 @@ public sealed class DynamicFormFieldDto
     public string? LookupFieldKey { get; set; }
     /// <summary>For grid fields: the table columns (stored in OptionsJson).</summary>
     public List<DynamicFormGridColumnDto> GridColumns { get; set; } = new();
+    /// <summary>For section fields: column count (1-4) for the Elementor-style
+    /// column layout. Null = legacy span-grid layout.</summary>
+    public int? SectionColumns { get; set; }
+    /// <summary>For fields inside a column-layout section: which column
+    /// (0-based) the field sits in. Null = first column.</summary>
+    public int? ColumnIndex { get; set; }
     public int ColumnSpan { get; set; } = 6;
     public int SortOrder { get; set; }
 }

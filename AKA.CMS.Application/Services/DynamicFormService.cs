@@ -100,6 +100,10 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' column span must be between 1 and 12.");
             if (field.ChoiceLayout is not null and not "Vertical" and not "Horizontal")
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' choice layout must be 'Vertical' or 'Horizontal'.");
+            if (field.SectionColumns is int secCols && (secCols < 1 || secCols > 4))
+                throw new InvalidDomainValueException($"Section '{field.FieldKey}' column count must be between 1 and 4.");
+            if (field.ColumnIndex is int colIdx && (colIdx < 0 || colIdx > 3))
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' column index must be between 0 and 3.");
             if (field.FieldType == "button" && field.ButtonAction is not null and not "submit" and not "reset" and not "button")
                 throw new InvalidDomainValueException($"Button '{field.FieldKey}' action must be 'submit', 'reset' or 'button'.");
             if (!string.IsNullOrWhiteSpace(field.RegexPattern))

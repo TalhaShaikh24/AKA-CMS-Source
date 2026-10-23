@@ -44,6 +44,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string? ValidationMessage { get; set; }
         public int? LookupFormId { get; set; }
         public string? LookupFieldKey { get; set; }
+        public int? SectionColumns { get; set; }
+        public int? ColumnIndex { get; set; }
         public int ColumnSpan { get; set; }
         public int SortOrder { get; set; }
     }
@@ -88,6 +90,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 ButtonAction = f.ButtonAction, RegexPattern = f.RegexPattern,
                 ValidationMessage = f.ValidationMessage,
                 LookupFormId = f.LookupFormId, LookupFieldKey = f.LookupFieldKey,
+                SectionColumns = f.SectionColumns, ColumnIndex = f.ColumnIndex,
                 ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
@@ -121,6 +124,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             validationMessage = f.ValidationMessage,
             lookupFormId = f.LookupFormId,
             lookupFieldKey = f.LookupFieldKey,
+            sectionColumns = f.FieldType == "section" ? f.SectionColumns : null,
+            columnIndex = f.FieldType == "section" ? null : f.ColumnIndex,
             minLength = f.MinLength,
             maxLength = f.MaxLength,
             minValue = f.MinValue,
