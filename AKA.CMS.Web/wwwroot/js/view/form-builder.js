@@ -834,6 +834,25 @@ $(function () {
     e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
   });
 
+  /* Resolve the drop zone for a drag event: first the element directly
+     under the pointer; if that is a dead spot (the empty-state message,
+     gaps between sections, section padding), fall back to the NEAREST
+     zone by pointer distance — a drop anywhere on the canvas must land. */
+  function resolveDropZone(e) {
+    var $z = $(e.target).closest('.dfb-col-zone, .dfb-area');
+    if ($z.length) return $z[0];
+    var x = e.originalEvent.clientX, y = e.originalEvent.clientY;
+    var best = null, bestDist = Infinity;
+    $('#dfbCanvas .dfb-col-zone, #dfbCanvas .dfb-area').each(function () {
+      var r = this.getBoundingClientRect();
+      var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+      var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+      var d = dx + dy;
+      if (d < bestDist) { bestDist = d; best = this; }
+    });
+    return best;
+  }
+
   $('#dfbCanvas').on('dragover', function (e) {
     if (!dragState) return;
     e.preventDefault();
@@ -841,7 +860,7 @@ $(function () {
     $(this).addClass('dfb-over');
     var target = null;
     if (dragState.kind === 'section') target = $(e.target).closest('.dfb-section-box, .dfb-area')[0] || null;
-    else target = $(e.target).closest('.dfb-col-zone, .dfb-area')[0] || null;
+    else target = resolveDropZone(e);
     setHot(target);
   });
   $('#dfbCanvas').on('dragleave', function (e) {
@@ -857,10 +876,15 @@ $(function () {
     if (dragState.kind === 'section') {
       dropSectionBlock(y);
     } else {
-      var $zone = $(e.target).closest('.dfb-col-zone');
-      var $area = $(e.target).closest('.dfb-area');
-      if ($zone.length) placeField(columnInsertIndex(Number($zone.data('secidx')), Number($zone.data('col')), y), Number($zone.data('col')));
-      else if ($area.length) placeField(areaInsertIndex($area, y), null);
+      var zone = resolveDropZone(e);
+      if (zone) {
+        var $zone = $(zone);
+        if ($zone.hasClass('dfb-col-zone')) placeField(columnInsertIndex(Number($zone.data('secidx')), Number($zone.data('col')), y), Number($zone.data('col')));
+        else placeField(areaInsertIndex($zone, y), null);
+      } else {
+        // No zones on the canvas at all — append at the end.
+        placeField(fields.length, null);
+      }
     }
     clearHot();
     dragState = null;
