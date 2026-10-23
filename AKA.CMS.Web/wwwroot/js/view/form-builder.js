@@ -70,7 +70,7 @@ $(function () {
       accept: '', choiceLayout: 'Vertical',
       buttonAction: null, regexPattern: '', validationMessage: '',
       lookupFormId: null, lookupFieldKey: '', gridColumns: [],
-      sectionColumns: null, columnIndex: null,
+      sectionColumns: null, columnIndex: null, showBorder: null, showDivider: null,
       customJs: '', cssClass: '', customId: '', customAttributes: [], validationRules: [],
       inputMask: '', showInfoIcon: false, infoText: '',
       columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
@@ -164,6 +164,15 @@ $(function () {
     return out;
   }
 
+  /* A section's effective display option: the stored value wins; when it
+     was never set (null), child (nested) sections hide border + divider
+     by default while top-level sections show them. */
+  function secShow(f, which) {
+    var v = which === 'border' ? f.showBorder : f.showDivider;
+    if (v === null || v === undefined) return !f.parentKey;
+    return !!v;
+  }
+
   function layoutSegHtml(sf, secIdx) {
     var cur = sf.sectionColumns || '';
     return [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }].map(function (o) {
@@ -219,7 +228,9 @@ $(function () {
   function sectionBoxHtml(secIdx, depth) {
     var sf = fields[secIdx];
     var layout = sf.sectionColumns || null;
-    var html = '<div class="dfb-section-box' + (secIdx === selected ? ' sel' : '') + '" data-secbox="' + secIdx + '">' +
+    var html = '<div class="dfb-section-box' + (secIdx === selected ? ' sel' : '') +
+      (secShow(sf, 'border') ? '' : ' dfb-noborder') + (secShow(sf, 'divider') ? '' : ' dfb-nodivider') +
+      '" data-secbox="' + secIdx + '">' +
       '<div class="dfb-section-bar">' +
         '<span class="dfb-drag" draggable="true" data-secdrag="' + secIdx + '" title="Drag to move section">⠿</span>' +
         '<strong>' + esc(sf.label) + '</strong><span class="pill">Section</span>' +
@@ -613,6 +624,10 @@ $(function () {
     if (isSection) {
       html += '<div class="field"><label>Columns</label><div class="seg">' + layoutSegHtml(f, selected) + '</div>' +
         '<span class="hint">How many columns this section has — drag fields into each column, Elementor-style.</span></div>';
+      html += '<div class="field"><label>Display</label>' +
+        '<label class="check-row"><input type="checkbox" id="ppShowBorder"' + (secShow(f, 'border') ? ' checked' : '') + '><span class="check-label">Show border</span></label>' +
+        '<label class="check-row"><input type="checkbox" id="ppShowDivider"' + (secShow(f, 'divider') ? ' checked' : '') + '><span class="check-label">Show divider under title</span></label>' +
+        (f.parentKey ? '<span class="hint">Child section — border and divider stay hidden unless you turn them on.</span></div>' : '</div>');
     }
     if (isButton) {
       var ba = f.buttonAction || 'button';
@@ -720,6 +735,8 @@ $(function () {
     else if (id === 'ppKey') { f.fieldKey = slug($(this).val()) || f.fieldKey; }
     else if (id === 'ppSpan') { f.columnSpan = Number($(this).val()); }
     else if (id === 'ppRequired') { f.isRequired = $(this).is(':checked'); }
+    else if (id === 'ppShowBorder') { f.showBorder = $(this).is(':checked'); renderCanvas(); }
+    else if (id === 'ppShowDivider') { f.showDivider = $(this).is(':checked'); renderCanvas(); }
     else if (id === 'ppPlaceholder') { f.placeholder = $(this).val(); }
     else if (id === 'ppDefault') { f.defaultValue = $(this).val(); }
     else if (id === 'ppHelp') { f.helpText = $(this).val(); }
@@ -1144,6 +1161,9 @@ $(function () {
             customAttributes: (x.customAttributes || []).map(function (a) { return { name: a.name || '', value: a.value || '' }; }),
             validationRules: (x.validationRules || []).map(function (r) { return { pattern: r.pattern || '', message: r.message || '' }; }),
             inputMask: x.inputMask || '', showInfoIcon: !!x.showInfoIcon, infoText: x.infoText || '',
+            parentKey: x.parentKey || null,
+            showBorder: x.showBorder === undefined ? null : x.showBorder,
+            showDivider: x.showDivider === undefined ? null : x.showDivider,
             sectionColumns: x.sectionColumns == null ? null : x.sectionColumns,
             columnIndex: x.columnIndex == null ? null : x.columnIndex,
             columnSpan: x.columnSpan || 6
@@ -1193,12 +1213,13 @@ $(function () {
           lookupFormId: f.fieldType === 'lookup' ? (f.lookupFormId || null) : null,
           lookupFieldKey: f.fieldType === 'lookup' ? (f.lookupFieldKey || null) : null,
           gridColumns: f.fieldType === 'grid' ? (f.gridColumns || []) : [],
+          parentKey: f.parentKey || null, showBorder: f.showBorder, showDivider: f.showDivider,
           customJs: f.customJs || null, cssClass: f.cssClass || null, customId: f.customId || null,
           customAttributes: (f.customAttributes || []).filter(function (a) { return a.name; }),
           validationRules: (f.validationRules || []).filter(function (r) { return r.pattern; }),
           inputMask: f.inputMask || null, showInfoIcon: !!f.showInfoIcon, infoText: f.infoText || null,
           sectionColumns: f.fieldType === 'section' ? (f.sectionColumns || null) : null,
-          columnIndex: f.fieldType === 'section' ? null : (f.columnIndex == null ? null : f.columnIndex),
+          columnIndex: (f.columnIndex == null ? null : f.columnIndex),
           columnSpan: (f.fieldType === 'section' || f.fieldType === 'hidden') ? 12 : (f.columnSpan || 6),
           sortOrder: i
         };

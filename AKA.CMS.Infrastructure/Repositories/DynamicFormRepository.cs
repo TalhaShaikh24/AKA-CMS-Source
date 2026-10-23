@@ -53,6 +53,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string? ValidationRulesJson { get; set; }
         public string? InputMask { get; set; }
         public string? ParentKey { get; set; }
+        public bool? ShowBorder { get; set; }
+        public bool? ShowDivider { get; set; }
         public bool ShowInfoIcon { get; set; }
         public string? InfoText { get; set; }
         public int ColumnSpan { get; set; }
@@ -103,7 +105,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 CustomJs = f.CustomJs, CssClass = f.CssClass, CustomId = f.CustomId,
                 CustomAttributes = ParseCustomAttributes(f.CustomAttributesJson),
                 ValidationRules = ParseValidationRules(f.ValidationRulesJson),
-                InputMask = f.InputMask, ParentKey = f.ParentKey, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
+                InputMask = f.InputMask, ParentKey = f.ParentKey, ShowBorder = f.ShowBorder, ShowDivider = f.ShowDivider, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
                 ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
@@ -151,6 +153,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 : null,
             inputMask = f.InputMask,
             parentKey = f.ParentKey,
+            showBorder = f.ShowBorder,
+            showDivider = f.ShowDivider,
             showInfoIcon = f.ShowInfoIcon,
             infoText = f.InfoText,
             minLength = f.MinLength,

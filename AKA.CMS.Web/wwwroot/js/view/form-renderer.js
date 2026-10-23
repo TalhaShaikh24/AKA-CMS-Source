@@ -235,6 +235,14 @@ window.CMSFormRenderer = (function () {
     return '<div class="dfb-cell dfb-nested" style="grid-column: span 12">' + sectionBoxHtml(f, fields, preview) + '</div>';
   }
 
+  /* Effective section display: stored value wins; never set (null) means
+     shown for a top-level section, hidden for a child (nested) section. */
+  function secShow(f, which) {
+    var v = which === 'border' ? f.showBorder : f.showDivider;
+    if (v === null || v === undefined) return !f.parentKey;
+    return !!v;
+  }
+
   function sectionBoxHtml(sf, fields, preview) {
     var kids = childrenOf(fields, sf.fieldKey);
     var body;
@@ -256,7 +264,8 @@ window.CMSFormRenderer = (function () {
         return itemHtml(g.section, fields, preview);
       }).join('');
     }
-    return '<section class="dfb-section' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') + '"' +
+    return '<section class="dfb-section' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') +
+      (secShow(sf, 'border') ? '' : ' dfb-noborder') + (secShow(sf, 'divider') ? '' : ' dfb-nodivider') + '"' +
       (sf.customId ? ' id="' + esc(sf.customId) + '"' : '') + customAttrs(sf) +
       ' data-fkey="' + esc(sf.fieldKey) + '">' +
       '<div class="dfb-section-head"><h3>' + esc(sf.label) + infoHtml(sf) + '</h3>' +

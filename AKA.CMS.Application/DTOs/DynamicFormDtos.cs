@@ -71,6 +71,11 @@ public sealed class DynamicFormFieldDto
     /// <summary>Key of the section this field belongs to; null = the form's
     /// top level. A section may itself have a parent (nested section).</summary>
     public string? ParentKey { get; set; }
+    /// <summary>Section border visibility; null = default (shown at the top
+    /// level, hidden for a child/nested section).</summary>
+    public bool? ShowBorder { get; set; }
+    /// <summary>Divider under the section title; null = default (same rule).</summary>
+    public bool? ShowDivider { get; set; }
     /// <summary>Custom JavaScript run when the field changes (button: on click).</summary>
     public string? CustomJs { get; set; }
     /// <summary>Extra CSS class(es) added to the field wrapper.</summary>

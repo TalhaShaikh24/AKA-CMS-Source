@@ -875,6 +875,12 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .dfb-col{display:block;min-width:0}
 .dfb-col .field{margin:0}
 .dfb-nested .dfb-section{margin:0}
+/* Section display options: border / divider toggles (per section).
+   Child (nested) sections get these classes by default. */
+.dfb-section.dfb-noborder{border-color:transparent;background:transparent}
+.dfb-section.dfb-nodivider .dfb-section-head{border-bottom:none;padding-bottom:0;margin-bottom:10px}
+.dfb-section-box.dfb-noborder{border-color:transparent}
+.dfb-section-box.dfb-nodivider .dfb-section-bar{border-bottom:none}
 .dfb-col > .dfb-grid{height:100%}
 @media (max-width:640px){.dfb-cols{grid-template-columns:1fr}}
 /* Builder canvas: section boxes, column drop zones, drop highlight */
