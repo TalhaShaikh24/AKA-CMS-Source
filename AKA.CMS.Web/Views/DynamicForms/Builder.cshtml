@@ -30,6 +30,7 @@
     <label class="check-row dfb-tb-active" title="Step (wizard) form — each Section becomes a step"><input type="checkbox" id="dfbMultiStep"><span class="check-label">Multi-step</span></label>
     <button class="btn btn-ghost btn-sm" id="dfbDescToggle" type="button">Description</button>
     <span class="dfb-tb-spacer"></span>
+    <button class="btn btn-ghost" id="dfbNavToggle" type="button">⎇ Navigator</button>
     <button class="btn btn-ghost" id="dfbPreviewBtn" type="button">Preview</button>
     <button class="btn btn-primary" id="dfbSaveBtn" type="button">Save Form</button>
     <div class="dfb-tb-desc" id="dfbDescRow" hidden>
@@ -63,6 +64,15 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="dfb-navigator open" id="dfbNavigator">
+  <div class="dfb-nav-head" id="dfbNavHead">
+    <strong>Navigator</strong>
+    <button type="button" class="modal-x" id="dfbNavClose" title="Close navigator">&times;</button>
+  </div>
+  <div class="dfb-nav-tree" id="dfbNavTree"></div>
+  <p class="hint" style="padding:8px 12px;border-top:1px solid var(--border)">Click a row to select it on the canvas. Drag rows to reorder — sections move with all their fields.</p>
 </div>
 
 <div class="modal-backdrop" id="dfbPreviewModal">

@@ -5,36 +5,40 @@ $(function () {
   CMS.bindLayout();
 
   var PALETTE = [
+    { group: 'Layout' },
+    { type: 'section', label: 'Section - Grid', icon: '\u25a4', preset: 0 },
+    { type: 'section', label: 'Section - 2 Columns', icon: '\u25a6', preset: 2 },
+    { type: 'section', label: 'Section - 3 Columns', icon: '\u25a6', preset: 3 },
+    { type: 'section', label: 'Section - 4 Columns', icon: '\u25a6', preset: 4 },
+    { type: 'heading', label: 'Heading', icon: 'H' },
+    { type: 'paragraph', label: 'Paragraph Text', icon: '\u2261' },
     { group: 'Inputs' },
     { type: 'text', label: 'Text Input', icon: 'T' },
     { type: 'email', label: 'Email', icon: '@' },
     { type: 'number', label: 'Number', icon: '#' },
-    { type: 'password', label: 'Password', icon: '••' },
-    { type: 'textarea', label: 'Text Area', icon: '¶' },
-    { type: 'hidden', label: 'Hidden Input', icon: '◌' },
+    { type: 'password', label: 'Password', icon: '\u2022\u2022' },
+    { type: 'textarea', label: 'Text Area', icon: '\u00b6' },
+    { type: 'hidden', label: 'Hidden Input', icon: '\u25cc' },
     { group: 'Choice' },
-    { type: 'select', label: 'Dropdown', icon: '▾' },
-    { type: 'multiselect', label: 'Multi-Select (Select2)', icon: '▾▾' },
-    { type: 'radio', label: 'Radio Buttons', icon: '◉' },
-    { type: 'checkboxGroup', label: 'Checkbox Group', icon: '☑' },
-    { type: 'checkbox', label: 'Single Checkbox', icon: '✓' },
-    { type: 'lookup', label: 'Lookup (other form)', icon: '⌕' },
+    { type: 'select', label: 'Dropdown', icon: '\u25be' },
+    { type: 'multiselect', label: 'Multi-Select (Select2)', icon: '\u25be\u25be' },
+    { type: 'radio', label: 'Radio Buttons', icon: '\u25c9' },
+    { type: 'checkboxGroup', label: 'Checkbox Group', icon: '\u2611' },
+    { type: 'checkbox', label: 'Single Checkbox', icon: '\u2713' },
+    { type: 'lookup', label: 'Lookup (other form)', icon: '\u2315' },
     { group: 'Date & Time' },
-    { type: 'date', label: 'Date Picker', icon: '📅' },
-    { type: 'time', label: 'Time', icon: '🕐' },
-    { type: 'datetime', label: 'Date & Time', icon: '📆' },
+    { type: 'date', label: 'Date Picker', icon: '\ud83d\udcc5' },
+    { type: 'time', label: 'Time', icon: '\ud83d\udd50' },
+    { type: 'datetime', label: 'Date & Time', icon: '\ud83d\udcc6' },
     { group: 'Advanced' },
-    { type: 'file', label: 'File Upload', icon: '📎' },
-    { type: 'grid', label: 'Grid / Table', icon: '⊞' },
-    { group: 'Layout' },
-    { type: 'section', label: 'Section', icon: '▤' },
-    { type: 'heading', label: 'Heading', icon: 'H' },
-    { type: 'paragraph', label: 'Paragraph Text', icon: '≡' },
+    { type: 'file', label: 'File Upload', icon: '\ud83d\udcce' },
+    { type: 'grid', label: 'Grid / Table', icon: '\u229e' },
     { group: 'Actions' },
-    { type: 'button', label: 'Button', icon: '▸' }
+    { type: 'button', label: 'Button', icon: '\u25b8' }
   ];
   var TYPE_LABELS = {};
-  PALETTE.forEach(function (p) { TYPE_LABELS[p.type] = p.label; });
+  PALETTE.forEach(function (p) { if (p.type && !TYPE_LABELS[p.type]) TYPE_LABELS[p.type] = p.label; });
+  TYPE_LABELS.section = 'Section';
   var WIDTHS = [ { v: 12, l: 'Full width' }, { v: 6, l: 'Half' }, { v: 4, l: 'Third' }, { v: 3, l: 'Quarter' } ];
 
   var formId = $('#dfbFormId').val() || '';
@@ -57,7 +61,7 @@ $(function () {
     return key;
   }
 
-  function newField(type) {
+  function newField(type, presetCols) {
     var label = TYPE_LABELS[type] || 'Field';
     var f = {
       fieldKey: uniqueKey(slug(label)), label: label, fieldType: type,
@@ -72,7 +76,10 @@ $(function () {
     if (CMSFormRenderer.OPTION_TYPES[type]) {
       f.options = [ { value: 'option-1', label: 'Option 1' }, { value: 'option-2', label: 'Option 2' } ];
     }
-    if (type === 'section') { f.label = 'New Section'; f.columnSpan = 12; f.sectionColumns = 2; }
+    if (type === 'section') {
+      f.label = 'New Section'; f.columnSpan = 12;
+      f.sectionColumns = presetCols === undefined ? 2 : (presetCols === 0 ? null : presetCols);
+    }
     if (type === 'hidden') { f.label = 'Hidden Field'; f.columnSpan = 12; }
     if (type === 'button') { f.label = 'Submit'; f.buttonAction = 'submit'; f.columnSpan = 12; }
     if (type === 'grid') {
@@ -87,7 +94,8 @@ $(function () {
   function renderPalette() {
     $('#dfbPalette').html(PALETTE.map(function (p) {
       if (p.group) return '<div class="dfb-pal-group">' + esc(p.group) + '</div>';
-      return '<div class="dfb-pal-item" draggable="true" data-ptype="' + p.type + '">' +
+      return '<div class="dfb-pal-item" draggable="true" data-ptype="' + p.type + '"' +
+        (p.preset !== undefined ? ' data-preset="' + p.preset + '"' : '') + '>' +
         '<span class="dfb-pal-icon">' + esc(p.icon) + '</span><span>' + esc(p.label) + '</span></div>';
     }).join(''));
   }
@@ -186,6 +194,7 @@ $(function () {
     $grid.html(html);
     // The renderer wraps fields in its own grid cell — unwrap one level for the card body.
     $grid.find('.dfb-card-body > .dfb-cell, .dfb-card-body > .field').css('grid-column', 'auto');
+    renderNavigator();
   }
 
   /* Switch a section between the legacy grid layout and column layouts.
@@ -208,6 +217,188 @@ $(function () {
     renderCanvas();
     renderProps();
   }
+
+  /* ---------------- navigator (Elementor-style structure tree) ------------
+     A floating panel mirroring the form structure: sections with their
+     fields (grouped by column for column-layout sections). Click a row to
+     select + reveal it on the canvas; drag rows to reorder — fields can
+     move between sections/columns, sections move as whole blocks. */
+  var collapsedSecs = new Set();
+  var navDrag = null;
+
+  function navIcon(type) {
+    var found = null;
+    PALETTE.forEach(function (p) { if (p.type === type && !found) found = p.icon; });
+    return found || '•';
+  }
+
+  function navFieldRow(i, depth) {
+    var f = fields[i];
+    return '<div class="dfb-nav-row' + (i === selected ? ' sel' : '') + '" data-navidx="' + i + '" draggable="true" style="padding-left:' + (10 + depth * 16) + 'px">' +
+      '<span class="dfb-nav-ico">' + esc(navIcon(f.fieldType)) + '</span>' +
+      '<span class="dfb-nav-label">' + esc(f.label || TYPE_LABELS[f.fieldType] || f.fieldType) + '</span>' +
+      '<span class="dfb-nav-meta">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span></div>';
+  }
+
+  function renderNavigator() {
+    var $nav = $('#dfbNavTree');
+    if (!$nav.length) return;
+    var html = '';
+    segments().forEach(function (seg) {
+      if (seg.kind === 'top') {
+        seg.fields.forEach(function (i) { html += navFieldRow(i, 0); });
+        return;
+      }
+      var sf = fields[seg.secIndex];
+      var collapsed = collapsedSecs.has(sf);
+      html += '<div class="dfb-nav-row dfb-nav-sec' + (seg.secIndex === selected ? ' sel' : '') + '" data-navidx="' + seg.secIndex + '" draggable="true">' +
+        '<button type="button" class="dfb-nav-caret" data-navcaret="' + seg.secIndex + '">' + (seg.fields.length ? (collapsed ? '▸' : '▾') : '·') + '</button>' +
+        '<span class="dfb-nav-ico">▦</span>' +
+        '<span class="dfb-nav-label">' + esc(sf.label || 'Section') + '</span>' +
+        '<span class="dfb-nav-meta">' + (sf.sectionColumns ? sf.sectionColumns + ' col' : 'Grid') + '</span></div>';
+      if (collapsed) return;
+      if (sf.sectionColumns) {
+        columnsOf(seg, sf.sectionColumns).forEach(function (colIdxs, c) {
+          html += '<div class="dfb-nav-row dfb-nav-col" data-navcol="' + seg.secIndex + ':' + c + '">' +
+            '<span class="dfb-nav-ico">▥</span><span class="dfb-nav-label">Column ' + (c + 1) + '</span></div>';
+          colIdxs.forEach(function (i) { html += navFieldRow(i, 2); });
+        });
+      } else {
+        seg.fields.forEach(function (i) { html += navFieldRow(i, 1); });
+      }
+    });
+    $nav.html(html || '<p class="hint" style="padding:8px 10px">No fields yet — add some from the Fields panel.</p>');
+  }
+
+  function revealInCanvas(i) {
+    var el = document.querySelector('.dfb-card[data-index="' + i + '"], .dfb-section-box[data-secbox="' + i + '"]');
+    if (!el) return;
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    el.classList.add('dfb-flash');
+    setTimeout(function () { el.classList.remove('dfb-flash'); }, 1200);
+  }
+
+  /* length of the block starting at idx (a section takes its fields along) */
+  function navBlockLen(idx) {
+    if (!fields[idx] || fields[idx].fieldType !== 'section') return 1;
+    var n = 1;
+    while (idx + n < fields.length && fields[idx + n].fieldType !== 'section') n++;
+    return n;
+  }
+
+  /* Which section contains flat index i, and its layout (null = top/legacy). */
+  function navColumnForField(i) {
+    var sec = null;
+    for (var k = i - 1; k >= 0; k--) if (fields[k].fieldType === 'section') { sec = fields[k]; break; }
+    return sec && sec.sectionColumns ? (fields[i].columnIndex || 0) : null;
+  }
+
+  function navDoDrop(target, after) {
+    var from = navDrag.index;
+    var ins, adoptCol;
+    if (target.kind === 'column') {
+      if (navDrag.isSection) { ins = target.secIdx; adoptCol = null; }
+      else {
+        adoptCol = target.col;
+        var seg = segments().filter(function (sg) { return sg.secIndex === target.secIdx; })[0];
+        var cols = columnsOf(seg, fields[target.secIdx].sectionColumns);
+        ins = cols[target.col].length ? cols[target.col][cols[target.col].length - 1] + 1
+          : (function () { for (var c = target.col + 1; c < cols.length; c++) if (cols[c].length) return cols[c][0]; return seg.fields.length ? seg.fields[seg.fields.length - 1] + 1 : target.secIdx + 1; })();
+      }
+    } else if (fields[target.idx] && fields[target.idx].fieldType === 'section' && navDrag.isSection === false && after) {
+      ins = target.idx + 1; // into the section, at its start
+      adoptCol = fields[target.idx].sectionColumns ? 0 : null;
+    } else {
+      ins = after ? target.idx + navBlockLen(target.idx) : target.idx;
+      adoptCol = (fields[target.idx] && fields[target.idx].fieldType !== 'section') ? navColumnForField(target.idx) : null;
+    }
+    if (navDrag.isSection) {
+      var block = fields.splice(from, navBlockLen(from));
+      if (from < ins) ins -= block.length;
+      fields.splice.apply(fields, [ins, 0].concat(block));
+      selectField(ins);
+      revealInCanvas(ins);
+    } else {
+      if (ins === from || ins === from + 1) { renderCanvas(); return; }
+      var item = fields.splice(from, 1)[0];
+      if (from < ins) ins--;
+      item.columnIndex = item.fieldType === 'section' ? null : adoptCol;
+      fields.splice(ins, 0, item);
+      selectField(ins);
+      revealInCanvas(ins);
+    }
+  }
+
+  function navClearOver() { $('#dfbNavTree .dfb-nav-over-top, #dfbNavTree .dfb-nav-over-bottom, #dfbNavTree .dfb-nav-over-full').removeClass('dfb-nav-over-top dfb-nav-over-bottom dfb-nav-over-full'); }
+
+  $('#dfbNavTree').on('click', '[data-navcaret]', function (e) {
+    e.stopPropagation();
+    var f = fields[Number($(this).data('navcaret'))];
+    if (f) { if (collapsedSecs.has(f)) collapsedSecs.delete(f); else collapsedSecs.add(f); }
+    renderNavigator();
+  });
+  $('#dfbNavTree').on('click', '[data-navidx]', function () {
+    var idx = Number($(this).data('navidx'));
+    selectField(idx);
+    revealInCanvas(idx);
+  });
+  $('#dfbNavTree').on('dragstart', '[data-navidx]', function (e) {
+    var idx = Number($(this).data('navidx'));
+    navDrag = { index: idx, isSection: fields[idx].fieldType === 'section' };
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/plain', 'dfb-nav');
+  });
+  $('#dfbNavTree').on('dragover', '[data-navidx], [data-navcol]', function (e) {
+    if (!navDrag) return;
+    e.preventDefault();
+    e.originalEvent.dataTransfer.dropEffect = 'move';
+    navClearOver();
+    var $row = $(this);
+    if ($row.is('[data-navcol]')) { $row.addClass('dfb-nav-over-full'); return; }
+    var r = this.getBoundingClientRect();
+    var after = (e.originalEvent.clientY - r.top) > r.height / 2;
+    $row.addClass(after ? 'dfb-nav-over-bottom' : 'dfb-nav-over-top');
+  });
+  $('#dfbNavTree').on('drop', '[data-navidx], [data-navcol]', function (e) {
+    e.preventDefault();
+    if (!navDrag) return;
+    var $row = $(this);
+    if ($row.is('[data-navcol]')) {
+      var parts = String($row.data('navcol')).split(':');
+      navDoDrop({ kind: 'column', secIdx: Number(parts[0]), col: Number(parts[1]) }, true);
+    } else {
+      var idx = Number($row.data('navidx'));
+      var r = this.getBoundingClientRect();
+      var after = (e.originalEvent.clientY - r.top) > r.height / 2;
+      if (idx !== navDrag.index) navDoDrop({ kind: 'row', idx: idx }, after);
+      else renderCanvas();
+    }
+    navDrag = null;
+    navClearOver();
+  });
+  $(document).on('dragend', function () { navDrag = null; navClearOver(); });
+
+  /* Panel show/hide + drag by its header (Elementor-style floating panel). */
+  $('#dfbNavToggle').on('click', function () { $('#dfbNavigator').toggleClass('open'); });
+  $('#dfbNavClose').on('click', function () { $('#dfbNavigator').removeClass('open'); });
+  (function () {
+    var head = document.getElementById('dfbNavHead'), panel = document.getElementById('dfbNavigator');
+    if (!head || !panel) return;
+    var sx = 0, sy = 0, ox = 0, oy = 0, moving = false;
+    head.addEventListener('pointerdown', function (e) {
+      if ($(e.target).closest('#dfbNavClose').length) return;
+      var r = panel.getBoundingClientRect();
+      moving = true; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+      panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px'; panel.style.right = 'auto';
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (!moving) return;
+      panel.style.left = (ox + e.clientX - sx) + 'px';
+      panel.style.top = (oy + e.clientY - sy) + 'px';
+    });
+    head.addEventListener('pointerup', function () { moving = false; });
+  })();
 
   /* ---------------- properties ---------------- */
   function optionsToText(options) {
@@ -499,7 +690,7 @@ $(function () {
 
   function placeField(idx, colIdx) {
     if (dragState.kind === 'new') {
-      var nf = newField(dragState.type);
+      var nf = newField(dragState.type, dragState.preset);
       nf.columnIndex = nf.fieldType === 'section' ? null : colIdx;
       fields.splice(idx, 0, nf);
       selectField(idx);
@@ -532,12 +723,14 @@ $(function () {
 
   /* palette drag + click */
   $('#dfbPalette').on('dragstart', '.dfb-pal-item', function (e) {
-    dragState = { kind: 'new', type: $(this).data('ptype') };
+    var pr = $(this).attr('data-preset');
+    dragState = { kind: 'new', type: $(this).data('ptype'), preset: pr === undefined ? undefined : Number(pr) };
     e.originalEvent.dataTransfer.effectAllowed = 'copy';
     e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
   });
   $('#dfbPalette').on('click', '.dfb-pal-item', function () {
-    fields.push(newField($(this).data('ptype')));
+    var pr = $(this).attr('data-preset');
+    fields.push(newField($(this).data('ptype'), pr === undefined ? undefined : Number(pr)));
     selectField(fields.length - 1);
   });
 
