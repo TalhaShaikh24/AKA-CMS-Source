@@ -207,10 +207,17 @@ window.CMSFormRenderer = (function () {
   function levelGroups(fields, parentKey) {
     var groups = [{ section: null, fields: [] }];
     childrenOf(fields, parentKey).forEach(function (f) {
-      if (f.fieldType === 'section') groups.push({ section: f, fields: [] });
-      else groups[groups.length - 1].fields.push(f);
+      if (f.fieldType === 'section') {
+        groups.push({ section: f, fields: [] });
+      } else {
+        // A plain field after a section starts a fresh leading group — it
+        // belongs to THIS level, not to the section above it.
+        var last = groups[groups.length - 1];
+        if (last.section) { last = { section: null, fields: [] }; groups.push(last); }
+        last.fields.push(f);
+      }
     });
-    if (groups.length > 1 && !groups[0].fields.length) groups.shift();
+    if (groups.length > 1 && !groups[0].section && !groups[0].fields.length) groups.shift();
     return groups;
   }
 
@@ -311,6 +318,61 @@ window.CMSFormRenderer = (function () {
     bindAdvanced($container, form, preview);
   }
 
+  /* ---------------- masks + custom functions ---------------- */
+  function setFieldValue($root, key, v) {
+    var $wrap = $root.find('[data-fkey="' + key + '"]');
+    if (!$wrap.length) return;
+    var $sel = $wrap.find('select[name="' + key + '"]');
+    if ($sel.length) { $sel.val(v).trigger('change'); return; }
+    var $inputs = $wrap.find('input[name="' + key + '"], textarea[name="' + key + '"]');
+    if (!$inputs.length) return;
+    var t = $inputs[0].type;
+    if (t === 'radio' || t === 'checkbox') {
+      if ($inputs.closest('.dfb-choices').length) {
+        $inputs.each(function () {
+          var on = Array.isArray(v) ? v.map(String).indexOf(String(this.value)) >= 0 : String(v) === String(this.value);
+          $(this).prop('checked', on);
+        });
+      } else if (t === 'checkbox') { $inputs.prop('checked', !!v); }
+    } else { $inputs.val(v); }
+  }
+
+  function bindAdvanced($container, form, preview) {
+    if (preview) return; // the builder preview stays inert
+    (form.fields || []).forEach(function (f) {
+      var $wrap = $container.find('[data-fkey="' + f.fieldKey + '"]');
+      if (!$wrap.length) return;
+      if (f.inputMask && ['text', 'email', 'password', 'textarea'].indexOf(f.fieldType) >= 0) {
+        $wrap.find('input, textarea').first().on('input.dfbmask', function () {
+          var masked = applyMaskToValue(this.value, f.inputMask);
+          if (masked !== this.value) this.value = masked;
+        });
+      }
+      if (f.customJs) {
+        var fn = null;
+        try { fn = new Function('ctx', f.customJs); } catch (e) { fn = null; }
+        if (!fn) return;
+        var run = function () {
+          var values = collect($container);
+          var ctx = {
+            key: f.fieldKey,
+            value: values[f.fieldKey],
+            values: values,
+            el: $wrap[0],
+            setValue: function (k, v) { setFieldValue($container, k, v); },
+            showField: function (k) { $container.find('[data-fkey="' + k + '"]').show(); },
+            hideField: function (k) { $container.find('[data-fkey="' + k + '"]').hide(); }
+          };
+          try { fn(ctx); }
+          catch (e) { if (window.console) console.warn('Custom function error (' + f.fieldKey + '):', e); }
+        };
+        if (f.fieldType === 'button') $wrap.find('button').on('click.dfbcustom', run);
+        else $wrap.on('change.dfbcustom input.dfbcustom', 'input, select, textarea', run);
+      }
+    });
+  }
+
+  /* ---------------- grid interactions ---------------- */
   /* ---------------- grid interactions ---------------- */
   function bindGridButtons($container, form, preview) {
     if (preview) return;

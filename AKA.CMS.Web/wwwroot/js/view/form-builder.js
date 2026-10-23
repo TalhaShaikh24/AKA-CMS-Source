@@ -425,6 +425,14 @@ $(function () {
     revealInCanvas(ins);
   }
 
+  function navClearOver() { $('#dfbNavTree .dfb-nav-over-top, #dfbNavTree .dfb-nav-over-bottom, #dfbNavTree .dfb-nav-over-full').removeClass('dfb-nav-over-top dfb-nav-over-bottom dfb-nav-over-full'); }
+
+  $('#dfbNavTree').on('click', '[data-navcaret]', function (e) {
+    e.stopPropagation();
+    var f = fields[Number($(this).data('navcaret'))];
+    if (f) { if (collapsedSecs.has(f)) collapsedSecs.delete(f); else collapsedSecs.add(f); }
+    renderNavigator();
+  });
   $('#dfbNavTree').on('click', '[data-navidx]', function () {
     var idx = Number($(this).data('navidx'));
     selectField(idx);
@@ -979,6 +987,50 @@ $(function () {
     }
     fields.splice(ins, 0, item);
     selectField(ins);
+  }
+
+  /* palette drag + click */
+  $('#dfbPalette').on('dragstart', '.dfb-pal-item', function (e) {
+    var pr = $(this).attr('data-preset');
+    dragState = { kind: 'new', type: $(this).data('ptype'), preset: pr === undefined ? undefined : Number(pr) };
+    e.originalEvent.dataTransfer.effectAllowed = 'copy';
+    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
+  });
+  $('#dfbPalette').on('click', '.dfb-pal-item', function () {
+    var pr = $(this).attr('data-preset');
+    fields.push(newField($(this).data('ptype'), pr === undefined ? undefined : Number(pr)));
+    selectField(fields.length - 1);
+  });
+
+  /* canvas reorder drag (field cards + section headers) */
+  $('#dfbGrid').on('dragstart', '[data-drag]', function (e) {
+    dragState = { kind: 'move', index: Number($(this).data('drag')) };
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
+  });
+  $('#dfbGrid').on('dragstart', '[data-secdrag]', function (e) {
+    dragState = { kind: 'section', index: Number($(this).data('secdrag')) };
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
+  });
+
+  /* Resolve the drop zone for a drag event: first the element directly
+     under the pointer; if that is a dead spot (the empty-state message,
+     gaps between sections, section padding), fall back to the NEAREST
+     zone by pointer distance — a drop anywhere on the canvas must land. */
+  function resolveDropZone(e) {
+    var $z = $(e.target).closest('.dfb-col-zone, .dfb-area');
+    if ($z.length) return $z[0];
+    var x = e.originalEvent.clientX, y = e.originalEvent.clientY;
+    var best = null, bestDist = Infinity;
+    $('#dfbCanvas .dfb-col-zone, #dfbCanvas .dfb-area').each(function () {
+      var r = this.getBoundingClientRect();
+      var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+      var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+      var d = dx + dy;
+      if (d < bestDist) { bestDist = d; best = this; }
+    });
+    return best;
   }
 
   $('#dfbCanvas').on('dragover', function (e) {
