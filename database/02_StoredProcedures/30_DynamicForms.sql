@@ -43,6 +43,8 @@ BEGIN
             [MinLength], [MaxLength], [MinValue], [MaxValue], [Accept],
             [ChoiceLayout], [ButtonAction], [RegexPattern], [ValidationMessage],
             [LookupFormId], [LookupFieldKey], [SectionColumns], [ColumnIndex],
+            [CustomJs], [CssClass], [CustomId], [CustomAttributesJson],
+            [ValidationRulesJson], [InputMask], [ShowInfoIcon], [InfoText],
             [ColumnSpan], [SortOrder]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
@@ -92,13 +94,18 @@ BEGIN
                  [IsRequired], [DefaultValue], [OptionsJson], [MinLength], [MaxLength],
                  [MinValue], [MaxValue], [Accept], [ChoiceLayout], [ButtonAction],
                  [RegexPattern], [ValidationMessage], [LookupFormId], [LookupFieldKey],
-                 [SectionColumns], [ColumnIndex], [ColumnSpan], [SortOrder])
+                 [SectionColumns], [ColumnIndex], [CustomJs], [CssClass], [CustomId],
+                 [CustomAttributesJson], [ValidationRulesJson], [InputMask],
+                 [ShowInfoIcon], [InfoText], [ColumnSpan], [SortOrder])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
                     j.[MinLength], j.[MaxLength], j.[MinValue], j.[MaxValue], j.[Accept],
                     j.[ChoiceLayout], j.[ButtonAction], j.[RegexPattern], j.[ValidationMessage],
                     j.[LookupFormId], j.[LookupFieldKey], j.[SectionColumns], j.[ColumnIndex],
+                    j.[CustomJs], j.[CssClass], j.[CustomId], j.[CustomAttributesJson],
+                    j.[ValidationRulesJson], j.[InputMask], ISNULL(j.[ShowInfoIcon], 0),
+                    j.[InfoText],
                     ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
             FROM OPENJSON(@FieldsJson)
             WITH (
@@ -123,6 +130,14 @@ BEGIN
                 [LookupFieldKey] VARCHAR(100) '$.lookupFieldKey',
                 [SectionColumns] TINYINT    '$.sectionColumns',
                 [ColumnIndex] TINYINT       '$.columnIndex',
+                [CustomJs]    NVARCHAR(MAX) '$.customJs',
+                [CssClass]    NVARCHAR(200) '$.cssClass',
+                [CustomId]    VARCHAR(100)  '$.customId',
+                [CustomAttributesJson] NVARCHAR(MAX) '$.customAttributesJson' AS JSON,
+                [ValidationRulesJson] NVARCHAR(MAX) '$.validationRulesJson' AS JSON,
+                [InputMask]   NVARCHAR(100) '$.inputMask',
+                [ShowInfoIcon] BIT          '$.showInfoIcon',
+                [InfoText]    NVARCHAR(500) '$.infoText',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
                 [SortOrder]   INT           '$.sortOrder'
             ) AS j

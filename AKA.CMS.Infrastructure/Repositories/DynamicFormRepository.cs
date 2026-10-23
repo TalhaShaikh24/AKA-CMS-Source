@@ -46,6 +46,14 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string? LookupFieldKey { get; set; }
         public int? SectionColumns { get; set; }
         public int? ColumnIndex { get; set; }
+        public string? CustomJs { get; set; }
+        public string? CssClass { get; set; }
+        public string? CustomId { get; set; }
+        public string? CustomAttributesJson { get; set; }
+        public string? ValidationRulesJson { get; set; }
+        public string? InputMask { get; set; }
+        public bool ShowInfoIcon { get; set; }
+        public string? InfoText { get; set; }
         public int ColumnSpan { get; set; }
         public int SortOrder { get; set; }
     }
@@ -91,6 +99,10 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 ValidationMessage = f.ValidationMessage,
                 LookupFormId = f.LookupFormId, LookupFieldKey = f.LookupFieldKey,
                 SectionColumns = f.SectionColumns, ColumnIndex = f.ColumnIndex,
+                CustomJs = f.CustomJs, CssClass = f.CssClass, CustomId = f.CustomId,
+                CustomAttributes = ParseCustomAttributes(f.CustomAttributesJson),
+                ValidationRules = ParseValidationRules(f.ValidationRulesJson),
+                InputMask = f.InputMask, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
                 ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
@@ -126,6 +138,19 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             lookupFieldKey = f.LookupFieldKey,
             sectionColumns = f.FieldType == "section" ? f.SectionColumns : null,
             columnIndex = f.FieldType == "section" ? null : f.ColumnIndex,
+            customJs = f.CustomJs,
+            cssClass = f.CssClass,
+            customId = f.CustomId,
+            // Real JSON arrays (not serialized strings) — the SP reads AS JSON.
+            customAttributesJson = f.CustomAttributes.Count > 0
+                ? (object)f.CustomAttributes.Select(a => new { name = a.Name, value = a.Value }).ToList()
+                : null,
+            validationRulesJson = f.ValidationRules.Count > 0
+                ? (object)f.ValidationRules.Select(r => new { pattern = r.Pattern, message = r.Message }).ToList()
+                : null,
+            inputMask = f.InputMask,
+            showInfoIcon = f.ShowInfoIcon,
+            infoText = f.InfoText,
             minLength = f.MinLength,
             maxLength = f.MaxLength,
             minValue = f.MinValue,
@@ -174,6 +199,28 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         {
             return new();
         }
+    }
+
+    private static List<DynamicFormCustomAttributeDto> ParseCustomAttributes(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<DynamicFormCustomAttributeDto>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private static List<DynamicFormValidationRuleDto> ParseValidationRules(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<DynamicFormValidationRuleDto>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch { return new(); }
     }
 
     private static List<DynamicFormFieldOptionDto> ParseOptions(string? optionsJson)

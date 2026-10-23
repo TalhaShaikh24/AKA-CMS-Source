@@ -18,6 +18,20 @@ public sealed class DynamicFormGridColumnDto
     public List<DynamicFormFieldOptionDto> Options { get; set; } = new();
 }
 
+/// <summary>One custom attribute (name/value) applied to a field's control.</summary>
+public sealed class DynamicFormCustomAttributeDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+}
+
+/// <summary>One extra regex validation rule with its own error message.</summary>
+public sealed class DynamicFormValidationRuleDto
+{
+    public string Pattern { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+
 public sealed class DynamicFormFieldDto
 {
     public int FieldId { get; set; }
@@ -54,6 +68,22 @@ public sealed class DynamicFormFieldDto
     /// <summary>For fields inside a column-layout section: which column
     /// (0-based) the field sits in. Null = first column.</summary>
     public int? ColumnIndex { get; set; }
+    /// <summary>Custom JavaScript run when the field changes (button: on click).</summary>
+    public string? CustomJs { get; set; }
+    /// <summary>Extra CSS class(es) added to the field wrapper.</summary>
+    public string? CssClass { get; set; }
+    /// <summary>Custom element id for the field control.</summary>
+    public string? CustomId { get; set; }
+    /// <summary>Custom attributes applied to the field control.</summary>
+    public List<DynamicFormCustomAttributeDto> CustomAttributes { get; set; } = new();
+    /// <summary>Extra regex validation rules, each with its own message.</summary>
+    public List<DynamicFormValidationRuleDto> ValidationRules { get; set; } = new();
+    /// <summary>Input mask pattern: 9 = digit, a = letter, * = alphanumeric.</summary>
+    public string? InputMask { get; set; }
+    /// <summary>Show an info icon next to the label.</summary>
+    public bool ShowInfoIcon { get; set; }
+    /// <summary>Info message shown in the info icon's tooltip.</summary>
+    public string? InfoText { get; set; }
     public int ColumnSpan { get; set; } = 6;
     public int SortOrder { get; set; }
 }

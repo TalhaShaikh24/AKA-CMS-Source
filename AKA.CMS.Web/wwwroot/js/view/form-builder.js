@@ -71,6 +71,8 @@ $(function () {
       buttonAction: null, regexPattern: '', validationMessage: '',
       lookupFormId: null, lookupFieldKey: '', gridColumns: [],
       sectionColumns: null, columnIndex: null,
+      customJs: '', cssClass: '', customId: '', customAttributes: [], validationRules: [],
+      inputMask: '', showInfoIcon: false, infoText: '',
       columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
     };
     if (CMSFormRenderer.OPTION_TYPES[type]) {
@@ -442,6 +444,50 @@ $(function () {
     return html;
   }
 
+  function attrsEditorHtml(f) {
+    var html = '<div class="field"><label>Custom Attributes</label><div id="ppAttrs">';
+    (f.customAttributes || []).forEach(function (a, i) {
+      html += '<div class="dfb-mini-row">' +
+        '<input class="input pp-attr-name" data-ai="' + i + '" value="' + esc(a.name) + '" placeholder="data-name">' +
+        '<input class="input pp-attr-value" data-ai="' + i + '" value="' + esc(a.value) + '" placeholder="value">' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-attr-del="' + i + '" title="Remove">✕</button></div>';
+    });
+    html += '</div><button type="button" class="btn btn-ghost btn-sm" id="ppAttrAdd">+ Add Attribute</button>' +
+      '<span class="hint">Applied to the field control, e.g. data-track, data-group. Event attributes (onclick…) are not allowed.</span></div>';
+    return html;
+  }
+
+  function rulesEditorHtml(f) {
+    var html = '<div class="field"><label>More Validation Rules (regex)</label><div id="ppRules">';
+    (f.validationRules || []).forEach(function (r, i) {
+      html += '<div class="dfb-mini-row">' +
+        '<input class="input pp-rule-pattern" data-ri="' + i + '" value="' + esc(r.pattern) + '" placeholder="Pattern, e.g. ^[A-Z]+$">' +
+        '<input class="input pp-rule-message" data-ri="' + i + '" value="' + esc(r.message) + '" placeholder="Error message">' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-rule-del="' + i + '" title="Remove">✕</button></div>';
+    });
+    html += '</div><button type="button" class="btn btn-ghost btn-sm" id="ppRuleAdd">+ Add Rule</button>' +
+      '<span class="hint">Checked in order after the main pattern; the first failing rule shows its own message.</span></div>';
+    return html;
+  }
+
+  function advancedHtml(f) {
+    var t = f.fieldType;
+    var html = '<div class="dfb-props-sep">Advanced</div>';
+    html += '<div class="field"><label>CSS Class</label><input class="input" id="ppCssClass" value="' + esc(f.cssClass || '') + '" placeholder="e.g. highlight big-text"></div>';
+    html += '<div class="field"><label>Custom ID</label><input class="input" id="ppCustomId" value="' + esc(f.customId || '') + '" placeholder="e.g. patient-cnic"></div>';
+    if (['text', 'email', 'password', 'textarea'].indexOf(t) >= 0) {
+      html += '<div class="field"><label>Input Mask</label><input class="input" id="ppInputMask" value="' + esc(f.inputMask || '') + '" placeholder="e.g. 99999-9999999-9">' +
+        '<span class="hint">9 = digit, a = letter, * = any character. CNIC: 99999-9999999-9 · Phone: 9999-9999999</span></div>';
+    }
+    html += attrsEditorHtml(f);
+    html += '<div class="field"><label class="check-row"><input type="checkbox" id="ppShowInfo"' + (f.showInfoIcon ? ' checked' : '') + '><span class="check-label">Show info icon</span></label>' +
+      '<input class="input" id="ppInfoText" value="' + esc(f.infoText || '') + '" placeholder="Info message (tooltip)" style="margin-top:6px">' +
+      '<span class="hint">An (i) icon appears next to the label; hovering or focusing it shows this message as a tooltip.</span></div>';
+    html += '<div class="field"><label>Custom Function (JavaScript)</label><textarea class="input dfb-code" id="ppCustomJs" rows="4" placeholder="Runs when this field changes">' + esc(f.customJs || '') + '</textarea>' +
+      '<span class="hint">Available: ctx.value, ctx.values, ctx.el, ctx.setValue(key, val), ctx.showField(key), ctx.hideField(key). Buttons run on click.</span></div>';
+    return html;
+  }
+
   function renderProps() {
     var $p = $('#dfbProps');
     var f = fields[selected];
@@ -499,6 +545,7 @@ $(function () {
       html += '<div class="field"><label>Regex Pattern</label><input class="input" id="ppRegex" value="' + esc(f.regexPattern || '') + '" placeholder="e.g. ^\\d{11}$">' +
         '<span class="hint">Optional. The value must match this pattern.</span></div>';
       html += '<div class="field"><label>Validation Message</label><input class="input" id="ppRegexMsg" value="' + esc(f.validationMessage || '') + '" placeholder="Shown when the pattern does not match"></div>';
+      html += rulesEditorHtml(f);
     }
     if (t === 'number') {
       html += '<div class="form-grid"><div class="field"><label>Min Value</label><input class="input" type="number" id="ppMinVal" value="' + (f.minValue == null ? '' : f.minValue) + '"></div>' +
@@ -513,6 +560,7 @@ $(function () {
       html += '<div class="field"><label>Source Field</label><select class="input" id="ppLookupField"><option value="">Select field…</option></select>' +
         '<span class="hint">SharePoint-style lookup: this dropdown is filled from the chosen field of the other form.</span></div>';
     }
+    html += advancedHtml(f);
     html += '<div style="display:flex;gap:8px;margin-top:12px">' +
       '<button class="btn btn-ghost btn-sm" id="ppDup" type="button">Duplicate</button>' +
       '<button class="btn btn-ghost btn-sm" id="ppDel" type="button" style="color:var(--red-dark)">Delete Field</button></div>';
@@ -569,6 +617,10 @@ $(function () {
     if ($t.hasClass('pp-col-label')) { f.gridColumns[Number($t.data('ci'))].label = $t.val(); renderCanvas(); return; }
     if ($t.hasClass('pp-col-options')) { f.gridColumns[Number($t.data('ci'))].options = textToOptions($t.val()); renderCanvas(); return; }
     if ($t.hasClass('pp-col-type')) { f.gridColumns[Number($t.data('ci'))].type = $t.val(); renderCanvas(); renderProps(); return; }
+    if ($t.hasClass('pp-attr-name')) { f.customAttributes[Number($t.data('ai'))].name = $.trim($t.val()); return; }
+    if ($t.hasClass('pp-attr-value')) { f.customAttributes[Number($t.data('ai'))].value = $t.val(); return; }
+    if ($t.hasClass('pp-rule-pattern')) { f.validationRules[Number($t.data('ri'))].pattern = $t.val(); return; }
+    if ($t.hasClass('pp-rule-message')) { f.validationRules[Number($t.data('ri'))].message = $t.val(); return; }
     var id = this.id;
     if (id === 'ppLabel') { f.label = $(this).val(); }
     else if (id === 'ppKey') { f.fieldKey = slug($(this).val()) || f.fieldKey; }
@@ -591,6 +643,12 @@ $(function () {
       renderCanvas(); fillLookupFields(f); return;
     }
     else if (id === 'ppLookupField') { f.lookupFieldKey = $(this).val(); }
+    else if (id === 'ppCssClass') { f.cssClass = $(this).val(); }
+    else if (id === 'ppCustomId') { f.customId = $(this).val(); }
+    else if (id === 'ppInputMask') { f.inputMask = $(this).val(); }
+    else if (id === 'ppInfoText') { f.infoText = $(this).val(); }
+    else if (id === 'ppShowInfo') { f.showInfoIcon = $(this).is(':checked'); }
+    else if (id === 'ppCustomJs') { f.customJs = $(this).val(); }
     else return;
     renderCanvas();
   });
@@ -615,6 +673,36 @@ $(function () {
     if (!f || f.fieldType !== 'grid') return;
     f.gridColumns.splice(Number($(this).data('col-del')), 1);
     renderProps(); renderCanvas();
+  });
+  $('#dfbProps').on('click', '#ppAttrAdd', function () {
+    var f = fields[selected];
+    if (!f) return;
+    f.customAttributes = f.customAttributes || [];
+    f.customAttributes.push({ name: '', value: '' });
+    renderProps();
+  });
+  $('#dfbProps').on('click', '[data-attr-del]', function () {
+    var f = fields[selected];
+    if (!f) return;
+    f.customAttributes.splice(Number($(this).data('attr-del')), 1);
+    renderProps();
+  });
+  $('#dfbProps').on('click', '#ppRuleAdd', function () {
+    var f = fields[selected];
+    if (!f) return;
+    f.validationRules = f.validationRules || [];
+    f.validationRules.push({ pattern: '', message: '' });
+    renderProps();
+  });
+  $('#dfbProps').on('click', '[data-rule-del]', function () {
+    var f = fields[selected];
+    if (!f) return;
+    f.validationRules.splice(Number($(this).data('rule-del')), 1);
+    renderProps();
+  });
+  $('#dfbPalToggle').on('click', function () {
+    var collapsed = $('#dfbPalPane').toggleClass('collapsed').hasClass('collapsed');
+    $('.dfb-layout').toggleClass('pal-collapsed', collapsed);
   });
   $('#dfbProps').on('click', '#ppLayoutSeg button', function () {
     var f = fields[selected];
@@ -816,8 +904,9 @@ $(function () {
   /* ---------------- load / save ---------------- */
   function loadForm() {
     if (!formId) {
-      // A new form starts with its (required) Submit button already in place.
-      fields = [newField('button')];
+      // A new form starts completely empty. Saving requires exactly one
+      // Submit button — the save check below enforces that with an error.
+      fields = [];
       renderPalette(); renderCanvas(); renderProps();
       return;
     }
@@ -844,6 +933,10 @@ $(function () {
             validationMessage: x.validationMessage || '',
             lookupFormId: x.lookupFormId || null, lookupFieldKey: x.lookupFieldKey || '',
             gridColumns: x.gridColumns || [],
+            customJs: x.customJs || '', cssClass: x.cssClass || '', customId: x.customId || '',
+            customAttributes: (x.customAttributes || []).map(function (a) { return { name: a.name || '', value: a.value || '' }; }),
+            validationRules: (x.validationRules || []).map(function (r) { return { pattern: r.pattern || '', message: r.message || '' }; }),
+            inputMask: x.inputMask || '', showInfoIcon: !!x.showInfoIcon, infoText: x.infoText || '',
             sectionColumns: x.sectionColumns == null ? null : x.sectionColumns,
             columnIndex: x.columnIndex == null ? null : x.columnIndex,
             columnSpan: x.columnSpan || 6
@@ -893,6 +986,10 @@ $(function () {
           lookupFormId: f.fieldType === 'lookup' ? (f.lookupFormId || null) : null,
           lookupFieldKey: f.fieldType === 'lookup' ? (f.lookupFieldKey || null) : null,
           gridColumns: f.fieldType === 'grid' ? (f.gridColumns || []) : [],
+          customJs: f.customJs || null, cssClass: f.cssClass || null, customId: f.customId || null,
+          customAttributes: (f.customAttributes || []).filter(function (a) { return a.name; }),
+          validationRules: (f.validationRules || []).filter(function (r) { return r.pattern; }),
+          inputMask: f.inputMask || null, showInfoIcon: !!f.showInfoIcon, infoText: f.infoText || null,
           sectionColumns: f.fieldType === 'section' ? (f.sectionColumns || null) : null,
           columnIndex: f.fieldType === 'section' ? null : (f.columnIndex == null ? null : f.columnIndex),
           columnSpan: (f.fieldType === 'section' || f.fieldType === 'hidden') ? 12 : (f.columnSpan || 6),

@@ -116,6 +116,35 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
                     throw new InvalidDomainValueException($"Field '{field.FieldKey}' has an invalid regex pattern.");
                 }
             }
+            // Advanced options: multiple regex rules, custom attributes,
+            // custom id/class — validated here so bad values never persist.
+            foreach (var rule in field.ValidationRules)
+            {
+                if (string.IsNullOrWhiteSpace(rule.Pattern))
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' has a validation rule without a pattern.");
+                if (!DynamicFormFieldTypes.SupportsRegex(field.FieldType))
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' type '{field.FieldType}' does not support validation rules.");
+                try { _ = new Regex(rule.Pattern); }
+                catch (ArgumentException)
+                {
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' has an invalid validation-rule pattern '{rule.Pattern}'.");
+                }
+            }
+            var seenAttrs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var attr in field.CustomAttributes)
+            {
+                if (string.IsNullOrWhiteSpace(attr.Name) || !AttributeNamePattern().IsMatch(attr.Name.Trim())
+                    || attr.Name.Trim().StartsWith("on", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' has an invalid custom attribute name '{attr.Name}'.");
+                if (!seenAttrs.Add(attr.Name.Trim()))
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' repeats the custom attribute '{attr.Name}'.");
+            }
+            if (!string.IsNullOrWhiteSpace(field.CustomId) && !CustomIdPattern().IsMatch(field.CustomId.Trim()))
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' has an invalid custom ID '{field.CustomId}' (letters, digits, hyphens, underscores; must start with a letter).");
+            if (!string.IsNullOrWhiteSpace(field.CssClass) && !CssClassPattern().IsMatch(field.CssClass.Trim()))
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' has an invalid CSS class '{field.CssClass}'.");
+            if (field.CustomJs is { Length: > 8000 })
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' custom function is too long (max 8000 characters).");
             if (field.FieldType == "grid")
             {
                 if (field.GridColumns.Count == 0)
@@ -147,4 +176,13 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]*$")]
     private static partial Regex KeyPattern();
+
+    [GeneratedRegex("^[a-zA-Z][a-zA-Z0-9_-]*$")]
+    private static partial Regex AttributeNamePattern();
+
+    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_-]*$")]
+    private static partial Regex CustomIdPattern();
+
+    [GeneratedRegex("^[A-Za-z0-9 _-]+$")]
+    private static partial Regex CssClassPattern();
 }

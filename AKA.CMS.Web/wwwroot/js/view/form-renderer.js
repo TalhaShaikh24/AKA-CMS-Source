@@ -13,11 +13,47 @@ window.CMSFormRenderer = (function () {
   var STATIC_TYPES = { heading: 1, paragraph: 1, section: 1, button: 1 };
 
   function labelHtml(f) {
-    return '<label>' + esc(f.label) + (f.isRequired ? ' <span class="req">*</span>' : '') + '</label>';
+    return '<label' + (f.customId ? ' for="' + esc(f.customId) + '"' : '') + '>' + esc(f.label) +
+      (f.isRequired ? ' <span class="req">*</span>' : '') + infoHtml(f) + '</label>';
   }
 
   function helpHtml(f) {
     return f.helpText ? '<span class="hint">' + esc(f.helpText) + '</span>' : '';
+  }
+
+  /* Info icon (i) with a CSS tooltip, when the field opts in. */
+  function infoHtml(f) {
+    if (!f.showInfoIcon || !f.infoText) return '';
+    return ' <span class="dfb-info" tabindex="0" data-tip="' + esc(f.infoText) + '">i</span>';
+  }
+
+  /* Extra attributes for a field's control, e.g. data-track="signup". */
+  function customAttrs(f) {
+    return (f.customAttributes || []).filter(function (a) { return a && a.name; }).map(function (a) {
+      return ' ' + a.name + '="' + esc(a.value == null ? '' : a.value) + '"';
+    }).join('');
+  }
+
+  /* Input masking: 9 = digit, a = letter, * = alphanumeric; any other mask
+     character is a literal separator inserted automatically. */
+  function applyMaskToValue(value, mask) {
+    var raw = String(value == null ? '' : value).split('').filter(function (ch) {
+      return /[0-9A-Za-z]/.test(ch);
+    });
+    var out = '', ri = 0;
+    for (var mi = 0; mi < mask.length && ri < raw.length; mi++) {
+      var mc = mask[mi];
+      if (mc === '9' || mc === 'a' || mc === '*') {
+        var ch = raw[ri];
+        var ok = mc === '*' || (mc === '9' ? /[0-9]/.test(ch) : /[A-Za-z]/.test(ch));
+        if (ok) { out += ch; ri++; }
+        else { mi--; ri++; } // skip a raw char that does not fit this slot
+      } else {
+        out += mc;
+        if (raw[ri] === mc) ri++;
+      }
+    }
+    return out;
   }
 
   function optionsHtml(f, selected) {
@@ -52,13 +88,18 @@ window.CMSFormRenderer = (function () {
     var dis = preview ? ' disabled' : '';
     var key = esc(f.fieldKey);
     var span = ' style="grid-column: span ' + (f.columnSpan || 6) + '"';
+    var cattrs = customAttrs(f);
+    var cid = f.customId ? ' id="' + esc(f.customId) + '"' : '';
+    var wrapCls = f.cssClass ? ' ' + esc(f.cssClass) : '';
+    var fkey = ' data-fkey="' + key + '"';
+    var maskAttr = f.inputMask ? ' data-mask-pattern="' + esc(f.inputMask) + '"' : '';
     var inner = '';
 
     switch (f.fieldType) {
       case 'heading':
-        return '<div class="dfb-cell dfb-static"' + span + '><h3 class="dfb-heading">' + esc(f.label) + '</h3>' + helpHtml(f) + '</div>';
+        return '<div class="dfb-cell dfb-static' + wrapCls + '"' + span + fkey + cid + cattrs + '><h3 class="dfb-heading">' + esc(f.label) + infoHtml(f) + '</h3>' + helpHtml(f) + '</div>';
       case 'paragraph':
-        return '<div class="dfb-cell dfb-static"' + span + '><p class="dfb-paragraph">' + esc(f.label) + '</p></div>';
+        return '<div class="dfb-cell dfb-static' + wrapCls + '"' + span + fkey + cid + cattrs + '><p class="dfb-paragraph">' + esc(f.label) + '</p></div>';
       case 'section':
         // In a rendered form, sections are structural (see render()); this
         // banner is what the builder canvas shows for a section field.
@@ -69,18 +110,18 @@ window.CMSFormRenderer = (function () {
           return '<div class="dfb-cell dfb-hidden-chip" style="grid-column: span 12">' +
             'Hidden · ' + key + ' = &quot;' + esc(f.defaultValue || '') + '&quot;</div>';
         }
-        return '<input type="hidden" name="' + key + '" value="' + esc(f.defaultValue || '') + '">';
+        return '<input type="hidden" name="' + key + '" value="' + esc(f.defaultValue || '') + '"' + cid + cattrs + '>';
       case 'button': {
         var act = f.buttonAction || 'button';
         if (act !== 'submit' && act !== 'reset' && act !== 'button') act = 'button';
-        inner = '<button type="' + act + '" class="' + (act === 'submit' ? 'btn btn-primary' : 'btn btn-ghost') + '"' + dis + '>' +
+        inner = '<button type="' + act + '" class="' + (act === 'submit' ? 'btn btn-primary' : 'btn btn-ghost') + '"' + cid + cattrs + dis + '>' +
           esc(f.label) + '</button>' + helpHtml(f);
-        return '<div class="field dfb-cell dfb-btn-cell"' + span + '>' + inner + '</div>';
+        return '<div class="field dfb-cell dfb-btn-cell' + wrapCls + '"' + span + fkey + '>' + inner + '</div>';
       }
       case 'grid': {
         var cols = (f.gridColumns || []).map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '<th class="dfb-grid-act"></th>';
         inner = labelHtml(f) +
-          '<div class="dfb-grid-wrap" data-grid-field="' + key + '">' +
+          '<div class="dfb-grid-wrap" data-grid-field="' + key + '"' + cid + cattrs + '>' +
             '<table class="dfb-grid-table"><thead><tr>' + cols + '</tr></thead><tbody>' +
             gridRowHtml(f, preview) + '</tbody></table>' +
             (preview ? '' : '<button type="button" class="btn btn-ghost btn-sm dfb-grid-add">+ Add row</button>') +
@@ -92,47 +133,47 @@ window.CMSFormRenderer = (function () {
           '<select class="input select2" name="' + key + '"' +
           ' data-lookup-form="' + (f.lookupFormId || '') + '"' +
           ' data-lookup-field="' + esc(f.lookupFieldKey || '') + '"' +
-          ' data-default="' + esc(f.defaultValue || '') + '"' + dis + '>' +
+          ' data-default="' + esc(f.defaultValue || '') + '"' + cid + cattrs + dis + '>' +
           '<option value="">' + esc(f.placeholder || 'Select…') + '</option></select>' + helpHtml(f);
         break;
       case 'textarea':
         inner = labelHtml(f) +
-          '<textarea class="input" name="' + key + '" rows="3" placeholder="' + esc(f.placeholder || '') + '"' + dis + '>' +
+          '<textarea class="input" name="' + key + '" rows="3" placeholder="' + esc(f.placeholder || '') + '"' + cid + cattrs + maskAttr + dis + '>' +
           esc(f.defaultValue || '') + '</textarea>' + helpHtml(f);
         break;
       case 'select':
         inner = labelHtml(f) +
-          '<select class="input select2" name="' + key + '"' + dis + '>' +
+          '<select class="input select2" name="' + key + '"' + cid + cattrs + dis + '>' +
           '<option value="">' + esc(f.placeholder || 'Select…') + '</option>' +
           optionsHtml(f, f.defaultValue) + '</select>' + helpHtml(f);
         break;
       case 'multiselect':
         inner = labelHtml(f) +
-          '<select class="input select2" name="' + key + '" multiple' + dis + '>' +
+          '<select class="input select2" name="' + key + '" multiple' + cid + cattrs + dis + '>' +
           optionsHtml(f, null) + '</select>' + helpHtml(f);
         break;
       case 'radio':
-        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '">' + (f.options || []).map(function (o) {
+        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '"' + cid + cattrs + '>' + (f.options || []).map(function (o) {
           var chk = f.defaultValue != null && String(f.defaultValue) === String(o.value) ? ' checked' : '';
           return '<label class="check-row"><input type="radio" name="' + key + '" value="' + esc(o.value) + '"' + chk + dis + '>' +
             '<span class="check-label">' + esc(o.label) + '</span></label>';
         }).join('') + '</div>' + helpHtml(f);
         break;
       case 'checkboxGroup':
-        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '">' + (f.options || []).map(function (o) {
+        inner = labelHtml(f) + '<div class="dfb-choices' + (f.choiceLayout === 'Horizontal' ? ' dfb-choices-h' : '') + '"' + cid + cattrs + '>' + (f.options || []).map(function (o) {
           return '<label class="check-row"><input type="checkbox" name="' + key + '" value="' + esc(o.value) + '"' + dis + '>' +
             '<span class="check-label">' + esc(o.label) + '</span></label>';
         }).join('') + '</div>' + helpHtml(f);
         break;
       case 'checkbox':
         inner = '<label class="check-row"><input type="checkbox" name="' + key + '"' +
-          (f.defaultValue === 'true' ? ' checked' : '') + dis + '>' +
-          '<span class="check-label">' + esc(f.label) + (f.isRequired ? ' <span class="req">*</span>' : '') + '</span></label>' + helpHtml(f);
+          (f.defaultValue === 'true' ? ' checked' : '') + cid + cattrs + dis + '>' +
+          '<span class="check-label">' + esc(f.label) + (f.isRequired ? ' <span class="req">*</span>' : '') + '</span>' + infoHtml(f) + '</label>' + helpHtml(f);
         break;
       case 'file':
         inner = labelHtml(f) +
           '<input class="input" type="file" name="' + key + '"' +
-          (f.accept ? ' accept="' + esc(f.accept) + '"' : '') + dis + '>' + helpHtml(f);
+          (f.accept ? ' accept="' + esc(f.accept) + '"' : '') + cid + cattrs + dis + '>' + helpHtml(f);
         break;
       default: { // text, email, number, password, date, time, datetime
         var typeMap = { text: 'text', email: 'email', number: 'number', password: 'password',
@@ -147,11 +188,11 @@ window.CMSFormRenderer = (function () {
         inner = labelHtml(f) +
           '<input class="input" type="' + (typeMap[f.fieldType] || 'text') + '" name="' + key + '"' +
           ' placeholder="' + esc(f.placeholder || '') + '" value="' + esc(f.defaultValue || '') + '"' +
-          attrs + dis + '>' + helpHtml(f);
+          attrs + cid + cattrs + maskAttr + dis + '>' + helpHtml(f);
         break;
       }
     }
-    return '<div class="field dfb-cell"' + span + '>' + inner + '</div>';
+    return '<div class="field dfb-cell' + wrapCls + '"' + span + fkey + '>' + inner + '</div>';
   }
 
   /* Group sorted fields by section: a section field starts a new group. */
@@ -166,6 +207,10 @@ window.CMSFormRenderer = (function () {
   }
 
   function sectionHeadHtml(g) {
+    if (g.section) {
+      return '<div class="dfb-section-head"><h3>' + esc(g.title) + infoHtml(g.section) + '</h3>' +
+        (g.helpText ? '<p class="hint">' + esc(g.helpText) + '</p>' : '') + '</div>';
+    }
     if (g.title == null) return '';
     return '<div class="dfb-section-head"><h3>' + esc(g.title) + '</h3>' +
       (g.helpText ? '<p class="hint">' + esc(g.helpText) + '</p>' : '') + '</div>';
@@ -198,7 +243,10 @@ window.CMSFormRenderer = (function () {
   function groupHtml(g, preview) {
     var body = (g.section && g.section.sectionColumns) ? columnsHtml(g, preview) : gridHtml(g.fields, preview);
     if (g.title == null) return body;
-    return '<section class="dfb-section">' + sectionHeadHtml(g) + body + '</section>';
+    var sf = g.section || {};
+    return '<section class="dfb-section' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') + '"' +
+      (sf.customId ? ' id="' + esc(sf.customId) + '"' : '') + customAttrs(sf) +
+      (sf.fieldKey ? ' data-fkey="' + esc(sf.fieldKey) + '"' : '') + '>' + sectionHeadHtml(g) + body + '</section>';
   }
 
   function render($container, form, opts) {
@@ -232,6 +280,61 @@ window.CMSFormRenderer = (function () {
     bindGridButtons($container, form, preview);
     bindWizard($container, form, groups);
     loadLookups($container);
+    bindAdvanced($container, form, preview);
+  }
+
+  /* ---------------- masks + custom functions ---------------- */
+  function setFieldValue($root, key, v) {
+    var $wrap = $root.find('[data-fkey="' + key + '"]');
+    if (!$wrap.length) return;
+    var $sel = $wrap.find('select[name="' + key + '"]');
+    if ($sel.length) { $sel.val(v).trigger('change'); return; }
+    var $inputs = $wrap.find('input[name="' + key + '"], textarea[name="' + key + '"]');
+    if (!$inputs.length) return;
+    var t = $inputs[0].type;
+    if (t === 'radio' || t === 'checkbox') {
+      if ($inputs.closest('.dfb-choices').length) {
+        $inputs.each(function () {
+          var on = Array.isArray(v) ? v.map(String).indexOf(String(this.value)) >= 0 : String(v) === String(this.value);
+          $(this).prop('checked', on);
+        });
+      } else if (t === 'checkbox') { $inputs.prop('checked', !!v); }
+    } else { $inputs.val(v); }
+  }
+
+  function bindAdvanced($container, form, preview) {
+    if (preview) return; // the builder preview stays inert
+    (form.fields || []).forEach(function (f) {
+      var $wrap = $container.find('[data-fkey="' + f.fieldKey + '"]');
+      if (!$wrap.length) return;
+      if (f.inputMask && ['text', 'email', 'password', 'textarea'].indexOf(f.fieldType) >= 0) {
+        $wrap.find('input, textarea').first().on('input.dfbmask', function () {
+          var masked = applyMaskToValue(this.value, f.inputMask);
+          if (masked !== this.value) this.value = masked;
+        });
+      }
+      if (f.customJs) {
+        var fn = null;
+        try { fn = new Function('ctx', f.customJs); } catch (e) { fn = null; }
+        if (!fn) return;
+        var run = function () {
+          var values = collect($container);
+          var ctx = {
+            key: f.fieldKey,
+            value: values[f.fieldKey],
+            values: values,
+            el: $wrap[0],
+            setValue: function (k, v) { setFieldValue($container, k, v); },
+            showField: function (k) { $container.find('[data-fkey="' + k + '"]').show(); },
+            hideField: function (k) { $container.find('[data-fkey="' + k + '"]').hide(); }
+          };
+          try { fn(ctx); }
+          catch (e) { if (window.console) console.warn('Custom function error (' + f.fieldKey + '):', e); }
+        };
+        if (f.fieldType === 'button') $wrap.find('button').on('click.dfbcustom', run);
+        else $wrap.on('change.dfbcustom input.dfbcustom', 'input, select, textarea', run);
+      }
+    });
   }
 
   /* ---------------- grid interactions ---------------- */
@@ -379,6 +482,18 @@ window.CMSFormRenderer = (function () {
         if (!ok) {
           errors.push({ fieldKey: f.fieldKey, label: f.label,
             message: f.validationMessage || (f.label + ' has an invalid format.') });
+        }
+      }
+      if (typeof v === 'string' && v !== '' && (f.validationRules || []).length) {
+        for (var ri = 0; ri < f.validationRules.length; ri++) {
+          var rule = f.validationRules[ri];
+          var ruleOk = true;
+          try { ruleOk = new RegExp(rule.pattern).test(v); } catch (e) { ruleOk = true; }
+          if (!ruleOk) {
+            errors.push({ fieldKey: f.fieldKey, label: f.label,
+              message: rule.message || (f.label + ' has an invalid format.') });
+            break;
+          }
         }
       }
     });
