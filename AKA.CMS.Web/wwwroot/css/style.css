@@ -809,7 +809,7 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .dfb-tb-active{flex:none}
 .dfb-tb-spacer{flex:1}
 .dfb-tb-desc{flex:1 1 100%}
-.dfb-layout{display:grid;grid-template-columns:250px 1fr 300px;gap:18px;align-items:stretch;flex:1;min-height:0}
+.dfb-layout{display:grid;grid-template-columns:var(--pal-w,250px) 8px 1fr 8px var(--props-w,300px);gap:12px;align-items:stretch;flex:1;min-height:0}
 .dfb-pane{display:flex;flex-direction:column;min-height:0;margin:0}
 .dfb-pane-body{overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin}
 .dfb-pane-body::-webkit-scrollbar{width:8px}
@@ -920,7 +920,15 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .dfb-pane-pal.collapsed .card-head h3{display:none}
 .dfb-pane-pal.collapsed .card-body{display:none}
 .dfb-pane-pal.collapsed .dfb-pal-toggle{margin:0;transform:rotate(180deg)}
-@media (min-width:1101px){.dfb-layout.pal-collapsed{grid-template-columns:38px 1fr 300px}}
+@media (min-width:1101px){.dfb-layout.pal-collapsed{grid-template-columns:38px 0 1fr 0 var(--props-w,300px)}}
+/* Resizable pane gutters */
+.dfb-gutter{cursor:col-resize;border-radius:6px;position:relative;background:transparent;transition:background .12s;min-height:60px}
+.dfb-gutter:hover,.dfb-gutter.dragging{background:var(--blue-tint)}
+.dfb-gutter::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:46px;border-radius:3px;background:#c3cfdf}
+.dfb-gutter:hover::after,.dfb-gutter.dragging::after{background:var(--navy)}
+body.dfb-resizing{cursor:col-resize!important;user-select:none}
+body.dfb-resizing *{cursor:col-resize!important}
+@media (max-width:1100px){.dfb-gutter{display:none}}
 /* Info icon + tooltip on rendered fields */
 .dfb-info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--blue-tint);color:var(--navy);font-size:11px;font-weight:700;font-style:italic;cursor:help;position:relative;vertical-align:middle;margin-left:2px}
 .dfb-info::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--navy-dark,#122c52);color:#fff;font-style:normal;font-weight:500;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;width:max-content;max-width:260px;white-space:normal;text-align:left;opacity:0;pointer-events:none;transition:opacity .15s;z-index:60;box-shadow:0 8px 20px rgba(25,63,122,.25)}

@@ -704,6 +704,48 @@ $(function () {
     var collapsed = $('#dfbPalPane').toggleClass('collapsed').hasClass('collapsed');
     $('.dfb-layout').toggleClass('pal-collapsed', collapsed);
   });
+
+  /* Resizable panes: drag the gutters between Fields / Canvas / Properties.
+     Widths persist in localStorage so the user's layout survives reloads. */
+  (function initPaneResize() {
+    var layout = document.querySelector('.dfb-layout');
+    if (!layout) return;
+    try {
+      var pw = localStorage.getItem('dfbPalW'), rw = localStorage.getItem('dfbPropsW');
+      if (pw) layout.style.setProperty('--pal-w', pw + 'px');
+      if (rw) layout.style.setProperty('--props-w', rw + 'px');
+    } catch (e) { /* storage unavailable */ }
+    $('.dfb-gutter').each(function () {
+      var gutter = this;
+      gutter.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        var side = gutter.getAttribute('data-gutter');
+        var pane = document.getElementById(side === 'left' ? 'dfbPalPane' : 'dfbPropsPane');
+        if (!pane) return;
+        var startX = e.clientX;
+        var startW = pane.getBoundingClientRect().width;
+        var minW = side === 'left' ? 170 : 230;
+        gutter.setPointerCapture(e.pointerId);
+        gutter.classList.add('dragging');
+        document.body.classList.add('dfb-resizing');
+        function onMove(ev) {
+          var dx = ev.clientX - startX;
+          var w = side === 'left' ? startW + dx : startW - dx;
+          w = Math.max(minW, Math.min(560, w));
+          layout.style.setProperty(side === 'left' ? '--pal-w' : '--props-w', w + 'px');
+          try { localStorage.setItem(side === 'left' ? 'dfbPalW' : 'dfbPropsW', String(Math.round(w))); } catch (err) { /* ignore */ }
+        }
+        function onUp() {
+          gutter.removeEventListener('pointermove', onMove);
+          gutter.removeEventListener('pointerup', onUp);
+          gutter.classList.remove('dragging');
+          document.body.classList.remove('dfb-resizing');
+        }
+        gutter.addEventListener('pointermove', onMove);
+        gutter.addEventListener('pointerup', onUp);
+      });
+    });
+  })();
   $('#dfbProps').on('click', '#ppLayoutSeg button', function () {
     var f = fields[selected];
     if (!f) return;
