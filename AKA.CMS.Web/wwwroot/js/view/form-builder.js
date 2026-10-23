@@ -6,7 +6,6 @@ $(function () {
 
   var PALETTE = [
     { group: 'Layout' },
-    { type: 'section', label: 'Section - Grid', icon: '\u25a4', preset: 0 },
     { type: 'section', label: 'Section - 2 Columns', icon: '\u25a6', preset: 2 },
     { type: 'section', label: 'Section - 3 Columns', icon: '\u25a6', preset: 3 },
     { type: 'section', label: 'Section - 4 Columns', icon: '\u25a6', preset: 4 },
