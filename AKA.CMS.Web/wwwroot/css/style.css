@@ -916,9 +916,15 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 /* Fields panel collapse (canvas expands into the freed space) */
 .dfb-pal-toggle{margin-left:auto;border:1px solid var(--border);background:#fff;border-radius:8px;width:26px;height:26px;font-size:16px;line-height:1;color:var(--navy);cursor:pointer;transition:transform .18s}
 .dfb-pal-toggle:hover{background:var(--blue-tint)}
+/* Fields palette search */
+.dfb-pal-search-wrap{position:relative;padding:10px 12px;border-bottom:1px solid var(--border)}
+.dfb-pal-search-wrap .input{padding-right:30px}
+.dfb-pal-clear{position:absolute;right:19px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:2px}
+.dfb-pal-clear:hover{color:var(--navy-dark)}
 .dfb-pane-pal.collapsed .card-head{justify-content:center;padding:10px 4px}
 .dfb-pane-pal.collapsed .card-head h3{display:none}
 .dfb-pane-pal.collapsed .card-body{display:none}
+.dfb-pane-pal.collapsed .dfb-pal-search-wrap{display:none}
 .dfb-pane-pal.collapsed .dfb-pal-toggle{margin:0;transform:rotate(180deg)}
 @media (min-width:1101px){.dfb-layout.pal-collapsed{grid-template-columns:38px 0 1fr 0 var(--props-w,300px)}}
 /* Resizable pane gutters */

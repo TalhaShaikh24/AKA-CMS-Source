@@ -41,6 +41,10 @@
   <div class="dfb-layout">
     <div class="card dfb-pane dfb-pane-pal" id="dfbPalPane">
       <div class="card-head"><h3>Fields</h3><button type="button" class="dfb-pal-toggle" id="dfbPalToggle" title="Collapse / expand the Fields panel">‹</button></div>
+      <div class="dfb-pal-search-wrap">
+        <input class="input" id="dfbPalSearch" placeholder="Search fields…" autocomplete="off">
+        <button type="button" class="dfb-pal-clear" id="dfbPalClear" title="Clear search" hidden>&times;</button>
+      </div>
       <div class="card-body dfb-pane-body">
         <div id="dfbPalette"></div>
         <p class="hint" style="margin-top:10px">Drag a field onto the canvas, or click to add it.</p>

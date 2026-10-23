@@ -97,10 +97,41 @@ $(function () {
     $('#dfbPalette').html(PALETTE.map(function (p) {
       if (p.group) return '<div class="dfb-pal-group">' + esc(p.group) + '</div>';
       return '<div class="dfb-pal-item" draggable="true" data-ptype="' + p.type + '"' +
-        (p.preset !== undefined ? ' data-preset="' + p.preset + '"' : '') + '>' +
+        (p.preset !== undefined ? ' data-preset="' + p.preset + '"' : '') +
+        ' data-search="' + esc((p.label + ' ' + p.type).toLowerCase()) + '">' +
         '<span class="dfb-pal-icon">' + esc(p.icon) + '</span><span>' + esc(p.label) + '</span></div>';
-    }).join(''));
+    }).join('') + '<p class="hint" id="dfbPalNoMatch" style="display:none;padding:8px 2px">No fields match your search.</p>');
+    filterPalette($('#dfbPalSearch').val() || '');
   }
+
+  /* Live search over the Fields palette: filters items as you type and
+     hides group headers whose items are all filtered out. */
+  function filterPalette(q) {
+    q = $.trim(String(q || '')).toLowerCase();
+    var anyVisible = false;
+    $('#dfbPalette .dfb-pal-item').each(function () {
+      var hit = !q || ($(this).data('search') || '').indexOf(q) >= 0;
+      $(this).toggle(hit);
+      if (hit) anyVisible = true;
+    });
+    $('#dfbPalette .dfb-pal-group').each(function () {
+      var show = !q, $n = $(this).next();
+      while ($n.length && !$n.hasClass('dfb-pal-group')) {
+        if ($n.hasClass('dfb-pal-item') && $n.is(':visible')) { show = true; break; }
+        $n = $n.next();
+      }
+      $(this).toggle(show);
+    });
+    $('#dfbPalNoMatch').toggle(!!q && !anyVisible);
+  }
+
+  $('#dfbPalSearch').on('input', function () {
+    $('#dfbPalClear').prop('hidden', !$(this).val());
+    filterPalette($(this).val());
+  });
+  $('#dfbPalClear').on('click', function () {
+    $('#dfbPalSearch').val('').trigger('input').focus();
+  });
 
   /* ---------------- canvas ----------------
      The canvas is a stack of areas: a leading "top" area (fields before the
