@@ -195,73 +195,101 @@ window.CMSFormRenderer = (function () {
     return '<div class="field dfb-cell' + wrapCls + '"' + span + fkey + '>' + inner + '</div>';
   }
 
-  /* Group sorted fields by section: a section field starts a new group. */
-  function groupFields(fields) {
-    var groups = [{ title: null, helpText: null, section: null, fields: [] }];
-    fields.forEach(function (f) {
-      if (f.fieldType === 'section') groups.push({ title: f.label, helpText: f.helpText, section: f, fields: [] });
+  /* ---------------- structure: nested sections ----------------
+     Every field carries parentKey (its section's key; null = top level).
+     A section's children render inside it; a section may itself sit inside
+     another section's column (nested section). Columns hold a 12-col grid
+     so field widths (spans) apply inside columns too. */
+  function childrenOf(fields, parentKey) {
+    return fields.filter(function (f) { return (f.parentKey || null) === (parentKey || null); });
+  }
+
+  function levelGroups(fields, parentKey) {
+    var groups = [{ section: null, fields: [] }];
+    childrenOf(fields, parentKey).forEach(function (f) {
+      if (f.fieldType === 'section') groups.push({ section: f, fields: [] });
       else groups[groups.length - 1].fields.push(f);
     });
-    if (groups.length > 1 && groups[0].title === null && !groups[0].fields.length) groups.shift();
+    if (groups.length > 1 && !groups[0].fields.length) groups.shift();
     return groups;
   }
 
-  function sectionHeadHtml(g) {
-    if (g.section) {
-      return '<div class="dfb-section-head"><h3>' + esc(g.title) + infoHtml(g.section) + '</h3>' +
-        (g.helpText ? '<p class="hint">' + esc(g.helpText) + '</p>' : '') + '</div>';
-    }
-    if (g.title == null) return '';
-    return '<div class="dfb-section-head"><h3>' + esc(g.title) + '</h3>' +
-      (g.helpText ? '<p class="hint">' + esc(g.helpText) + '</p>' : '') + '</div>';
-  }
-
-  function gridHtml(fields, preview) {
-    return '<div class="dfb-grid">' + fields.map(function (f) { return fieldHtml(f, preview); }).join('') + '</div>';
-  }
-
-  /* Elementor-style columns: fields stack inside their column (full width),
-     grouped by columnIndex. Used when the section has sectionColumns set. */
-  function columnsHtml(g, preview) {
-    var n = Math.min(4, Math.max(1, g.section.sectionColumns || 1));
-    var buckets = [];
-    for (var i = 0; i < n; i++) buckets.push([]);
-    g.fields.forEach(function (f) {
-      var ci = f.columnIndex == null ? 0 : Math.min(n - 1, Math.max(0, f.columnIndex));
-      buckets[ci].push(f);
+  function descendantsOf(fields, sectionKey) {
+    var out = [];
+    childrenOf(fields, sectionKey).forEach(function (f) {
+      out.push(f);
+      if (f.fieldType === 'section') out = out.concat(descendantsOf(fields, f.fieldKey));
     });
-    return '<div class="dfb-cols" style="--cols:' + n + '">' + buckets.map(function (bucket) {
-      return '<div class="dfb-col">' + bucket.map(function (f) {
-        var clone = Object.assign({}, f, { columnSpan: 12 });
-        return fieldHtml(clone, preview);
-      }).join('') + '</div>';
-    }).join('') + '</div>';
+    return out;
   }
 
-  /* One group (section or leading fields) as HTML — used by normal and
-     wizard rendering alike. */
-  function groupHtml(g, preview) {
-    var body = (g.section && g.section.sectionColumns) ? columnsHtml(g, preview) : gridHtml(g.fields, preview);
-    if (g.title == null) return body;
-    var sf = g.section || {};
+  function itemHtml(f, fields, preview) {
+    if (f.fieldType !== 'section') return fieldHtml(f, preview);
+    return '<div class="dfb-cell dfb-nested" style="grid-column: span 12">' + sectionBoxHtml(f, fields, preview) + '</div>';
+  }
+
+  function sectionBoxHtml(sf, fields, preview) {
+    var kids = childrenOf(fields, sf.fieldKey);
+    var body;
+    if (sf.sectionColumns) {
+      var n = Math.min(4, Math.max(1, sf.sectionColumns || 1));
+      var buckets = [];
+      for (var i = 0; i < n; i++) buckets.push([]);
+      kids.forEach(function (k) {
+        var ci = k.columnIndex == null ? 0 : Math.min(n - 1, Math.max(0, k.columnIndex));
+        buckets[ci].push(k);
+      });
+      body = '<div class="dfb-cols" style="--cols:' + n + '">' + buckets.map(function (bucket) {
+        return '<div class="dfb-col"><div class="dfb-grid">' +
+          bucket.map(function (k) { return itemHtml(k, fields, preview); }).join('') + '</div></div>';
+      }).join('') + '</div>';
+    } else {
+      body = levelGroups(fields, sf.fieldKey).map(function (g) {
+        if (!g.section) return '<div class="dfb-grid">' + g.fields.map(function (k) { return itemHtml(k, fields, preview); }).join('') + '</div>';
+        return itemHtml(g.section, fields, preview);
+      }).join('');
+    }
     return '<section class="dfb-section' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') + '"' +
       (sf.customId ? ' id="' + esc(sf.customId) + '"' : '') + customAttrs(sf) +
-      (sf.fieldKey ? ' data-fkey="' + esc(sf.fieldKey) + '"' : '') + '>' + sectionHeadHtml(g) + body + '</section>';
+      ' data-fkey="' + esc(sf.fieldKey) + '">' +
+      '<div class="dfb-section-head"><h3>' + esc(sf.label) + infoHtml(sf) + '</h3>' +
+      (sf.helpText ? '<p class="hint">' + esc(sf.helpText) + '</p>' : '') + '</div>' + body + '</section>';
+  }
+
+  function levelHtml(fields, parentKey, preview) {
+    return levelGroups(fields, parentKey).map(function (g) {
+      if (!g.section) return '<div class="dfb-grid">' + g.fields.map(function (k) { return itemHtml(k, fields, preview); }).join('') + '</div>';
+      return sectionBoxHtml(g.section, fields, preview);
+    }).join('');
+  }
+
+  /* Wizard steps are the top-level groups; each step validates every field
+     inside it, nested sections included. */
+  function wizardGroups(fields) {
+    return levelGroups(fields, null).map(function (g) {
+      return {
+        title: g.section ? g.section.label : null,
+        fields: g.section ? descendantsOf(fields, g.section.fieldKey) : g.fields,
+        section: g.section
+      };
+    });
   }
 
   function render($container, form, opts) {
     opts = opts || {};
     var preview = !!opts.preview;
     var fields = (form.fields || []).slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
-    var groups = groupFields(fields);
+    var wgroups = wizardGroups(fields);
     var html = '';
 
-    if (form.isMultiStep && groups.length > 1) {
+    if (form.isMultiStep && wgroups.length > 1) {
       html = '<div class="dfb-wizard">' +
         '<div class="dfb-wiz-progress"><span class="dfb-wiz-label"></span>' +
         '<div class="dfb-wiz-bar"><i></i></div></div>' +
-        groups.map(function (g, i) {
-          return '<div class="dfb-step" data-step="' + i + '">' + groupHtml(g, preview) + '</div>';
+        wgroups.map(function (g, i) {
+          var inner = g.section ? sectionBoxHtml(g.section, fields, preview)
+            : '<div class="dfb-grid">' + g.fields.map(function (k) { return itemHtml(k, fields, preview); }).join('') + '</div>';
+          return '<div class="dfb-step" data-step="' + i + '">' + inner + '</div>';
         }).join('') +
         '<div class="dfb-wiz-nav">' +
           '<button type="button" class="btn btn-ghost" data-wiz-back>← Back</button>' +
@@ -269,7 +297,7 @@ window.CMSFormRenderer = (function () {
           '<button type="button" class="btn btn-primary" data-wiz-next>Next →</button>' +
         '</div></div>';
     } else {
-      html = groups.map(function (g) { return groupHtml(g, preview); }).join('');
+      html = levelHtml(fields, null, preview);
     }
 
     $container.html(html);
@@ -278,63 +306,9 @@ window.CMSFormRenderer = (function () {
 
     if (!preview && window.CMS && CMS.initSelect2) CMS.initSelect2($container[0]);
     bindGridButtons($container, form, preview);
-    bindWizard($container, form, groups);
+    bindWizard($container, form, wgroups);
     loadLookups($container);
     bindAdvanced($container, form, preview);
-  }
-
-  /* ---------------- masks + custom functions ---------------- */
-  function setFieldValue($root, key, v) {
-    var $wrap = $root.find('[data-fkey="' + key + '"]');
-    if (!$wrap.length) return;
-    var $sel = $wrap.find('select[name="' + key + '"]');
-    if ($sel.length) { $sel.val(v).trigger('change'); return; }
-    var $inputs = $wrap.find('input[name="' + key + '"], textarea[name="' + key + '"]');
-    if (!$inputs.length) return;
-    var t = $inputs[0].type;
-    if (t === 'radio' || t === 'checkbox') {
-      if ($inputs.closest('.dfb-choices').length) {
-        $inputs.each(function () {
-          var on = Array.isArray(v) ? v.map(String).indexOf(String(this.value)) >= 0 : String(v) === String(this.value);
-          $(this).prop('checked', on);
-        });
-      } else if (t === 'checkbox') { $inputs.prop('checked', !!v); }
-    } else { $inputs.val(v); }
-  }
-
-  function bindAdvanced($container, form, preview) {
-    if (preview) return; // the builder preview stays inert
-    (form.fields || []).forEach(function (f) {
-      var $wrap = $container.find('[data-fkey="' + f.fieldKey + '"]');
-      if (!$wrap.length) return;
-      if (f.inputMask && ['text', 'email', 'password', 'textarea'].indexOf(f.fieldType) >= 0) {
-        $wrap.find('input, textarea').first().on('input.dfbmask', function () {
-          var masked = applyMaskToValue(this.value, f.inputMask);
-          if (masked !== this.value) this.value = masked;
-        });
-      }
-      if (f.customJs) {
-        var fn = null;
-        try { fn = new Function('ctx', f.customJs); } catch (e) { fn = null; }
-        if (!fn) return;
-        var run = function () {
-          var values = collect($container);
-          var ctx = {
-            key: f.fieldKey,
-            value: values[f.fieldKey],
-            values: values,
-            el: $wrap[0],
-            setValue: function (k, v) { setFieldValue($container, k, v); },
-            showField: function (k) { $container.find('[data-fkey="' + k + '"]').show(); },
-            hideField: function (k) { $container.find('[data-fkey="' + k + '"]').hide(); }
-          };
-          try { fn(ctx); }
-          catch (e) { if (window.console) console.warn('Custom function error (' + f.fieldKey + '):', e); }
-        };
-        if (f.fieldType === 'button') $wrap.find('button').on('click.dfbcustom', run);
-        else $wrap.on('change.dfbcustom input.dfbcustom', 'input, select, textarea', run);
-      }
-    });
   }
 
   /* ---------------- grid interactions ---------------- */
@@ -514,7 +488,7 @@ window.CMSFormRenderer = (function () {
       var form = $root.data('dfbForm');
       if (form) {
         var fields = (form.fields || []).slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
-        wizardGoTo($root, groupFields(fields), Number($step.data('step')) || 0);
+        wizardGoTo($root, wizardGroups(fields), Number($step.data('step')) || 0);
       }
     }
     var $focus = $el.is('[data-grid-field]') ? $el.find('.dfb-grid-cell').first() : $el;

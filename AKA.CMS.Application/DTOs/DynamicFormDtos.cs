@@ -68,6 +68,9 @@ public sealed class DynamicFormFieldDto
     /// <summary>For fields inside a column-layout section: which column
     /// (0-based) the field sits in. Null = first column.</summary>
     public int? ColumnIndex { get; set; }
+    /// <summary>Key of the section this field belongs to; null = the form's
+    /// top level. A section may itself have a parent (nested section).</summary>
+    public string? ParentKey { get; set; }
     /// <summary>Custom JavaScript run when the field changes (button: on click).</summary>
     public string? CustomJs { get; set; }
     /// <summary>Extra CSS class(es) added to the field wrapper.</summary>

@@ -52,6 +52,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string? CustomAttributesJson { get; set; }
         public string? ValidationRulesJson { get; set; }
         public string? InputMask { get; set; }
+        public string? ParentKey { get; set; }
         public bool ShowInfoIcon { get; set; }
         public string? InfoText { get; set; }
         public int ColumnSpan { get; set; }
@@ -85,7 +86,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             FormId = form.FormId, FormKey = form.FormKey, Title = form.Title,
             Description = form.Description, IsActive = form.IsActive, IsMultiStep = form.IsMultiStep,
             FieldCount = form.FieldCount, CreatedAt = form.CreatedAt, UpdatedAt = form.UpdatedAt,
-            Fields = fields.Select(f => new DynamicFormFieldDto
+            Fields = ResolveParents(fields).Select(f => new DynamicFormFieldDto
             {
                 FieldId = f.FieldId, FieldKey = f.FieldKey, Label = f.Label, FieldType = f.FieldType,
                 Placeholder = f.Placeholder, HelpText = f.HelpText, IsRequired = f.IsRequired,
@@ -102,7 +103,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 CustomJs = f.CustomJs, CssClass = f.CssClass, CustomId = f.CustomId,
                 CustomAttributes = ParseCustomAttributes(f.CustomAttributesJson),
                 ValidationRules = ParseValidationRules(f.ValidationRulesJson),
-                InputMask = f.InputMask, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
+                InputMask = f.InputMask, ParentKey = f.ParentKey, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
                 ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
             }).ToList()
         };
@@ -137,7 +138,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
             lookupFormId = f.LookupFormId,
             lookupFieldKey = f.LookupFieldKey,
             sectionColumns = f.FieldType == "section" ? f.SectionColumns : null,
-            columnIndex = f.FieldType == "section" ? null : f.ColumnIndex,
+            columnIndex = f.ColumnIndex,
             customJs = f.CustomJs,
             cssClass = f.CssClass,
             customId = f.CustomId,
@@ -149,6 +150,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 ? (object)f.ValidationRules.Select(r => new { pattern = r.Pattern, message = r.Message }).ToList()
                 : null,
             inputMask = f.InputMask,
+            parentKey = f.ParentKey,
             showInfoIcon = f.ShowInfoIcon,
             infoText = f.InfoText,
             minLength = f.MinLength,
@@ -199,6 +201,23 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         {
             return new();
         }
+    }
+
+    /* Parent resolution: forms saved by the current builder carry an explicit
+       ParentKey on every nested field (null = top level). Older rows have
+       ParentKey null everywhere; for those, the parent is derived from field
+       order (a field belonged to the section above it). As soon as ANY field
+       carries a parent, the form is treated as explicit and nulls mean root. */
+    private static List<FieldRow> ResolveParents(List<FieldRow> fields)
+    {
+        if (fields.Any(f => f.ParentKey is not null)) return fields;
+        string? lastSectionKey = null;
+        foreach (var f in fields)
+        {
+            if (f.FieldType == "section") { lastSectionKey = f.FieldKey; }
+            else { f.ParentKey = lastSectionKey; }
+        }
+        return fields;
     }
 
     private static List<DynamicFormCustomAttributeDto> ParseCustomAttributes(string? json)

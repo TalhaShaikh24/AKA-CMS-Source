@@ -138,23 +138,30 @@ $(function () {
      first section, span-grid layout), then one box per section. A section
      either keeps the legacy span-grid layout (sectionColumns = null) or an
      Elementor-style column layout (1-4 columns; fields stack per column). */
-  function segments() {
-    var segs = [{ kind: 'top', secIndex: -1, fields: [] }];
-    fields.forEach(function (f, i) {
-      if (f.fieldType === 'section') segs.push({ kind: 'section', secIndex: i, fields: [] });
-      else segs[segs.length - 1].fields.push(i);
-    });
-    return segs;
+  /* Tree helpers: every field carries parentKey (its section's key;
+     null = top level). Children render in array order within a parent. */
+  function childrenIdx(parentKey) {
+    var out = [];
+    fields.forEach(function (f, i) { if ((f.parentKey || null) === (parentKey || null)) out.push(i); });
+    return out;
   }
 
-  function columnsOf(seg, n) {
+  function bucketsIdx(secIdx, n) {
     var cols = [];
     for (var c = 0; c < n; c++) cols.push([]);
-    seg.fields.forEach(function (i) {
+    childrenIdx(fields[secIdx].fieldKey).forEach(function (i) {
       var ci = fields[i].columnIndex == null ? 0 : Math.min(n - 1, Math.max(0, fields[i].columnIndex));
       cols[ci].push(i);
     });
     return cols;
+  }
+
+  function descendantKeys(key) {
+    var out = [key];
+    fields.forEach(function (f) {
+      if ((f.parentKey || null) === key && f.fieldType === 'section') out = out.concat(descendantKeys(f.fieldKey));
+    });
+    return out;
   }
 
   function layoutSegHtml(sf, secIdx) {
@@ -165,10 +172,10 @@ $(function () {
     }).join('');
   }
 
-  function cardHtml(f, i, inColumn) {
+  function cardHtml(f, i) {
     var preview = CMSFormRenderer.fieldHtml(f, true);
     return '<div class="dfb-card' + (i === selected ? ' sel' : '') + '" data-index="' + i + '"' +
-        (inColumn ? '' : ' style="grid-column: span ' + (f.columnSpan || 6) + '"') + '>' +
+        ' style="grid-column: span ' + (f.columnSpan || 6) + '">' +
       '<div class="dfb-card-bar">' +
         '<span class="dfb-drag" draggable="true" data-drag="' + i + '" title="Drag to move">⠿</span>' +
         '<span class="dfb-card-type">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span>' +
@@ -181,49 +188,77 @@ $(function () {
     '</div>';
   }
 
+  function itemHtmlB(i, depth) {
+    if (fields[i].fieldType === 'section') {
+      return '<div class="dfb-nested-box" style="grid-column:1/-1">' + sectionBoxHtml(i, depth) + '</div>';
+    }
+    return cardHtml(fields[i], i);
+  }
+
+  function areaHtml(parentKey, idxs, slim) {
+    return '<div class="dfb-grid dfb-area' + (slim ? ' dfb-area-slim' : '') + '" data-area="' + (parentKey ? 'section' : 'top') + '" data-parent="' + esc(parentKey || '') + '">' +
+      (idxs.length ? idxs.map(function (i) { return cardHtml(fields[i], i); }).join('')
+                   : '<div class="dfb-col-empty" style="grid-column:1/-1">Drop fields here' + (parentKey ? '' : ' (before the first section)') + '</div>') +
+      '</div>';
+  }
+
+  /* One level of the tree as HTML: runs of fields become grid areas,
+     sections become boxes (recursively). */
+  function levelHtml(parentKey, depth) {
+    var kids = childrenIdx(parentKey);
+    var html = '', run = [];
+    function flush() { if (run.length) { html += areaHtml(parentKey, run, false); run = []; } }
+    kids.forEach(function (i) {
+      if (fields[i].fieldType === 'section') { flush(); html += sectionBoxHtml(i, depth); }
+      else run.push(i);
+    });
+    flush();
+    return html;
+  }
+
+  function sectionBoxHtml(secIdx, depth) {
+    var sf = fields[secIdx];
+    var layout = sf.sectionColumns || null;
+    var html = '<div class="dfb-section-box' + (secIdx === selected ? ' sel' : '') + '" data-secbox="' + secIdx + '">' +
+      '<div class="dfb-section-bar">' +
+        '<span class="dfb-drag" draggable="true" data-secdrag="' + secIdx + '" title="Drag to move section">⠿</span>' +
+        '<strong>' + esc(sf.label) + '</strong><span class="pill">Section</span>' +
+        '<span class="dfb-layout-seg seg">' + layoutSegHtml(sf, secIdx) + '</span>' +
+        '<span class="dfb-card-actions">' +
+          '<button type="button" data-dup="' + secIdx + '" title="Duplicate section">⧉</button>' +
+          '<button type="button" data-del="' + secIdx + '" title="Delete section">✕</button>' +
+        '</span>' +
+      '</div>';
+    if (layout) {
+      html += '<div class="dfb-cols-row" style="grid-template-columns:repeat(' + layout + ',1fr)">' +
+        bucketsIdx(secIdx, layout).map(function (colIdxs, c) {
+          return '<div class="dfb-col-zone" data-secidx="' + secIdx + '" data-col="' + c + '">' +
+            (colIdxs.length ? colIdxs.map(function (ci) { return itemHtmlB(ci, depth + 1); }).join('')
+                            : '<div class="dfb-col-empty" style="grid-column:1/-1">Drop fields here</div>') +
+            '</div>';
+        }).join('') + '</div>';
+    } else {
+      html += levelHtml(sf.fieldKey, depth + 1);
+    }
+    return html + '</div>';
+  }
+
   function renderCanvas() {
     var $grid = $('#dfbGrid');
     $('#dfbEmpty').toggle(fields.length === 0);
     $('#dfbFieldCount').text(fields.length ? fields.length + ' field' + (fields.length === 1 ? '' : 's') : '');
-    var segs = segments();
-    var html = '';
-    segs.forEach(function (seg) {
-      if (seg.kind === 'top') {
-        if (seg.fields.length || segs.length === 1) {
-          html += '<div class="dfb-grid dfb-area" data-area="top">' +
-            seg.fields.map(function (i) { return cardHtml(fields[i], i, false); }).join('') + '</div>';
-        } else {
-          html += '<div class="dfb-grid dfb-area dfb-area-empty" data-area="top">' +
-            '<div class="dfb-col-empty" style="grid-column:1/-1">Drop fields here (before the first section)</div></div>';
-        }
-        return;
+    var html;
+    if (!fields.length) {
+      html = '<div class="dfb-grid dfb-area" data-area="top" data-parent=""></div>';
+    } else {
+      html = levelHtml(null, 0);
+      // Keep a slim drop strip before the first section so top-level fields
+      // can still be dropped above it.
+      var rootKids = childrenIdx(null);
+      if (rootKids.length && fields[rootKids[0]].fieldType === 'section') {
+        html = areaHtml(null, [], true) + html;
       }
-      var sf = fields[seg.secIndex];
-      var layout = sf.sectionColumns || null;
-      html += '<div class="dfb-section-box' + (seg.secIndex === selected ? ' sel' : '') + '" data-secbox="' + seg.secIndex + '">' +
-        '<div class="dfb-section-bar">' +
-          '<span class="dfb-drag" draggable="true" data-secdrag="' + seg.secIndex + '" title="Drag to move section">⠿</span>' +
-          '<strong>' + esc(sf.label) + '</strong><span class="pill">Section</span>' +
-          '<span class="dfb-layout-seg seg">' + layoutSegHtml(sf, seg.secIndex) + '</span>' +
-          '<span class="dfb-card-actions">' +
-            '<button type="button" data-dup="' + seg.secIndex + '" title="Duplicate section">⧉</button>' +
-            '<button type="button" data-del="' + seg.secIndex + '" title="Delete section">✕</button>' +
-          '</span>' +
-        '</div>';
-      if (layout) {
-        html += '<div class="dfb-cols-row" style="grid-template-columns:repeat(' + layout + ',1fr)">' +
-          columnsOf(seg, layout).map(function (colIdxs, c) {
-            return '<div class="dfb-col-zone" data-secidx="' + seg.secIndex + '" data-col="' + c + '">' +
-              (colIdxs.length ? colIdxs.map(function (i) { return cardHtml(fields[i], i, true); }).join('')
-                              : '<div class="dfb-col-empty">Drop fields here</div>') +
-              '</div>';
-          }).join('') + '</div>';
-      } else {
-        html += '<div class="dfb-grid dfb-area" data-area="section" data-secidx="' + seg.secIndex + '">' +
-          seg.fields.map(function (i) { return cardHtml(fields[i], i, false); }).join('') + '</div>';
-      }
-      html += '</div>';
-    });
+    }
     $grid.html(html);
     // The renderer wraps fields in its own grid cell — unwrap one level for the card body.
     $grid.find('.dfb-card-body > .dfb-cell, .dfb-card-body > .field').css('grid-column', 'auto');
@@ -231,15 +266,14 @@ $(function () {
   }
 
   /* Switch a section between the legacy grid layout and column layouts.
-     Grid -> columns distributes fields round-robin; fewer columns clamps
-     overflow into the last column; columns -> Grid clears the assignment. */
+     Grid -> columns distributes the section's direct fields round-robin;
+     fewer columns clamps overflow into the last column. */
   function applySectionLayout(secIdx, newLayout) {
     var sf = fields[secIdx];
     if (!sf || sf.fieldType !== 'section') return;
     var oldLayout = sf.sectionColumns || null;
     sf.sectionColumns = newLayout;
-    var idxs = [];
-    for (var i = secIdx + 1; i < fields.length && fields[i].fieldType !== 'section'; i++) idxs.push(i);
+    var idxs = childrenIdx(sf.fieldKey);
     if (!newLayout) { idxs.forEach(function (i) { fields[i].columnIndex = null; }); return; }
     if (!oldLayout) { idxs.forEach(function (i, k) { fields[i].columnIndex = k % newLayout; }); return; }
     idxs.forEach(function (i) { if ((fields[i].columnIndex || 0) >= newLayout) fields[i].columnIndex = newLayout - 1; });
@@ -273,34 +307,51 @@ $(function () {
       '<span class="dfb-nav-meta">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span></div>';
   }
 
+  function navSectionRow(i, depth) {
+    var f = fields[i];
+    var kids = childrenIdx(f.fieldKey).length;
+    var collapsed = collapsedSecs.has(f);
+    return '<div class="dfb-nav-row dfb-nav-sec' + (i === selected ? ' sel' : '') + '" data-navidx="' + i + '" draggable="true" style="padding-left:' + (4 + depth * 16) + 'px">' +
+      '<button type="button" class="dfb-nav-caret" data-navcaret="' + i + '">' + (kids ? (collapsed ? '▸' : '▾') : '·') + '</button>' +
+      '<span class="dfb-nav-ico">▦</span>' +
+      '<span class="dfb-nav-label">' + esc(f.label || 'Section') + '</span>' +
+      '<span class="dfb-nav-meta">' + (f.sectionColumns ? f.sectionColumns + ' col' : 'Section') + '</span></div>';
+  }
+
+  function navChildrenHtml(secIdx, depth) {
+    var f = fields[secIdx];
+    var html = '';
+    if (f.sectionColumns) {
+      bucketsIdx(secIdx, f.sectionColumns).forEach(function (colIdxs, c) {
+        html += '<div class="dfb-nav-row dfb-nav-col" data-navcol="' + secIdx + ':' + c + '" style="padding-left:' + (10 + depth * 16) + 'px">' +
+          '<span class="dfb-nav-ico">▥</span><span class="dfb-nav-label">Column ' + (c + 1) + '</span></div>';
+        colIdxs.forEach(function (ci) {
+          if (fields[ci].fieldType === 'section') {
+            html += navSectionRow(ci, depth + 1);
+            if (!collapsedSecs.has(fields[ci])) html += navChildrenHtml(ci, depth + 2);
+          } else html += navFieldRow(ci, depth + 1);
+        });
+      });
+      return html;
+    }
+    return navLevelHtml(f.fieldKey, depth);
+  }
+
+  function navLevelHtml(parentKey, depth) {
+    var html = '';
+    childrenIdx(parentKey).forEach(function (i) {
+      if (fields[i].fieldType === 'section') {
+        html += navSectionRow(i, depth);
+        if (!collapsedSecs.has(fields[i])) html += navChildrenHtml(i, depth + 1);
+      } else html += navFieldRow(i, depth);
+    });
+    return html;
+  }
+
   function renderNavigator() {
     var $nav = $('#dfbNavTree');
     if (!$nav.length) return;
-    var html = '';
-    segments().forEach(function (seg) {
-      if (seg.kind === 'top') {
-        seg.fields.forEach(function (i) { html += navFieldRow(i, 0); });
-        return;
-      }
-      var sf = fields[seg.secIndex];
-      var collapsed = collapsedSecs.has(sf);
-      html += '<div class="dfb-nav-row dfb-nav-sec' + (seg.secIndex === selected ? ' sel' : '') + '" data-navidx="' + seg.secIndex + '" draggable="true">' +
-        '<button type="button" class="dfb-nav-caret" data-navcaret="' + seg.secIndex + '">' + (seg.fields.length ? (collapsed ? '▸' : '▾') : '·') + '</button>' +
-        '<span class="dfb-nav-ico">▦</span>' +
-        '<span class="dfb-nav-label">' + esc(sf.label || 'Section') + '</span>' +
-        '<span class="dfb-nav-meta">' + (sf.sectionColumns ? sf.sectionColumns + ' col' : 'Grid') + '</span></div>';
-      if (collapsed) return;
-      if (sf.sectionColumns) {
-        columnsOf(seg, sf.sectionColumns).forEach(function (colIdxs, c) {
-          html += '<div class="dfb-nav-row dfb-nav-col" data-navcol="' + seg.secIndex + ':' + c + '">' +
-            '<span class="dfb-nav-ico">▥</span><span class="dfb-nav-label">Column ' + (c + 1) + '</span></div>';
-          colIdxs.forEach(function (i) { html += navFieldRow(i, 2); });
-        });
-      } else {
-        seg.fields.forEach(function (i) { html += navFieldRow(i, 1); });
-      }
-    });
-    $nav.html(html || '<p class="hint" style="padding:8px 10px">No fields yet — add some from the Fields panel.</p>');
+    $nav.html(navLevelHtml(null, 0) || '<p class="hint" style="padding:8px 10px">No fields yet — add some from the Fields panel.</p>');
   }
 
   function revealInCanvas(i) {
@@ -311,65 +362,69 @@ $(function () {
     setTimeout(function () { el.classList.remove('dfb-flash'); }, 1200);
   }
 
-  /* length of the block starting at idx (a section takes its fields along) */
-  function navBlockLen(idx) {
-    if (!fields[idx] || fields[idx].fieldType !== 'section') return 1;
-    var n = 1;
-    while (idx + n < fields.length && fields[idx + n].fieldType !== 'section') n++;
-    return n;
-  }
-
-  /* Which section contains flat index i, and its layout (null = top/legacy). */
+  /* The column a field visually sits in: only when its parent section
+     uses a column layout. */
   function navColumnForField(i) {
+    var f = fields[i];
+    if (!f || !f.parentKey) return null;
     var sec = null;
-    for (var k = i - 1; k >= 0; k--) if (fields[k].fieldType === 'section') { sec = fields[k]; break; }
-    return sec && sec.sectionColumns ? (fields[i].columnIndex || 0) : null;
+    fields.forEach(function (x) { if (x.fieldKey === f.parentKey) sec = x; });
+    return sec && sec.sectionColumns ? (f.columnIndex || 0) : null;
   }
 
   function navDoDrop(target, after) {
     var from = navDrag.index;
-    var ins, adoptCol;
+    var item = fields[from];
+    if (!item) { renderCanvas(); return; }
+    var ins, newParent = null, newCol = null;
     if (target.kind === 'column') {
-      if (navDrag.isSection) { ins = target.secIdx; adoptCol = null; }
+      var secF = fields[target.secIdx];
+      newParent = secF.fieldKey;
+      newCol = target.col;
+      var colItems = bucketsIdx(target.secIdx, secF.sectionColumns)[target.col];
+      if (colItems.length) ins = colItems[colItems.length - 1] + 1;
       else {
-        adoptCol = target.col;
-        var seg = segments().filter(function (sg) { return sg.secIndex === target.secIdx; })[0];
-        var cols = columnsOf(seg, fields[target.secIdx].sectionColumns);
-        ins = cols[target.col].length ? cols[target.col][cols[target.col].length - 1] + 1
-          : (function () { for (var c = target.col + 1; c < cols.length; c++) if (cols[c].length) return cols[c][0]; return seg.fields.length ? seg.fields[seg.fields.length - 1] + 1 : target.secIdx + 1; })();
+        var kids = childrenIdx(secF.fieldKey);
+        ins = target.secIdx + 1;
+        for (var k = 0; k < kids.length; k++) {
+          if ((fields[kids[k]].columnIndex || 0) > target.col) { ins = kids[k]; break; }
+          ins = kids[k] + 1;
+        }
       }
-    } else if (fields[target.idx] && fields[target.idx].fieldType === 'section' && navDrag.isSection === false && after) {
-      ins = target.idx + 1; // into the section, at its start
-      adoptCol = fields[target.idx].sectionColumns ? 0 : null;
     } else {
-      ins = after ? target.idx + navBlockLen(target.idx) : target.idx;
-      adoptCol = (fields[target.idx] && fields[target.idx].fieldType !== 'section') ? navColumnForField(target.idx) : null;
+      var t = fields[target.idx];
+      if (!t) { renderCanvas(); return; }
+      if (t.fieldType === 'section' && after && !navDrag.isSection) {
+        // Field dropped onto a section row = into the section, at its start.
+        newParent = t.fieldKey;
+        newCol = t.sectionColumns ? 0 : null;
+        ins = target.idx + 1;
+      } else if (t.fieldType === 'section') {
+        // Before/after a section = sibling position in the section's parent.
+        newParent = t.parentKey || null;
+        newCol = t.columnIndex == null ? null : t.columnIndex;
+        ins = after ? target.idx + 1 : target.idx;
+      } else {
+        newParent = t.parentKey || null;
+        newCol = navColumnForField(target.idx);
+        ins = after ? target.idx + 1 : target.idx;
+      }
     }
-    if (navDrag.isSection) {
-      var block = fields.splice(from, navBlockLen(from));
-      if (from < ins) ins -= block.length;
-      fields.splice.apply(fields, [ins, 0].concat(block));
-      selectField(ins);
-      revealInCanvas(ins);
-    } else {
-      if (ins === from || ins === from + 1) { renderCanvas(); return; }
-      var item = fields.splice(from, 1)[0];
-      if (from < ins) ins--;
-      item.columnIndex = item.fieldType === 'section' ? null : adoptCol;
-      fields.splice(ins, 0, item);
-      selectField(ins);
-      revealInCanvas(ins);
+    if (item.fieldType === 'section' && newParent && descendantKeys(item.fieldKey).indexOf(newParent) >= 0) {
+      CMS.toast('A section cannot be moved inside itself.', 'error');
+      renderCanvas();
+      return;
     }
+    if (ins === from || ins === from + 1) { renderCanvas(); return; }
+    fields.splice(from, 1);
+    if (from < ins) ins--;
+    item.parentKey = newParent;
+    item.columnIndex = newParent ? newCol : null;
+    fields.splice(ins, 0, item);
+    selectField(ins);
+    revealInCanvas(ins);
   }
 
-  function navClearOver() { $('#dfbNavTree .dfb-nav-over-top, #dfbNavTree .dfb-nav-over-bottom, #dfbNavTree .dfb-nav-over-full').removeClass('dfb-nav-over-top dfb-nav-over-bottom dfb-nav-over-full'); }
-
-  $('#dfbNavTree').on('click', '[data-navcaret]', function (e) {
-    e.stopPropagation();
-    var f = fields[Number($(this).data('navcaret'))];
-    if (f) { if (collapsedSecs.has(f)) collapsedSecs.delete(f); else collapsedSecs.add(f); }
-    renderNavigator();
-  });
   $('#dfbNavTree').on('click', '[data-navidx]', function () {
     var idx = Number($(this).data('navidx'));
     selectField(idx);
@@ -786,6 +841,13 @@ $(function () {
 
   function deleteField(i) {
     if (i < 0 || i >= fields.length) return;
+    var removed = fields[i];
+    if (removed.fieldType === 'section') {
+      // Children move up to the deleted section's parent (they are not lost).
+      fields.forEach(function (c) {
+        if ((c.parentKey || null) === removed.fieldKey) c.parentKey = removed.parentKey || null;
+      });
+    }
     fields.splice(i, 1);
     selected = -1;
     renderCanvas(); renderProps();
@@ -820,110 +882,103 @@ $(function () {
 
   /* Insertion flat-index for a span-grid area (top / legacy section). */
   function areaInsertIndex($area, y) {
-    var $cards = $area.find('.dfb-card');
-    var idx = null;
+    // Only cards that live directly in THIS area (nested boxes hold their own).
+    var $cards = $area.find('.dfb-card').filter(function () { return $(this).closest('.dfb-area')[0] === $area[0]; });
+    var ins = null;
     $cards.each(function () {
       var r = this.getBoundingClientRect();
-      if (y < r.top + r.height / 2) { idx = Number($(this).data('index')); return false; }
+      if (ins === null && y < r.top + r.height / 2) ins = Number($(this).data('index'));
     });
-    if (idx !== null) return idx;
+    if (ins !== null) return ins;
     if ($cards.length) return Number($cards.last().data('index')) + 1;
-    if ($area.data('area') === 'section') return Number($area.data('secidx')) + 1;
-    return 0; // empty top area
+    // Empty area: insert where this area sits in its parent level.
+    var parentKey = $area.data('parent') || null;
+    if (parentKey) {
+      var secIdx = fields.findIndex(function (f) { return f.fieldKey === parentKey; });
+      return secIdx >= 0 ? secIdx + 1 : fields.length;
+    }
+    var firstSec = fields.findIndex(function (f) { return (f.parentKey || null) === null && f.fieldType === 'section'; });
+    return firstSec >= 0 ? firstSec : fields.length;
   }
 
-  /* Insertion flat-index inside one column of a column-layout section. */
   function columnInsertIndex(secIdx, col, y) {
     var $zone = $('.dfb-col-zone[data-secidx="' + secIdx + '"][data-col="' + col + '"]');
+    var items = [];
     var before = null;
-    $zone.find('.dfb-card').each(function () {
+    $zone.children().each(function () {
+      var $c = $(this), flat = null;
+      if ($c.hasClass('dfb-card')) flat = Number($c.data('index'));
+      else if ($c.hasClass('dfb-nested-box')) flat = Number($c.find('[data-secbox]').first().data('secbox'));
+      if (flat === null || isNaN(flat)) return;
+      items.push(flat);
       var r = this.getBoundingClientRect();
-      if (y < r.top + r.height / 2) { before = Number($(this).data('index')); return false; }
+      if (before === null && y < r.top + r.height / 2) before = flat;
     });
     if (before !== null) return before;
-    var seg = segments().filter(function (sg) { return sg.secIndex === secIdx; })[0];
-    var cols = columnsOf(seg, fields[secIdx].sectionColumns);
-    var mine = cols[col];
-    if (mine.length) return mine[mine.length - 1] + 1;
-    for (var c = col + 1; c < cols.length; c++) if (cols[c].length) return cols[c][0];
-    return seg.fields.length ? seg.fields[seg.fields.length - 1] + 1 : secIdx + 1;
+    if (items.length) return items[items.length - 1] + 1;
+    // Empty column: before the first child of a later column, else after the
+    // section's last child, else right after the section itself.
+    var kids = childrenIdx(fields[secIdx].fieldKey);
+    for (var k = 0; k < kids.length; k++) { if ((fields[kids[k]].columnIndex || 0) > col) return kids[k]; }
+    return kids.length ? kids[kids.length - 1] + 1 : secIdx + 1;
   }
 
-  function placeField(idx, colIdx) {
+  function placeField(idx, colIdx, parentKey) {
+    parentKey = parentKey || null;
     if (dragState.kind === 'new') {
       var nf = newField(dragState.type, dragState.preset);
-      nf.columnIndex = nf.fieldType === 'section' ? null : colIdx;
+      nf.parentKey = parentKey;
+      nf.columnIndex = parentKey ? colIdx : null;
       fields.splice(idx, 0, nf);
       selectField(idx);
-    } else {
-      var from = dragState.index;
-      var item = fields.splice(from, 1)[0];
-      if (from < idx) idx--;
-      item.columnIndex = item.fieldType === 'section' ? null : colIdx;
-      fields.splice(idx, 0, item);
-      selectField(idx);
+      return;
     }
+    var from = dragState.index;
+    if (from === null || from === undefined || from === idx || from === idx - 1) { renderCanvas(); return; }
+    var item = fields.splice(from, 1)[0];
+    if (from < idx) idx--;
+    // A section can never land inside itself or one of its own sections.
+    if (item.fieldType === 'section' && parentKey && descendantKeys(item.fieldKey).indexOf(parentKey) >= 0) {
+      fields.splice(from, 0, item);
+      renderCanvas();
+      CMS.toast('A section cannot be moved inside itself.', 'error');
+      return;
+    }
+    item.parentKey = parentKey;
+    item.columnIndex = parentKey ? colIdx : null;
+    fields.splice(idx, 0, item);
+    selectField(idx);
   }
 
+  /* Moving a section now moves just its marker row — its fields follow
+     automatically because they point at the section by key. Reorder happens
+     among the section's siblings (same parent). */
   function dropSectionBlock(y) {
     var from = dragState.index;
-    var end = from + 1;
-    while (end < fields.length && fields[end].fieldType !== 'section') end++;
-    var target = fields.length;
-    $('#dfbGrid .dfb-section-box').each(function () {
-      var bi = Number($(this).data('secbox'));
-      if (bi === from) return;
+    var item = fields[from];
+    if (!item) { renderCanvas(); return; }
+    var parentKey = item.parentKey || null;
+    var $box = $('.dfb-section-box[data-secbox="' + from + '"]');
+    var $container = $box.parent();
+    var targetObj = null;
+    $container.children('.dfb-section-box, .dfb-nested-box').each(function () {
+      if (targetObj) return;
+      var $c = $(this);
+      var bi = Number($c.is('[data-secbox]') ? $c.data('secbox') : $c.find('[data-secbox]').first().data('secbox'));
+      if (isNaN(bi) || bi === from) return;
       var r = this.getBoundingClientRect();
-      if (y < r.top + r.height / 2) target = Math.min(target, bi);
+      if (y < r.top + r.height / 2) targetObj = fields[bi];
     });
-    var block = fields.splice(from, end - from);
-    if (from < target) target -= block.length;
-    fields.splice.apply(fields, [target, 0].concat(block));
-    selectField(target);
-  }
-
-  /* palette drag + click */
-  $('#dfbPalette').on('dragstart', '.dfb-pal-item', function (e) {
-    var pr = $(this).attr('data-preset');
-    dragState = { kind: 'new', type: $(this).data('ptype'), preset: pr === undefined ? undefined : Number(pr) };
-    e.originalEvent.dataTransfer.effectAllowed = 'copy';
-    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
-  });
-  $('#dfbPalette').on('click', '.dfb-pal-item', function () {
-    var pr = $(this).attr('data-preset');
-    fields.push(newField($(this).data('ptype'), pr === undefined ? undefined : Number(pr)));
-    selectField(fields.length - 1);
-  });
-
-  /* canvas reorder drag (field cards + section headers) */
-  $('#dfbGrid').on('dragstart', '[data-drag]', function (e) {
-    dragState = { kind: 'move', index: Number($(this).data('drag')) };
-    e.originalEvent.dataTransfer.effectAllowed = 'move';
-    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
-  });
-  $('#dfbGrid').on('dragstart', '[data-secdrag]', function (e) {
-    dragState = { kind: 'section', index: Number($(this).data('secdrag')) };
-    e.originalEvent.dataTransfer.effectAllowed = 'move';
-    e.originalEvent.dataTransfer.setData('text/plain', 'dfb');
-  });
-
-  /* Resolve the drop zone for a drag event: first the element directly
-     under the pointer; if that is a dead spot (the empty-state message,
-     gaps between sections, section padding), fall back to the NEAREST
-     zone by pointer distance — a drop anywhere on the canvas must land. */
-  function resolveDropZone(e) {
-    var $z = $(e.target).closest('.dfb-col-zone, .dfb-area');
-    if ($z.length) return $z[0];
-    var x = e.originalEvent.clientX, y = e.originalEvent.clientY;
-    var best = null, bestDist = Infinity;
-    $('#dfbCanvas .dfb-col-zone, #dfbCanvas .dfb-area').each(function () {
-      var r = this.getBoundingClientRect();
-      var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
-      var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
-      var d = dx + dy;
-      if (d < bestDist) { bestDist = d; best = this; }
-    });
-    return best;
+    fields.splice(from, 1);
+    var ins;
+    if (targetObj) {
+      ins = fields.indexOf(targetObj);
+    } else {
+      var sibs = fields.filter(function (f) { return f.fieldType === 'section' && (f.parentKey || null) === parentKey; });
+      ins = sibs.length ? fields.indexOf(sibs[sibs.length - 1]) + 1 : fields.length;
+    }
+    fields.splice(ins, 0, item);
+    selectField(ins);
   }
 
   $('#dfbCanvas').on('dragover', function (e) {
@@ -952,11 +1007,14 @@ $(function () {
       var zone = resolveDropZone(e);
       if (zone) {
         var $zone = $(zone);
-        if ($zone.hasClass('dfb-col-zone')) placeField(columnInsertIndex(Number($zone.data('secidx')), Number($zone.data('col')), y), Number($zone.data('col')));
-        else placeField(areaInsertIndex($zone, y), null);
+        if ($zone.hasClass('dfb-col-zone')) {
+          var sIdx = Number($zone.data('secidx'));
+          placeField(columnInsertIndex(sIdx, Number($zone.data('col')), y), Number($zone.data('col')), fields[sIdx].fieldKey);
+        }
+        else placeField(areaInsertIndex($zone, y), null, $zone.data('parent') || null);
       } else {
         // No zones on the canvas at all — append at the end.
-        placeField(fields.length, null);
+        placeField(fields.length, null, null);
       }
     }
     clearHot();

@@ -45,7 +45,7 @@ BEGIN
             [LookupFormId], [LookupFieldKey], [SectionColumns], [ColumnIndex],
             [CustomJs], [CssClass], [CustomId], [CustomAttributesJson],
             [ValidationRulesJson], [InputMask], [ShowInfoIcon], [InfoText],
-            [ColumnSpan], [SortOrder]
+            [ParentKey], [ColumnSpan], [SortOrder]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
     ORDER BY [SortOrder], [FieldId];
@@ -96,7 +96,7 @@ BEGIN
                  [RegexPattern], [ValidationMessage], [LookupFormId], [LookupFieldKey],
                  [SectionColumns], [ColumnIndex], [CustomJs], [CssClass], [CustomId],
                  [CustomAttributesJson], [ValidationRulesJson], [InputMask],
-                 [ShowInfoIcon], [InfoText], [ColumnSpan], [SortOrder])
+                 [ShowInfoIcon], [InfoText], [ParentKey], [ColumnSpan], [SortOrder])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
@@ -105,7 +105,7 @@ BEGIN
                     j.[LookupFormId], j.[LookupFieldKey], j.[SectionColumns], j.[ColumnIndex],
                     j.[CustomJs], j.[CssClass], j.[CustomId], j.[CustomAttributesJson],
                     j.[ValidationRulesJson], j.[InputMask], ISNULL(j.[ShowInfoIcon], 0),
-                    j.[InfoText],
+                    j.[InfoText], j.[ParentKey],
                     ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
             FROM OPENJSON(@FieldsJson)
             WITH (
@@ -138,6 +138,7 @@ BEGIN
                 [InputMask]   NVARCHAR(100) '$.inputMask',
                 [ShowInfoIcon] BIT          '$.showInfoIcon',
                 [InfoText]    NVARCHAR(500) '$.infoText',
+                [ParentKey]   VARCHAR(100)  '$.parentKey',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
                 [SortOrder]   INT           '$.sortOrder'
             ) AS j

@@ -166,6 +166,32 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
             }
         }
 
+        // Nesting: a field's parent must be a section of the same form, with
+        // no cycles and at most 3 levels of nesting.
+        var byKey = request.Fields
+            .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        foreach (var field in request.Fields)
+        {
+            if (string.IsNullOrWhiteSpace(field.ParentKey)) continue;
+            if (string.Equals(field.ParentKey, field.FieldKey, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' cannot be its own parent.");
+            if (!byKey.TryGetValue(field.ParentKey, out var parent) || parent.FieldType != "section")
+                throw new InvalidDomainValueException($"Field '{field.FieldKey}' has parent '{field.ParentKey}', which is not a section of this form.");
+            var depth = 0;
+            var seenChain = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { field.FieldKey };
+            var cursor = parent;
+            while (cursor is not null)
+            {
+                if (!seenChain.Add(cursor.FieldKey))
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' creates a section nesting cycle.");
+                depth++;
+                if (depth > 3)
+                    throw new InvalidDomainValueException($"Field '{field.FieldKey}' is nested too deeply (max 3 levels).");
+                cursor = cursor.ParentKey is not null && byKey.TryGetValue(cursor.ParentKey, out var next) ? next : null;
+            }
+        }
+
         // Every form must carry exactly one submit button — it is what the
         // (future) submission pipeline will post through.
         var submitCount = request.Fields.Count(f =>
