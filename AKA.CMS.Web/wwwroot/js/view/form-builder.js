@@ -128,7 +128,7 @@ $(function () {
 
   function layoutSegHtml(sf, secIdx) {
     var cur = sf.sectionColumns || '';
-    return [{ v: '', l: 'Grid' }, { v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }].map(function (o) {
+    return [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }].map(function (o) {
       return '<button type="button" data-seclayout="' + o.v + '" data-secidx="' + secIdx + '"' +
         (String(cur) === String(o.v) ? ' class="sel"' : '') + '>' + o.l + '</button>';
     }).join('');
@@ -518,7 +518,7 @@ $(function () {
     html += '<div class="field"><label>Help Text</label><input class="input" id="ppHelp" value="' + esc(f.helpText || '') + '"></div>';
     if (isSection) {
       html += '<div class="field"><label>Columns</label><div class="seg">' + layoutSegHtml(f, selected) + '</div>' +
-        '<span class="hint">Grid = fields flow by width (old layout). 1–4 = columns: drag fields into each column, Elementor-style.</span></div>';
+        '<span class="hint">How many columns this section has — drag fields into each column, Elementor-style.</span></div>';
     }
     if (isButton) {
       var ba = f.buttonAction || 'button';
