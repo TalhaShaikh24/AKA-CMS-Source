@@ -848,6 +848,12 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 .dfb-section-head .hint{display:block;margin-top:2px}
 .dfb-section-banner{display:flex;align-items:center;gap:10px;background:var(--blue-tint);border:1px dashed var(--navy);border-radius:10px;padding:10px 14px;color:var(--navy-dark);font-size:14px}
 .dfb-hidden-chip{display:flex;align-items:center;background:repeating-linear-gradient(45deg,#f6f8fc,#f6f8fc 10px,#eef2f9 10px,#eef2f9 20px);border:1px dashed var(--border);border-radius:10px;padding:8px 12px;color:var(--muted);font-size:12.5px;font-family:ui-monospace,Consolas,monospace}
+.dfb-link-cell{padding:8px 0}
+.dfb-link{color:var(--navy);font-weight:600;text-decoration:underline}
+.dfb-link:hover{color:var(--navy-dark)}
+.dfb-link-text{color:var(--text);font-weight:600}
+.dfb-nav-label .req{color:var(--red);font-weight:700}
+.input::placeholder,textarea.input::placeholder{color:#9aa5b5;opacity:1}
 .dfb-btn-cell{display:flex;align-items:flex-end;gap:10px}
 .dfb-grid-wrap{overflow-x:auto}
 .dfb-grid-table{width:100%;border-collapse:collapse;font-size:13.5px}

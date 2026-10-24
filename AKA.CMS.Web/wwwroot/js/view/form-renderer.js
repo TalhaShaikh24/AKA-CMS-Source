@@ -10,7 +10,7 @@ window.CMSFormRenderer = (function () {
   }); }
 
   var OPTION_TYPES = { select: 1, multiselect: 1, radio: 1, checkboxGroup: 1 };
-  var STATIC_TYPES = { heading: 1, paragraph: 1, section: 1, button: 1 };
+  var STATIC_TYPES = { heading: 1, paragraph: 1, section: 1, button: 1, link: 1 };
 
   function labelHtml(f) {
     return '<label' + (f.customId ? ' for="' + esc(f.customId) + '"' : '') + '>' + esc(f.label) +
@@ -54,6 +54,32 @@ window.CMSFormRenderer = (function () {
       }
     }
     return out;
+  }
+
+  /* Mask pattern as a visible placeholder: slots become underscores, so
+     99999-9999999-9 shows as _____-_______-_ and the user can see the
+     expected format before typing anything. */
+  function maskPlaceholder(mask) {
+    return String(mask || '').replace(/[9a*]/g, '_');
+  }
+
+  /* Explicit placeholder wins; otherwise a masked field shows its mask
+     pattern as the placeholder instead of an empty box. */
+  function effectivePlaceholder(f) {
+    if (f.placeholder) return f.placeholder;
+    if (f.inputMask) return maskPlaceholder(f.inputMask);
+    return '';
+  }
+
+  /* A link URL is only ever rendered as an href when it uses a safe
+     scheme (or is a same-site path / anchor). Anything else — notably
+     javascript: — renders as plain text, never as a clickable link. */
+  function linkHref(url) {
+    var u = String(url || '').trim();
+    if (!u) return '';
+    if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(u)) return u;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return ''; // any other scheme: unsafe
+    return 'https://' + u;
   }
 
   function optionsHtml(f, selected) {
@@ -100,6 +126,15 @@ window.CMSFormRenderer = (function () {
         return '<div class="dfb-cell dfb-static' + wrapCls + '"' + span + fkey + cid + cattrs + '><h3 class="dfb-heading">' + esc(f.label) + infoHtml(f) + '</h3>' + helpHtml(f) + '</div>';
       case 'paragraph':
         return '<div class="dfb-cell dfb-static' + wrapCls + '"' + span + fkey + cid + cattrs + '><p class="dfb-paragraph">' + esc(f.label) + '</p></div>';
+      case 'link': {
+        // Display-only hyperlink: Label = link text, Default Value = URL.
+        var href = linkHref(f.defaultValue);
+        var linkInner = href
+          ? '<a class="dfb-link" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + esc(f.label) + '</a>'
+          : '<span class="dfb-link-text">' + esc(f.label) + '</span>';
+        return '<div class="dfb-cell dfb-static dfb-link-cell' + wrapCls + '"' + span + fkey + cid + cattrs + '>' +
+          linkInner + infoHtml(f) + helpHtml(f) + '</div>';
+      }
       case 'section':
         // In a rendered form, sections are structural (see render()); this
         // banner is what the builder canvas shows for a section field.
@@ -138,7 +173,7 @@ window.CMSFormRenderer = (function () {
         break;
       case 'textarea':
         inner = labelHtml(f) +
-          '<textarea class="input" name="' + key + '" rows="3" placeholder="' + esc(f.placeholder || '') + '"' + cid + cattrs + maskAttr + dis + '>' +
+          '<textarea class="input" name="' + key + '" rows="3" placeholder="' + esc(effectivePlaceholder(f)) + '"' + cid + cattrs + maskAttr + dis + '>' +
           esc(f.defaultValue || '') + '</textarea>' + helpHtml(f);
         break;
       case 'select':
@@ -187,12 +222,15 @@ window.CMSFormRenderer = (function () {
         if (f.maxLength != null) attrs += ' maxlength="' + f.maxLength + '"';
         inner = labelHtml(f) +
           '<input class="input" type="' + (typeMap[f.fieldType] || 'text') + '" name="' + key + '"' +
-          ' placeholder="' + esc(f.placeholder || '') + '" value="' + esc(f.defaultValue || '') + '"' +
+          ' placeholder="' + esc(effectivePlaceholder(f)) + '" value="' + esc(f.defaultValue || '') + '"' +
           attrs + cid + cattrs + maskAttr + dis + '>' + helpHtml(f);
         break;
       }
     }
-    return '<div class="field dfb-cell' + wrapCls + '"' + span + fkey + '>' + inner + '</div>';
+    // Every input field carries its own .field-error slot, exactly like the
+    // rest of the site's forms: .field.invalid paints the border red (see
+    // style.css) and reveals this message inline under the control.
+    return '<div class="field dfb-cell' + wrapCls + '"' + span + fkey + '>' + inner + '<span class="field-error"></span></div>';
   }
 
   /* ---------------- structure: nested sections ----------------
@@ -322,6 +360,7 @@ window.CMSFormRenderer = (function () {
 
     if (!preview && window.CMS && CMS.initSelect2) CMS.initSelect2($container[0]);
     bindGridButtons($container, form, preview);
+    bindValidationClear($container);
     bindWizard($container, form, wgroups);
     loadLookups($container);
     bindAdvanced($container, form, preview);
@@ -376,6 +415,7 @@ window.CMSFormRenderer = (function () {
           catch (e) { if (window.console) console.warn('Custom function error (' + f.fieldKey + '):', e); }
         };
         if (f.fieldType === 'button') $wrap.find('button').on('click.dfbcustom', run);
+        else if (f.fieldType === 'link') $wrap.find('a').on('click.dfbcustom', run);
         else $wrap.on('change.dfbcustom input.dfbcustom', 'input, select, textarea', run);
       }
     });
@@ -450,10 +490,13 @@ window.CMSFormRenderer = (function () {
       var i = $container.data('dfbStep') || 0;
       var errors = validateFields($container, groups[i].fields);
       if (errors.length) {
-        if (window.CMS && CMS.toast) CMS.toast(errors.map(function (e) { return e.message; }).slice(0, 3).join(' '), 'error');
+        clearErrors($container);
+        showErrors($container, errors);
+        if (window.CMS && CMS.toast) CMS.toast('Please fix the highlighted fields.', 'error');
         showField($container, errors[0].fieldKey);
         return;
       }
+      clearErrors($container);
       wizardGoTo($container, groups, Math.min(groups.length - 1, i + 1));
     });
   }
@@ -521,6 +564,33 @@ window.CMSFormRenderer = (function () {
           return;
         }
       }
+      // Built-in email format check: previously an email field accepted
+      // any string, because only custom regex rules were checked. The
+      // pattern matches the site's own validator (validator.js).
+      if (f.fieldType === 'email' && typeof v === 'string' && v !== '' &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) {
+        errors.push({ fieldKey: f.fieldKey, label: f.label,
+          message: 'Please enter a valid email address.' });
+      }
+      if (typeof v === 'string' && v !== '') {
+        if (f.minLength != null && v.length < f.minLength) {
+          errors.push({ fieldKey: f.fieldKey, label: f.label,
+            message: f.label + ' must be at least ' + f.minLength + ' characters.' });
+        } else if (f.maxLength != null && v.length > f.maxLength) {
+          errors.push({ fieldKey: f.fieldKey, label: f.label,
+            message: f.label + ' must be no more than ' + f.maxLength + ' characters.' });
+        }
+      }
+      if (f.fieldType === 'number' && typeof v === 'string' && v !== '' && !isNaN(parseFloat(v))) {
+        var num = parseFloat(v);
+        if (f.minValue != null && num < f.minValue) {
+          errors.push({ fieldKey: f.fieldKey, label: f.label,
+            message: f.label + ' must be at least ' + f.minValue + '.' });
+        } else if (f.maxValue != null && num > f.maxValue) {
+          errors.push({ fieldKey: f.fieldKey, label: f.label,
+            message: f.label + ' must be no more than ' + f.maxValue + '.' });
+        }
+      }
       if (f.regexPattern && typeof v === 'string' && v !== '') {
         var ok = true;
         try { ok = new RegExp(f.regexPattern).test(v); } catch (e) { ok = true; }
@@ -549,6 +619,34 @@ window.CMSFormRenderer = (function () {
     return validateFields($root, (form && form.fields) || []);
   }
 
+  /* Inline validation display, matching the rest of the site: the failing
+     field's .field wrapper gets .invalid (red border via style.css) and
+     its .field-error slot shows the message under the control. */
+  function showErrors($root, errors) {
+    (errors || []).forEach(function (e) {
+      var $wrap = $root.find('[data-fkey="' + e.fieldKey + '"]').first();
+      if (!$wrap.length) return;
+      $wrap.addClass('invalid');
+      $wrap.find('.field-error').first().text(e.message);
+    });
+  }
+
+  function clearErrors($root) {
+    $root.find('.field.invalid').removeClass('invalid');
+    $root.find('.field-error').text('');
+  }
+
+  /* Live clear, like the site's other forms: typing in a flagged field
+     drops its error state immediately, without waiting for re-submit. */
+  function bindValidationClear($container) {
+    $container.off('input.dfbvalid change.dfbvalid', 'input, select, textarea')
+      .on('input.dfbvalid change.dfbvalid', 'input, select, textarea', function () {
+        var $field = $(this).closest('.field');
+        $field.removeClass('invalid');
+        $field.find('.field-error').first().text('');
+      });
+  }
+
   /* Bring a field into view: activates its wizard step (if any) and focuses it. */
   function showField($root, fieldKey) {
     var $el = $root.find('[name="' + fieldKey + '"], [data-grid-field="' + fieldKey + '"]').first();
@@ -569,6 +667,7 @@ window.CMSFormRenderer = (function () {
   return {
     render: render, collect: collect, fieldHtml: fieldHtml,
     validate: validate, validateFields: validateFields, showField: showField,
+    showErrors: showErrors, clearErrors: clearErrors,
     OPTION_TYPES: OPTION_TYPES
   };
 })();

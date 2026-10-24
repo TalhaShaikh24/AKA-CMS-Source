@@ -12,6 +12,7 @@ $(function () {
     { type: 'section', label: 'Section - 4 Columns', icon: '\u25a6', preset: 4 },
     { type: 'heading', label: 'Heading', icon: 'H' },
     { type: 'paragraph', label: 'Paragraph Text', icon: '\u2261' },
+    { type: 'link', label: 'Hyperlink', icon: '\ud83d\udd17' },
     { group: 'Inputs' },
     { type: 'text', label: 'Text Input', icon: 'T' },
     { type: 'email', label: 'Email', icon: '@' },
@@ -83,6 +84,7 @@ $(function () {
       f.sectionColumns = presetCols === undefined ? 2 : (presetCols === 0 ? null : presetCols);
     }
     if (type === 'hidden') { f.label = 'Hidden Field'; f.columnSpan = 12; }
+    if (type === 'link') { f.label = 'Hyperlink'; f.columnSpan = 12; }
     if (type === 'button') { f.label = 'Submit'; f.buttonAction = 'submit'; f.columnSpan = 12; }
     if (type === 'grid') {
       f.label = 'Grid'; f.columnSpan = 12;
@@ -314,7 +316,8 @@ $(function () {
     var f = fields[i];
     return '<div class="dfb-nav-row' + (i === selected ? ' sel' : '') + '" data-navidx="' + i + '" draggable="true" style="padding-left:' + (10 + depth * 16) + 'px">' +
       '<span class="dfb-nav-ico">' + esc(navIcon(f.fieldType)) + '</span>' +
-      '<span class="dfb-nav-label">' + esc(f.label || TYPE_LABELS[f.fieldType] || f.fieldType) + '</span>' +
+      '<span class="dfb-nav-label">' + esc(f.label || TYPE_LABELS[f.fieldType] || f.fieldType) +
+        (f.isRequired ? ' <span class="req">*</span>' : '') + '</span>' +
       '<span class="dfb-nav-meta">' + esc(TYPE_LABELS[f.fieldType] || f.fieldType) + '</span></div>';
   }
 
@@ -582,14 +585,15 @@ $(function () {
     html += '<div class="field"><label>Custom ID</label><input class="input" id="ppCustomId" value="' + esc(f.customId || '') + '" placeholder="e.g. patient-cnic"></div>';
     if (['text', 'email', 'password', 'textarea'].indexOf(t) >= 0) {
       html += '<div class="field"><label>Input Mask</label><input class="input" id="ppInputMask" value="' + esc(f.inputMask || '') + '" placeholder="e.g. 99999-9999999-9">' +
-        '<span class="hint">9 = digit, a = letter, * = any character. CNIC: 99999-9999999-9 · Phone: 9999-9999999</span></div>';
+        '<span class="hint">9 = digit, a = letter, * = any character. CNIC: 99999-9999999-9 · Phone: 9999-9999999. ' +
+        'If Placeholder is empty, the mask pattern shows as the placeholder (e.g. _____-_______-_).</span></div>';
     }
     html += attrsEditorHtml(f);
     html += '<div class="field"><label class="check-row"><input type="checkbox" id="ppShowInfo"' + (f.showInfoIcon ? ' checked' : '') + '><span class="check-label">Show info icon</span></label>' +
       '<input class="input" id="ppInfoText" value="' + esc(f.infoText || '') + '" placeholder="Info message (tooltip)" style="margin-top:6px">' +
       '<span class="hint">An (i) icon appears next to the label; hovering or focusing it shows this message as a tooltip.</span></div>';
     html += '<div class="field"><label>Custom Function (JavaScript)</label><textarea class="input dfb-code" id="ppCustomJs" rows="4" placeholder="Runs when this field changes">' + esc(f.customJs || '') + '</textarea>' +
-      '<span class="hint">Available: ctx.value, ctx.values, ctx.el, ctx.setValue(key, val), ctx.showField(key), ctx.hideField(key). Buttons run on click.</span></div>';
+      '<span class="hint">Available: ctx.value, ctx.values, ctx.el, ctx.setValue(key, val), ctx.showField(key), ctx.hideField(key). Buttons and links run on click.</span></div>';
     return html;
   }
 
@@ -604,8 +608,9 @@ $(function () {
     var isButton = t === 'button';
     var isHidden = t === 'hidden';
     var isGrid = t === 'grid';
+    var isLink = t === 'link';
     var html = '';
-    html += '<div class="field"><label>' + (isSection ? 'Section Title' : isButton ? 'Button Text' : 'Label') + '</label><input class="input" id="ppLabel" value="' + esc(f.label) + '"></div>';
+    html += '<div class="field"><label>' + (isSection ? 'Section Title' : isButton ? 'Button Text' : isLink ? 'Link Text' : 'Label') + '</label><input class="input" id="ppLabel" value="' + esc(f.label) + '"></div>';
     html += '<div class="field"><label>Field Key</label><input class="input" id="ppKey" value="' + esc(f.fieldKey) + '"><span class="hint">Used as the data name. Lowercase, hyphens.</span></div>';
     html += '<div class="field"><label>Type</label><div><span class="pill">' + esc(TYPE_LABELS[t] || t) + '</span></div></div>';
     if (!isSection && !isHidden) {
@@ -613,12 +618,14 @@ $(function () {
         WIDTHS.map(function (w) { return '<option value="' + w.v + '"' + (f.columnSpan === w.v ? ' selected' : '') + '>' + w.l + '</option>'; }).join('') +
         '</select></div>';
     }
-    if (!isStatic && !isSection && !isButton && !isHidden) {
+    if (!isStatic && !isSection && !isButton && !isHidden && !isLink) {
       html += '<div class="field"><label class="check-row"><input type="checkbox" id="ppRequired"' + (f.isRequired ? ' checked' : '') + '><span class="check-label">Required</span></label></div>';
       html += '<div class="field"><label>Placeholder</label><input class="input" id="ppPlaceholder" value="' + esc(f.placeholder || '') + '"></div>';
     }
     if (!isStatic && !isSection && !isButton && !isGrid) {
-      html += '<div class="field"><label>Default Value</label><input class="input" id="ppDefault" value="' + esc(f.defaultValue || '') + '"></div>';
+      // For a hyperlink the "default value" IS the URL it points to.
+      html += '<div class="field"><label>' + (isLink ? 'Link URL' : 'Default Value') + '</label><input class="input" id="ppDefault" value="' + esc(f.defaultValue || '') + '"' +
+        (isLink ? ' placeholder="https://example.com"' : '') + '></div>';
     }
     html += '<div class="field"><label>Help Text</label><input class="input" id="ppHelp" value="' + esc(f.helpText || '') + '"></div>';
     if (isSection) {

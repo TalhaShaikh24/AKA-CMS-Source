@@ -141,7 +141,7 @@ public static class DynamicFormFieldTypes
         "text", "email", "number", "password", "textarea",
         "select", "multiselect", "radio", "checkboxGroup", "checkbox",
         "date", "time", "datetime", "file", "heading", "paragraph",
-        "section", "button", "hidden", "grid", "lookup"
+        "section", "button", "hidden", "grid", "lookup", "link"
     };
 
     public static bool HasOptions(string fieldType) =>
@@ -153,7 +153,7 @@ public static class DynamicFormFieldTypes
 
     /// <summary>Display-only fields: never collected, never required-validated.</summary>
     public static bool IsStatic(string fieldType) =>
-        fieldType is "heading" or "paragraph" or "section" or "button";
+        fieldType is "heading" or "paragraph" or "section" or "button" or "link";
 
     public static readonly string[] GridColumnTypes = { "text", "number", "date", "select" };
 }

@@ -28,10 +28,14 @@ $(function () {
   $('#dfRenderForm').on('submit', function (e) {
     e.preventDefault();
     if (!formDef) return;
-    // Validate against the definition: required fields + custom regex.
+    // Validate against the definition (required, email format, lengths,
+    // ranges, custom regex). Failures show inline, like every other form
+    // on the site: red border + message under the field.
     var errors = CMSFormRenderer.validate($('#dfRenderForm'), formDef);
+    CMSFormRenderer.clearErrors($('#dfRenderBody'));
     if (errors.length) {
-      CMS.toast(errors.map(function (x) { return x.message; }).slice(0, 3).join(' '), 'error');
+      CMSFormRenderer.showErrors($('#dfRenderBody'), errors);
+      CMS.toast('Please fix the highlighted fields.', 'error');
       CMSFormRenderer.showField($('#dfRenderBody'), errors[0].fieldKey);
       return;
     }
@@ -42,6 +46,9 @@ $(function () {
   });
 
   $('#dfRenderForm').on('reset', function () {
-    setTimeout(function () { $('#dfResult').prop('hidden', true); }, 0);
+    setTimeout(function () {
+      $('#dfResult').prop('hidden', true);
+      CMSFormRenderer.clearErrors($('#dfRenderBody'));
+    }, 0);
   });
 });
