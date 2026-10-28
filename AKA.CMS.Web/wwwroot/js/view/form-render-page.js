@@ -58,13 +58,10 @@ $(function () {
       url: '/api/dynamic-forms/' + formId + '/submissions', method: 'POST',
       data: fd,
       fallbackMsg: 'Could not submit form.',
-      success: function (entry) {
-        $('#dfEntryId').text(entry.submissionId);
-        $('#dfViewEntries').attr('href', '/DynamicForms/Entries/' + formId);
-        $('#dfResult').prop('hidden', false);
-        CMS.toast('Entry saved.', 'success');
-        $('#dfRenderForm')[0].reset();
-        CMSFormRenderer.clearErrors($('#dfRenderBody'));
+      // Entry saved: take the user back to the Dynamic Forms list
+      // instead of staying on the fill page with a success block.
+      success: function () {
+        window.location.href = '/DynamicForms';
       },
       error: function (xhr) {
         // Server-side validation comes back per field (the same shape
@@ -90,7 +87,6 @@ $(function () {
 
   $('#dfRenderForm').on('reset', function () {
     setTimeout(function () {
-      $('#dfResult').prop('hidden', true);
       CMSFormRenderer.clearErrors($('#dfRenderBody'));
     }, 0);
   });
