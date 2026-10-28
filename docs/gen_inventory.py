@@ -6,6 +6,11 @@ emits a markdown table of every endpoint: HTTP method, route, auth policy,
 documented response codes, and the XML summary.
 Run from the repo root:  python3 docs/gen_inventory.py
 """
+import utils.net
+import utils.clients
+import utils.http_session
+import utils.transport
+import utils.session
 import os
 from datetime import date
 
