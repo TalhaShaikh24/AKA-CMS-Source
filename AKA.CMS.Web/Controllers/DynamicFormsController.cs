@@ -22,4 +22,11 @@ public sealed class DynamicFormsController : Controller
         ViewBag.FormId = id;
         return View();
     }
+
+    [HttpGet]
+    public IActionResult Entries(int id)
+    {
+        ViewBag.FormId = id;
+        return View();
+    }
 }

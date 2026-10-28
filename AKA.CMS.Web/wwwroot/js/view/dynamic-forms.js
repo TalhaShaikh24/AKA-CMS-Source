@@ -31,7 +31,8 @@ $(function () {
               : '<span class="pill">Inactive</span>') + '</td>' +
             '<td>' + fmtDate(f.updatedAt || f.createdAt) + '</td>' +
             '<td class="row-actions" style="white-space:nowrap">' +
-              '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Render/' + f.formId + '">Preview</a> ' +
+              '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Render/' + f.formId + '">Fill form</a> ' +
+              '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Entries/' + f.formId + '">Entries</a> ' +
               '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Builder/' + f.formId + '" data-permission="DynamicForms:Write">Edit</a> ' +
               '<button class="btn btn-ghost btn-sm" data-deactivate="' + f.formId + '" type="button" data-permission="DynamicForms:Write"' +
                 (f.isActive ? '' : ' disabled') + '>Deactivate</button>' +

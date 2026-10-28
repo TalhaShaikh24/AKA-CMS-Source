@@ -24,6 +24,11 @@ public static class StoredProcedures
     public const string DynamicFormGetById = "sp_CMS_DynamicForm_GetById";
     public const string DynamicFormSave = "sp_CMS_DynamicForm_Save";
     public const string DynamicFormDelete = "sp_CMS_DynamicForm_Delete";
+    public const string DynamicFormSubmissionSubmit = "sp_CMS_DynamicFormSubmission_Submit";
+    public const string DynamicFormSubmissionGetByForm = "sp_CMS_DynamicFormSubmission_GetByForm";
+    public const string DynamicFormSubmissionGetById = "sp_CMS_DynamicFormSubmission_GetById";
+    public const string DynamicFormSubmissionDelete = "sp_CMS_DynamicFormSubmission_Delete";
+    public const string DynamicFormSubmissionGetFieldValues = "sp_CMS_DynamicFormSubmission_GetFieldValues";
     public const string UserUpdate = "sp_CMS_User_Update";
     public const string UserAssignRole = "sp_CMS_User_AssignRole";
     public const string UserRemoveRole = "sp_CMS_User_RemoveRole";

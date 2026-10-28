@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Form Preview";
+    ViewData["Title"] = "Fill Form";
     ViewData["Breadcrumb"] = "System";
     ViewData["ActivePage"] = "dynamicforms";
     ViewData["RequiredPermission"] = "DynamicForms:Read";
@@ -29,8 +29,10 @@
       </div>
     </form>
     <div id="dfResult" hidden style="margin-top:18px">
-      <h3 style="margin-bottom:8px">Submitted values</h3>
-      <pre id="dfResultJson" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto;font-size:13px"></pre>
+      <div style="background:#e6f4ea;border:1px solid #b7e0c0;border-radius:10px;padding:14px 16px">
+        <strong>Entry saved.</strong>
+        <span class="hint">Entry #<span id="dfEntryId"></span> — <a href="#" id="dfViewEntries">View entries</a></span>
+      </div>
     </div>
   </div>
 </div>

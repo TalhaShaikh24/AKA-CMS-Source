@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace AKA.CMS.Application.DTOs;
 
 /// <summary>One field option for select / multiselect / radio / checkbox-group fields.</summary>
@@ -132,6 +134,46 @@ public sealed class SaveDynamicFormRequest
     public bool IsActive { get; set; } = true;
     public bool IsMultiStep { get; set; }
     public List<DynamicFormFieldDto> Fields { get; set; } = new();
+}
+
+/// <summary>One submitted entry's values: field key -> submitted value.
+/// JsonElement keeps every type exact (string, boolean, number, array of
+/// selections, array of grid rows) instead of flattening to text.</summary>
+public sealed class SubmitDynamicFormRequest
+{
+    public Dictionary<string, JsonElement> Values { get; set; } = new();
+}
+
+/// <summary>One uploaded file that arrived with a submission. The content
+/// stream is copied to disk by the service during the same call.</summary>
+public sealed class SubmissionFileUpload
+{
+    public string FieldKey { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public Stream Content { get; set; } = Stream.Null;
+}
+
+/// <summary>One row of a form's Entries list.</summary>
+public sealed class DynamicFormSubmissionListItemDto
+{
+    public int SubmissionId { get; set; }
+    public int FormId { get; set; }
+    public int? SubmittedBy { get; set; }
+    public string? SubmittedByName { get; set; }
+    public DateTime SubmittedAt { get; set; }
+    public int ValueCount { get; set; }
+}
+
+/// <summary>One entry in full: header plus every answered field's value.</summary>
+public sealed class DynamicFormSubmissionDetailDto
+{
+    public int SubmissionId { get; set; }
+    public int FormId { get; set; }
+    public int? SubmittedBy { get; set; }
+    public string? SubmittedByName { get; set; }
+    public DateTime SubmittedAt { get; set; }
+    public Dictionary<string, JsonElement> Values { get; set; } = new();
 }
 
 public static class DynamicFormFieldTypes

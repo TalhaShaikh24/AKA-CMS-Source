@@ -1,6 +1,7 @@
 /* Dynamic Form render page — loads a form definition and renders it with
-   the app theme via CMSFormRenderer. Submit validates required fields and
-   shows the collected values (preview of what a wired-up consumer receives). */
+   the app theme via CMSFormRenderer. Submit validates client-side, then
+   really saves the entry (POST /api/dynamic-forms/{id}/submissions):
+   values go as one JSON part, file fields as real file parts. */
 $(function () {
   if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
@@ -40,9 +41,51 @@ $(function () {
       return;
     }
     var data = CMSFormRenderer.collect($('#dfRenderForm'));
-    $('#dfResultJson').text(JSON.stringify(data, null, 2));
-    $('#dfResult').prop('hidden', false);
-    CMS.toast('Form submitted (preview).', 'success');
+    // File inputs travel as real files, not filenames: the filename the
+    // collector produced for a file field is dropped, and the chosen
+    // file (if any) is appended as "file_{fieldKey}".
+    var fd = new FormData();
+    (formDef.fields || []).forEach(function (f) {
+      if (f.fieldType !== 'file') return;
+      var input = $('#dfRenderForm').find('[name="' + f.fieldKey + '"]')[0];
+      if (input && input.files && input.files.length) fd.append('file_' + f.fieldKey, input.files[0]);
+      delete data[f.fieldKey];
+    });
+    fd.append('values', JSON.stringify(data));
+    var $btn = $('#dfRenderForm').find('button[type="submit"]');
+    $btn.prop('disabled', true);
+    cmsAjax({
+      url: '/api/dynamic-forms/' + formId + '/submissions', method: 'POST',
+      data: fd,
+      fallbackMsg: 'Could not submit form.',
+      success: function (entry) {
+        $('#dfEntryId').text(entry.submissionId);
+        $('#dfViewEntries').attr('href', '/DynamicForms/Entries/' + formId);
+        $('#dfResult').prop('hidden', false);
+        CMS.toast('Entry saved.', 'success');
+        $('#dfRenderForm')[0].reset();
+        CMSFormRenderer.clearErrors($('#dfRenderBody'));
+      },
+      error: function (xhr) {
+        // Server-side validation comes back per field (the same shape
+        // the middleware builds for FluentValidation): show it inline
+        // instead of a generic toast.
+        var body = xhr.responseJSON || null;
+        var errs = body && body.errors;
+        if (errs) {
+          var mapped = Object.keys(errs).map(function (k) {
+            var msgs = errs[k];
+            return { fieldKey: k, message: $.isArray(msgs) ? msgs[0] : msgs };
+          });
+          CMSFormRenderer.clearErrors($('#dfRenderBody'));
+          CMSFormRenderer.showErrors($('#dfRenderBody'), mapped);
+          CMS.toast('Please fix the highlighted fields.', 'error');
+          if (mapped.length) CMSFormRenderer.showField($('#dfRenderBody'), mapped[0].fieldKey);
+          return true;
+        }
+        return false;
+      }
+    }).always(function () { $btn.prop('disabled', false); });
   });
 
   $('#dfRenderForm').on('reset', function () {

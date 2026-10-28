@@ -1,10 +1,16 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AKA.CMS.Application.DTOs;
 using AKA.CMS.Application.Interfaces;
+using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.Extensions.Options;
 
 namespace AKA.CMS.Application.Services;
 
-public sealed partial class DynamicFormService(IDynamicFormRepository repository) : IDynamicFormService
+public sealed partial class DynamicFormService(
+    IDynamicFormRepository repository,
+    IOptions<FileStorageOptions> storageOptions) : IDynamicFormService
 {
     public Task<IReadOnlyList<DynamicFormListItemDto>> GetAllAsync() => repository.GetAllAsync();
 
@@ -31,18 +37,364 @@ public sealed partial class DynamicFormService(IDynamicFormRepository repository
         return await GetByIdAsync(id);
     }
 
-    /// <summary>Options for a lookup field: the configured options of the
-    /// referenced field in the source form. Non-option source fields (and
-    /// forms without submissions yet) yield an empty list.</summary>
+    /// <summary>Options for a lookup field. Once the source form has
+    /// submissions, the distinct values actually submitted for that field
+    /// win — a lookup then offers real entered values, not just the
+    /// configured list. With no submissions yet, the source field's
+    /// configured options are returned (empty for non-option fields).</summary>
     public async Task<IReadOnlyList<DynamicFormFieldOptionDto>> GetLookupOptionsAsync(int formId, string fieldKey)
     {
         var form = await GetByIdAsync(formId);
         var field = form.Fields.FirstOrDefault(f =>
             string.Equals(f.FieldKey, fieldKey, StringComparison.OrdinalIgnoreCase))
             ?? throw new NotFoundException($"Field '{fieldKey}' not found in form {formId}.");
+
+        var submitted = await repository.GetFieldValuesAsync(formId, field.FieldKey);
+        var distinct = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in submitted)
+        {
+            foreach (var value in FlattenStoredValue(raw))
+            {
+                if (!string.IsNullOrWhiteSpace(value) && seen.Add(value.Trim()))
+                    distinct.Add(value.Trim());
+            }
+        }
+        if (distinct.Count > 0)
+        {
+            distinct.Sort(StringComparer.OrdinalIgnoreCase);
+            return distinct.Select(v => new DynamicFormFieldOptionDto { Value = v, Label = v }).ToList();
+        }
+
         return DynamicFormFieldTypes.HasOptions(field.FieldType)
             ? field.Options
             : new List<DynamicFormFieldOptionDto>();
+    }
+
+    // One stored value (JSON text) flattened to plain display strings:
+    // a string stays itself, a number/boolean becomes its text, an array
+    // contributes each scalar element, anything else is skipped.
+    private static List<string> FlattenStoredValue(string raw)
+    {
+        var values = new List<string>();
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in root.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.String) values.Add(el.GetString()!);
+                    else if (el.ValueKind is JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+                        values.Add(el.GetRawText());
+                }
+            }
+            else if (root.ValueKind == JsonValueKind.String)
+            {
+                values.Add(root.GetString()!);
+            }
+            else if (root.ValueKind is JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+            {
+                values.Add(root.GetRawText());
+            }
+        }
+        catch
+        {
+            // A corrupt row is ignored rather than breaking the lookup.
+        }
+        return values;
+    }
+
+    /* ---------------- submission entries ---------------- */
+
+    public async Task<DynamicFormSubmissionDetailDto> SubmitAsync(
+        int formId, Dictionary<string, JsonElement> values,
+        IReadOnlyList<SubmissionFileUpload> files, int submittedBy)
+    {
+        var form = await GetByIdAsync(formId);
+        if (!form.IsActive)
+            throw new InvalidDomainValueException("This form is inactive and does not accept submissions.");
+
+        // Case-insensitive lookup: JSON keys arrive exactly as the client
+        // sent them, field keys are defined lowercase.
+        var byKey = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in values) byKey[kv.Key] = kv.Value;
+        var fileByKey = files
+            .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        ValidateSubmission(form, byKey, fileByKey);
+
+        // Files are written first, under one folder per entry, so the
+        // stored value is the file's path. If the DB save then fails,
+        // the folder is removed again — no orphaned files, no row
+        // pointing at a file that never landed.
+        var uploadsRoot = ResolveUploadsPath();
+        var folderToken = Guid.NewGuid().ToString("N");
+        var folder = Path.Combine(uploadsRoot, "forms", formId.ToString(), folderToken);
+        var stored = new List<(string FieldKey, string ValueJson)>();
+        try
+        {
+            foreach (var field in form.Fields)
+            {
+                if (DynamicFormFieldTypes.IsStatic(field.FieldType)) continue;
+                if (field.FieldType == "file")
+                {
+                    if (!fileByKey.TryGetValue(field.FieldKey, out var upload)) continue;
+                    Directory.CreateDirectory(folder);
+                    var safeName = SanitizeFileName(upload.FileName);
+                    var storedName = $"{Guid.NewGuid():N}_{safeName}";
+                    var fullPath = Path.Combine(folder, storedName);
+                    await using (var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write))
+                    {
+                        await upload.Content.CopyToAsync(stream);
+                    }
+                    var relative = $"forms/{formId}/{folderToken}/{storedName}";
+                    stored.Add((field.FieldKey, JsonSerializer.Serialize(relative)));
+                    continue;
+                }
+                if (byKey.TryGetValue(field.FieldKey, out var element))
+                    stored.Add((field.FieldKey, element.GetRawText()));
+            }
+
+            var submissionId = await repository.SubmitAsync(formId, submittedBy, stored);
+            return await GetSubmissionAsync(submissionId);
+        }
+        catch
+        {
+            TryDeleteFolder(folder);
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsAsync(int formId)
+    {
+        _ = await GetByIdAsync(formId);
+        return await repository.GetSubmissionsByFormAsync(formId);
+    }
+
+    public async Task<DynamicFormSubmissionDetailDto> GetSubmissionAsync(int submissionId)
+        => await repository.GetSubmissionByIdAsync(submissionId)
+           ?? throw new NotFoundException($"Submission {submissionId} not found.");
+
+    public async Task DeleteSubmissionAsync(int submissionId, int performedBy)
+    {
+        // Read first: file values hold stored paths, which must be
+        // deleted from disk after the row goes.
+        var detail = await GetSubmissionAsync(submissionId);
+        var form = await GetByIdAsync(detail.FormId);
+        var fileKeys = form.Fields
+            .Where(f => f.FieldType == "file")
+            .Select(f => f.FieldKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        await repository.DeleteSubmissionAsync(submissionId, performedBy);
+
+        var uploadsRoot = ResolveUploadsPath();
+        var rootFull = Path.GetFullPath(uploadsRoot);
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in detail.Values)
+        {
+            if (!fileKeys.Contains(kv.Key) || kv.Value.ValueKind != JsonValueKind.String) continue;
+            var relative = kv.Value.GetString();
+            if (string.IsNullOrWhiteSpace(relative)) continue;
+            var full = Path.GetFullPath(Path.Combine(rootFull, relative));
+            if (!full.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(full, rootFull, StringComparison.OrdinalIgnoreCase)) continue;
+            try { if (File.Exists(full)) File.Delete(full); } catch { /* best effort */ }
+            var dir = Path.GetDirectoryName(full);
+            if (!string.IsNullOrEmpty(dir)) folders.Add(dir);
+        }
+        foreach (var dir in folders)
+        {
+            try { if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir); } catch { /* best effort */ }
+        }
+    }
+
+    public async Task<(string FileName, string ContentType, string StoragePath)> GetSubmissionFileAsync(
+        int submissionId, string fieldKey)
+    {
+        var detail = await GetSubmissionAsync(submissionId);
+        var form = await GetByIdAsync(detail.FormId);
+        _ = form.Fields.FirstOrDefault(f => f.FieldType == "file"
+                && string.Equals(f.FieldKey, fieldKey, StringComparison.OrdinalIgnoreCase))
+            ?? throw new NotFoundException($"File field '{fieldKey}' not found in form {detail.FormId}.");
+        if (!detail.Values.TryGetValue(fieldKey, out var value) || value.ValueKind != JsonValueKind.String)
+            throw new NotFoundException($"Submission {submissionId} has no file for field '{fieldKey}'.");
+        var relative = value.GetString();
+        if (string.IsNullOrWhiteSpace(relative))
+            throw new NotFoundException($"Submission {submissionId} has no file for field '{fieldKey}'.");
+
+        // The stored path must stay inside the uploads root — a stored
+        // value is never trusted as an absolute or escaping path.
+        var rootFull = ResolveUploadsPath();
+        var full = Path.GetFullPath(Path.Combine(rootFull, relative));
+        if (!full.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new NotFoundException($"Submission {submissionId} has no file for field '{fieldKey}'.");
+        if (!File.Exists(full))
+            throw new NotFoundException($"The uploaded file for submission {submissionId} is missing on disk.");
+
+        var storedName = Path.GetFileName(full);
+        var underscore = storedName.IndexOf('_');
+        var original = underscore >= 0 ? storedName[(underscore + 1)..] : storedName;
+        return (original, ContentTypeFor(Path.GetExtension(full)), full);
+    }
+
+    private static string ContentTypeFor(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        ".txt" => "text/plain",
+        ".csv" => "text/csv",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls" => "application/vnd.ms-excel",
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".zip" => "application/zip",
+        _ => "application/octet-stream"
+    };
+
+    // Server-side mirror of the renderer's validateFields: required, email
+    // format, regex patterns + custom messages, length and number ranges,
+    // and file Accept. Failures carry the field key so the renderer can
+    // show each message inline under its own field.
+    private static void ValidateSubmission(
+        DynamicFormDetailDto form,
+        Dictionary<string, JsonElement> byKey,
+        Dictionary<string, SubmissionFileUpload> fileByKey)
+    {
+        var failures = new List<ValidationFailure>();
+        foreach (var field in form.Fields)
+        {
+            if (DynamicFormFieldTypes.IsStatic(field.FieldType) || field.FieldType == "hidden") continue;
+
+            if (field.FieldType == "file")
+            {
+                var upload = fileByKey.TryGetValue(field.FieldKey, out var u) ? u : null;
+                if (field.IsRequired && upload is null)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} is required."));
+                else if (upload is not null && !AcceptAllows(field.Accept, upload.FileName, upload.ContentType))
+                    failures.Add(new ValidationFailure(field.FieldKey, $"File type not allowed for {field.Label}."));
+                continue;
+            }
+
+            var present = byKey.TryGetValue(field.FieldKey, out var value);
+            if (!present) value = default;
+            if (IsSubmissionEmpty(field, value))
+            {
+                if (field.IsRequired)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} is required."));
+                continue;
+            }
+
+            var text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : null;
+            if (field.FieldType == "email" && text is not null
+                && !Regex.IsMatch(text, @"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"))
+            {
+                failures.Add(new ValidationFailure(field.FieldKey, "Please enter a valid email address."));
+                continue;
+            }
+            if (text is not null)
+            {
+                if (field.MinLength is int min && text.Length < min)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} must be at least {min} characters."));
+                if (field.MaxLength is int max && text.Length > max)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} must be at most {max} characters."));
+            }
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
+            {
+                if (field.MinValue is decimal minV && number < minV)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} must be at least {minV}."));
+                if (field.MaxValue is decimal maxV && number > maxV)
+                    failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} must be at most {maxV}."));
+            }
+            if (text is not null)
+            {
+                foreach (var pattern in Prepend(field.RegexPattern, field.ValidationRules.Select(r => r.Pattern)))
+                {
+                    if (string.IsNullOrWhiteSpace(pattern)) continue;
+                    if (!Regex.IsMatch(text, pattern))
+                    {
+                        var rule = field.ValidationRules.FirstOrDefault(r => r.Pattern == pattern);
+                        failures.Add(new ValidationFailure(field.FieldKey,
+                            rule?.Message ?? field.ValidationMessage ?? $"Please enter a valid value for {field.Label}."));
+                        break;
+                    }
+                }
+            }
+        }
+        if (failures.Count > 0) throw new ValidationException(failures);
+    }
+
+    private static IEnumerable<string?> Prepend(string? first, IEnumerable<string> rest)
+    {
+        yield return first;
+        foreach (var item in rest) yield return item;
+    }
+
+    // Same emptiness rules as the renderer: an empty string, an unchecked
+    // box, an empty selection, or a grid with no filled row all count as
+    // "not answered". A number (including 0) counts as answered.
+    private static bool IsSubmissionEmpty(DynamicFormFieldDto field, JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Undefined || value.ValueKind == JsonValueKind.Null) return true;
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => string.IsNullOrWhiteSpace(value.GetString()),
+            JsonValueKind.False => true,
+            JsonValueKind.Array => field.FieldType == "grid"
+                ? !value.EnumerateArray().Any(row => row.ValueKind == JsonValueKind.Object
+                    && row.EnumerateObject().Any(c =>
+                        c.Value.ValueKind == JsonValueKind.String
+                            ? !string.IsNullOrWhiteSpace(c.Value.GetString())
+                            : c.Value.ValueKind != JsonValueKind.Null))
+                : value.GetArrayLength() == 0,
+            _ => false
+        };
+    }
+
+    private static bool AcceptAllows(string? accept, string fileName, string contentType)
+    {
+        if (string.IsNullOrWhiteSpace(accept)) return true;
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        var type = (contentType ?? string.Empty).ToLowerInvariant();
+        foreach (var part in accept.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var p = part.ToLowerInvariant();
+            if (p.StartsWith('.') && p == ext) return true;
+            if (p.EndsWith("/*") && type.StartsWith(p[..^1], StringComparison.Ordinal)) return true;
+            if (p == type) return true;
+        }
+        return false;
+    }
+
+    private string ResolveUploadsPath()
+    {
+        var path = storageOptions.Value.UploadsPath;
+        if (string.IsNullOrWhiteSpace(path))
+            throw new InvalidDomainValueException("File storage is not configured.");
+        return Path.GetFullPath(Environment.ExpandEnvironmentVariables(path));
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var name = Path.GetFileName(fileName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidDomainValueException("A file name is required.");
+        var invalid = Path.GetInvalidFileNameChars();
+        name = new string(name.Where(c => !invalid.Contains(c)).ToArray()).Trim();
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 200)
+            throw new InvalidDomainValueException("The file name is not valid.");
+        return name;
+    }
+
+    private static void TryDeleteFolder(string folder)
+    {
+        try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); } catch { /* best effort */ }
     }
 
     private async Task ValidateLookupsAsync(SaveDynamicFormRequest request, int? selfFormId)

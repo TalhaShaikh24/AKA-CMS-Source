@@ -246,6 +246,118 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         catch { return new(); }
     }
 
+    /* ---------------- submission entries ---------------- */
+
+    private sealed class SubmissionRow
+    {
+        public int SubmissionId { get; set; }
+        public int FormId { get; set; }
+        public int? SubmittedBy { get; set; }
+        public string? SubmittedByName { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public int ValueCount { get; set; }
+    }
+
+    private sealed class SubmissionValueRow
+    {
+        public string FieldKey { get; set; } = string.Empty;
+        public string? ValueJson { get; set; }
+    }
+
+    public async Task<int> SubmitAsync(
+        int formId, int? submittedBy, IReadOnlyList<(string FieldKey, string ValueJson)> values)
+    {
+        // The SP takes one JSON array [{fieldKey, valueJson}]; valueJson is
+        // itself JSON text, so it is carried as a string and re-encoded
+        // here — the SP stores it back as the original JSON text.
+        var payload = values.Select(v => new { fieldKey = v.FieldKey, valueJson = v.ValueJson }).ToList();
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        p.Add("@SubmittedBy", submittedBy);
+        p.Add("@ValuesJson", JsonSerializer.Serialize(payload));
+        p.Add("@NewSubmissionId", dbType: DbType.Int32, direction: ParameterDirection.Output);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormSubmissionSubmit, p, commandType: CommandType.StoredProcedure);
+        return p.Get<int>("@NewSubmissionId");
+    }
+
+    public async Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsByFormAsync(int formId)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        var rows = await connection.QueryAsync<SubmissionRow>(
+            StoredProcedures.DynamicFormSubmissionGetByForm, p, commandType: CommandType.StoredProcedure);
+        return rows.Select(r => new DynamicFormSubmissionListItemDto
+        {
+            SubmissionId = r.SubmissionId, FormId = r.FormId,
+            SubmittedBy = r.SubmittedBy, SubmittedByName = r.SubmittedByName,
+            SubmittedAt = r.SubmittedAt, ValueCount = r.ValueCount
+        }).ToList();
+    }
+
+    public async Task<DynamicFormSubmissionDetailDto?> GetSubmissionByIdAsync(int submissionId)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@SubmissionId", submissionId);
+        using var multi = await connection.QueryMultipleAsync(
+            StoredProcedures.DynamicFormSubmissionGetById, p, commandType: CommandType.StoredProcedure);
+        var header = await multi.ReadSingleOrDefaultAsync<SubmissionRow>();
+        if (header is null) return null;
+        var values = await multi.ReadAsync<SubmissionValueRow>();
+        var dict = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var v in values)
+        {
+            dict[v.FieldKey] = ParseStoredValue(v.ValueJson);
+        }
+        return new DynamicFormSubmissionDetailDto
+        {
+            SubmissionId = header.SubmissionId, FormId = header.FormId,
+            SubmittedBy = header.SubmittedBy, SubmittedByName = header.SubmittedByName,
+            SubmittedAt = header.SubmittedAt, Values = dict
+        };
+    }
+
+    public async Task DeleteSubmissionAsync(int submissionId, int performedBy)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@SubmissionId", submissionId);
+        p.Add("@PerformedBy", performedBy);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormSubmissionDelete, p, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IReadOnlyList<string>> GetFieldValuesAsync(int formId, string fieldKey)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        p.Add("@FieldKey", fieldKey);
+        var rows = await connection.QueryAsync<string>(
+            StoredProcedures.DynamicFormSubmissionGetFieldValues, p, commandType: CommandType.StoredProcedure);
+        return rows.Where(r => r is not null).ToList();
+    }
+
+    // Stored ValueJson back to a JsonElement. A corrupt row degrades to
+    // its raw text instead of failing the whole entry.
+    private static JsonElement ParseStoredValue(string? valueJson)
+    {
+        if (string.IsNullOrWhiteSpace(valueJson)) return default;
+        try
+        {
+            using var doc = JsonDocument.Parse(valueJson);
+            return doc.RootElement.Clone();
+        }
+        catch
+        {
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(valueJson));
+            return doc.RootElement.Clone();
+        }
+    }
+
     private static List<DynamicFormFieldOptionDto> ParseOptions(string? optionsJson)
     {
         if (string.IsNullOrWhiteSpace(optionsJson)) return new();

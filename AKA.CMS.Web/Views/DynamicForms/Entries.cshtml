@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Form Entries";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "dynamicforms";
+    ViewData["RequiredPermission"] = "DynamicForms:Read";
+    var formId = ViewBag.FormId as int?;
+}
+
+<input type="hidden" id="dfFormId" value="@(formId?.ToString() ?? "")">
+
+<div class="page-head">
+  <div class="page-title">
+    <h1 id="dfTitle">Entries</h1>
+    <p class="sub" id="dfDesc"></p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="@Url.Action("Index", "DynamicForms")">Back to Forms</a>
+    <a class="btn btn-ghost" href="@Url.Action("Render", "DynamicForms", new { id = formId })">Fill form</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Submitted entries</h3>
+    <span class="hint" id="dfCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="dfTable">
+      <thead>
+        <tr><th>#</th><th>Submitted</th><th>Submitted by</th><th>Answers</th><th></th></tr>
+      </thead>
+      <tbody id="dfTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" id="dfDetailCard" hidden style="margin-top:18px">
+  <div class="card-head">
+    <h3 id="dfDetailTitle">Entry</h3>
+    <span class="hint" id="dfDetailMeta"></span>
+  </div>
+  <div class="card-body" id="dfDetailBody"></div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/form-entries.js" asp-append-version="true"></script>
+}
