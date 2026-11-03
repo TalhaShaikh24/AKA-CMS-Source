@@ -74,6 +74,41 @@ $(function () {
     { v: 3, l: 'Quarter' }
   ];
 
+  // SQL types offered in Properties, and the auto default per field
+  // type. These mirror the server defaults exactly (see the Ensure
+  // stored procedure): changing one side without the other makes the
+  // DDL preview lie about the table that will actually be created.
+  var SQL_TYPES = [
+    'NVARCHAR(100)', 'NVARCHAR(255)', 'NVARCHAR(500)', 'NVARCHAR(1000)', 'NVARCHAR(MAX)',
+    'VARCHAR(100)', 'VARCHAR(255)',
+    'INT', 'BIGINT', 'DECIMAL(18,2)', 'DECIMAL(18,4)', 'BIT',
+    'DATE', 'TIME', 'DATETIME2'
+  ];
+  function defaultSqlType(type) {
+    if (type === 'lookup') return 'INT';
+    if (type === 'textarea' || type === 'multiselect' || type === 'checkboxGroup' || type === 'grid') return 'NVARCHAR(MAX)';
+    if (type === 'checkbox') return 'BIT';
+    if (type === 'date') return 'DATE';
+    if (type === 'time') return 'TIME';
+    if (type === 'datetime') return 'DATETIME2';
+    if (type === 'file') return 'NVARCHAR(500)';
+    return 'NVARCHAR(255)';
+  }
+  function isDataField(f) {
+    return f && ['heading', 'paragraph', 'section', 'button', 'link'].indexOf(f.fieldType) < 0;
+  }
+  function sqlTypeFor(f) {
+    if (!isDataField(f)) return null;
+    if (f.fieldType === 'lookup') return 'INT';
+    return f.sqlDataType || defaultSqlType(f.fieldType);
+  }
+  function physicalTableName(formKey) {
+    return 'FormData_' + slug(formKey || 'form').replace(/-/g, '_');
+  }
+  function physicalColumnName(fieldKey) {
+    return String(fieldKey || '').replace(/-/g, '_');
+  }
+
   // The form being edited. `selected` is its index, or -1 when nothing
   // is selected. `dragState` / `navDrag` only live during a drag.
   var formId = $('#dfbFormId').val() || '';
@@ -167,6 +202,7 @@ $(function () {
       sectionColumns: null, columnIndex: null, showBorder: null, showDivider: null,
       customJs: '', cssClass: '', customId: '', customAttributes: [], validationRules: [],
       inputMask: '', showInfoIcon: false, infoText: '',
+      sqlDataType: null,
       columnSpan: (type === 'heading' || type === 'paragraph') ? 12 : 6
     };
     if (CMSFormRenderer.OPTION_TYPES[type]) {
@@ -753,6 +789,23 @@ $(function () {
     html += '<div class="field"><label>' + labelTitle + '</label><input class="input" id="ppLabel" value="' + esc(f.label) + '"></div>';
     html += '<div class="field"><label>Field Key</label><input class="input" id="ppKey" value="' + esc(f.fieldKey) + '"><span class="hint">Used as the data name. Lowercase, hyphens.</span></div>';
     html += '<div class="field"><label>Type</label><div><span class="pill">' + esc(TYPE_LABELS[t] || t) + '</span></div></div>';
+    // SQL Data Type: the type of this field's column in the form's
+    // physical table (FormData_...). Static fields store nothing, so
+    // they get none; a lookup is always INT, the foreign key to the
+    // source entry, so it is shown, not edited.
+    if (!isStatic && !isSectionField && !isButton && !isLink) {
+      if (t === 'lookup') {
+        html += '<div class="field"><label>SQL Data Type</label><div><span class="pill">INT</span></div>' +
+          '<span class="hint">Foreign key to the source entry (its EntryId). The column you picked in the source form is what the dropdown shows.</span></div>';
+      } else {
+        html += '<div class="field"><label>SQL Data Type</label><select class="input" id="ppSqlType">' +
+          [''].concat(SQL_TYPES).map(function (dt) {
+            return '<option value="' + dt + '"' + ((f.sqlDataType || '') === dt ? ' selected' : '') + '>' +
+              (dt === '' ? 'Auto (default for this type)' : dt) + '</option>';
+          }).join('') + '</select>' +
+          '<span class="hint">Column type in the FormData_ table. Auto = ' + defaultSqlType(t) + ' for this type.</span></div>';
+      }
+    }
     if (!isSectionField && !isHidden) {
       html += '<div class="field"><label>Width</label><select class="input" id="ppSpan">' +
         WIDTHS.map(function (w) {
@@ -906,6 +959,7 @@ $(function () {
     else if (id === 'ppMinVal') f.minValue = numOrNull($input.val());
     else if (id === 'ppMaxVal') f.maxValue = numOrNull($input.val());
     else if (id === 'ppAccept') f.accept = $input.val();
+    else if (id === 'ppSqlType') f.sqlDataType = $input.val() || null;
     else if (id === 'ppRegex') f.regexPattern = $input.val();
     else if (id === 'ppRegexMsg') f.validationMessage = $input.val();
     else if (id === 'ppLookupForm') {
@@ -1355,6 +1409,7 @@ $(function () {
       renderPalette();
       renderCanvas();
       renderProps();
+      refreshPreviewTabs();
       return;
     }
     cmsAjax({
@@ -1388,6 +1443,7 @@ $(function () {
               return { pattern: r.pattern || '', message: r.message || '' };
             }),
             inputMask: x.inputMask || '', showInfoIcon: !!x.showInfoIcon, infoText: x.infoText || '',
+            sqlDataType: x.sqlDataType || null,
             parentKey: x.parentKey || null,
             showBorder: x.showBorder === undefined ? null : x.showBorder,
             showDivider: x.showDivider === undefined ? null : x.showDivider,
@@ -1399,6 +1455,7 @@ $(function () {
         renderPalette();
         renderCanvas();
         renderProps();
+        refreshPreviewTabs();
       }
     });
   }
@@ -1432,6 +1489,8 @@ $(function () {
           customAttributes: (f.customAttributes || []).filter(function (a) { return a.name; }),
           validationRules: (f.validationRules || []).filter(function (r) { return r.pattern; }),
           inputMask: f.inputMask || null, showInfoIcon: !!f.showInfoIcon, infoText: f.infoText || null,
+          sqlDataType: (f.fieldType === 'lookup' || ['heading', 'paragraph', 'section', 'button', 'link'].indexOf(f.fieldType) >= 0)
+            ? null : (f.sqlDataType || null),
           sectionColumns: f.fieldType === 'section' ? (f.sectionColumns || null) : null,
           columnIndex: (f.columnIndex == null ? null : f.columnIndex),
           columnSpan: (f.fieldType === 'section' || f.fieldType === 'hidden') ? 12 : (f.columnSpan || 6),
@@ -1478,6 +1537,86 @@ $(function () {
         }
       }
     });
+  });
+
+  /* ------------------------------------------------------------------
+     Preview tabs below the builder: JSON and SQL Server DDL.
+     JSON is the exact save payload. DDL is the CREATE TABLE script
+     the server will run on Save (same table/column/type rules as the
+     Ensure stored procedure, including EntryId IDENTITY(1,1) and the
+     lookup foreign keys to the source tables' EntryId). Nothing here
+     creates a table — the tabs only show what Save will create, and
+     they refresh every time you click a tab, so unsaved changes are
+     always included.
+     ------------------------------------------------------------------ */
+  function buildDdlPreview() {
+    var payload = savePayload();
+    var table = physicalTableName(payload.formKey);
+    var dataFields = fields.filter(function (f) { return isDataField(f); });
+    var lines = [];
+    lines.push('-- Preview only — this table is created when you click Save Form.');
+    lines.push('-- Form: ' + (payload.title || 'Untitled') + ' (' + (payload.formKey || 'form-key') + ')');
+    lines.push('CREATE TABLE [dbo].[' + table + '] (');
+    lines.push('    [EntryId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,');
+    lines.push('    [SubmissionId] INT NOT NULL UNIQUE,');
+    lines.push('    [SubmittedBy] INT NULL,');
+    lines.push('    [SubmittedAt] DATETIME2 NOT NULL DEFAULT (SYSUTCDATETIME()),');
+    lines.push('    CONSTRAINT [FK_' + table + '_Submission] FOREIGN KEY ([SubmissionId])' +
+      ' REFERENCES [dbo].[CMS_DynamicFormSubmissions] ([SubmissionId]) ON DELETE CASCADE' +
+      (dataFields.length ? ',' : ''));
+    var fkLines = [];
+    dataFields.forEach(function (f) {
+      if (f.fieldType === 'lookup' && f.lookupFormId) {
+        var src = (lookupFormsCache || []).filter(function (x) { return String(x.formId) === String(f.lookupFormId); })[0];
+        if (src) {
+          fkLines.push('    CONSTRAINT [FK_' + table.replace('FormData_', '') + '_' + physicalColumnName(f.fieldKey) + ']' +
+            ' FOREIGN KEY ([' + physicalColumnName(f.fieldKey) + '])' +
+            ' REFERENCES [dbo].[' + physicalTableName(src.formKey) + '] ([EntryId])');
+        } else {
+          lines.push('    -- WARNING: source form ' + f.lookupFormId + ' not found; its foreign key is omitted here.');
+        }
+      }
+    });
+    dataFields.forEach(function (f, i) {
+      var last = i === dataFields.length - 1 && !fkLines.length;
+      lines.push('    [' + physicalColumnName(f.fieldKey) + '] ' + sqlTypeFor(f) + ' NULL' + (last ? '' : ','));
+    });
+    fkLines.forEach(function (line, i) {
+      lines.push(line + (i === fkLines.length - 1 ? '' : ','));
+    });
+    lines.push(');');
+    return lines.join('\n');
+  }
+
+  function refreshPreviewTabs() {
+    var tab = $('#dfbTabSeg button.sel').data('ptab') || 'json';
+    if (tab === 'json') {
+      $('#dfbJsonPre').text(JSON.stringify(savePayload(), null, 2));
+      return;
+    }
+    var needsSource = fields.some(function (f) { return f.fieldType === 'lookup' && f.lookupFormId; });
+    if (needsSource && !lookupFormsCache) {
+      $('#dfbDdlPre').text('-- Loading source forms…');
+      cmsAjax({
+        url: '/api/dynamic-forms', method: 'GET', fallbackMsg: 'Could not load forms.',
+        success: function (forms) {
+          lookupFormsCache = forms || [];
+          $('#dfbDdlPre').text(buildDdlPreview());
+        },
+        error: function () { return true; }
+      });
+      return;
+    }
+    $('#dfbDdlPre').text(buildDdlPreview());
+  }
+
+  $('#dfbTabSeg').on('click', 'button', function () {
+    $('#dfbTabSeg button').removeClass('sel');
+    $(this).addClass('sel');
+    var tab = $(this).data('ptab');
+    $('#dfbJsonPre').prop('hidden', tab !== 'json');
+    $('#dfbDdlPre').prop('hidden', tab !== 'ddl');
+    refreshPreviewTabs();
   });
 
   // Preview the current in-memory form (unsaved changes included) in a

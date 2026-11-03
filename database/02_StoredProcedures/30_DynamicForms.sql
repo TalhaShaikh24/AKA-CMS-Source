@@ -45,7 +45,8 @@ BEGIN
             [LookupFormId], [LookupFieldKey], [SectionColumns], [ColumnIndex],
             [CustomJs], [CssClass], [CustomId], [CustomAttributesJson],
             [ValidationRulesJson], [InputMask], [ShowInfoIcon], [InfoText],
-            [ParentKey], [ShowBorder], [ShowDivider], [ColumnSpan], [SortOrder]
+            [ParentKey], [ShowBorder], [ShowDivider], [ColumnSpan], [SortOrder],
+            [SqlDataType]
     FROM [dbo].[CMS_DynamicFormFields]
     WHERE [FormId] = @FormId
     ORDER BY [SortOrder], [FieldId];
@@ -96,7 +97,8 @@ BEGIN
                  [RegexPattern], [ValidationMessage], [LookupFormId], [LookupFieldKey],
                  [SectionColumns], [ColumnIndex], [CustomJs], [CssClass], [CustomId],
                  [CustomAttributesJson], [ValidationRulesJson], [InputMask],
-                 [ShowInfoIcon], [InfoText], [ParentKey], [ShowBorder], [ShowDivider], [ColumnSpan], [SortOrder])
+                 [ShowInfoIcon], [InfoText], [ParentKey], [ShowBorder], [ShowDivider], [ColumnSpan], [SortOrder],
+                 [SqlDataType])
             SELECT  @NewFormId,
                     j.[FieldKey], j.[Label], j.[FieldType], j.[Placeholder], j.[HelpText],
                     ISNULL(j.[IsRequired], 0), j.[DefaultValue], j.[OptionsJson],
@@ -106,7 +108,8 @@ BEGIN
                     j.[CustomJs], j.[CssClass], j.[CustomId], j.[CustomAttributesJson],
                     j.[ValidationRulesJson], j.[InputMask], ISNULL(j.[ShowInfoIcon], 0),
                     j.[InfoText], j.[ParentKey], j.[ShowBorder], j.[ShowDivider],
-                    ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0)
+                    ISNULL(j.[ColumnSpan], 6), ISNULL(j.[SortOrder], 0),
+                    j.[SqlDataType]
             FROM OPENJSON(@FieldsJson)
             WITH (
                 [FieldKey]    VARCHAR(100)  '$.fieldKey',
@@ -142,7 +145,8 @@ BEGIN
                 [ShowBorder]  BIT           '$.showBorder',
                 [ShowDivider] BIT           '$.showDivider',
                 [ColumnSpan]  TINYINT       '$.columnSpan',
-                [SortOrder]   INT           '$.sortOrder'
+                [SortOrder]   INT           '$.sortOrder',
+                [SqlDataType] NVARCHAR(50)  '$.sqlDataType'
             ) AS j
             WHERE j.[FieldKey] IS NOT NULL AND j.[FieldType] IS NOT NULL;
         END
