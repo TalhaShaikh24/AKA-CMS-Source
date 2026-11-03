@@ -124,6 +124,10 @@ $(function () {
   var navDrag = null;   // { index, isSection }
   var collapsedSecs = new Set(); // section field objects collapsed in Navigator
   var lookupFormsCache = null;
+  // True while the source-forms list is being fetched for the DDL
+  // tab, so a live refresh on every keystroke does not fire the
+  // same request over and over.
+  var lookupFormsLoading = false;
 
   /* ------------------------------------------------------------------
      Small helpers
@@ -437,6 +441,12 @@ $(function () {
     // so the card body, not the cell, controls the width.
     $grid.find('.dfb-card-body > .dfb-cell, .dfb-card-body > .field').css('grid-column', 'auto');
     renderNavigator();
+    // Live preview: renderCanvas runs on every change (add, delete,
+    // drag, and every Properties keystroke), so refreshing the tabs
+    // here keeps JSON/DDL in step with the form without needing a
+    // tab re-click. refreshPreviewTabs only writes text into the
+    // <pre> blocks, so it cannot recurse back into renderCanvas.
+    refreshPreviewTabs();
   }
 
   // Switch a section between legacy grid and column layouts.
@@ -1656,14 +1666,17 @@ $(function () {
     }
     var needsSource = fields.some(function (f) { return f.fieldType === 'lookup' && f.lookupFormId; });
     if (needsSource && !lookupFormsCache) {
+      if (lookupFormsLoading) return;
+      lookupFormsLoading = true;
       $('#dfbDdlPre').text('-- Loading source forms…');
       cmsAjax({
         url: '/api/dynamic-forms', method: 'GET', fallbackMsg: 'Could not load forms.',
         success: function (forms) {
           lookupFormsCache = forms || [];
+          lookupFormsLoading = false;
           $('#dfbDdlPre').text(buildDdlPreview());
         },
-        error: function () { return true; }
+        error: function () { lookupFormsLoading = false; return true; }
       });
       return;
     }
