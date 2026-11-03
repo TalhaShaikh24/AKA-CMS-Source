@@ -655,8 +655,14 @@ public sealed partial class DynamicFormService(
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in request.Fields)
         {
-            if (string.IsNullOrWhiteSpace(field.FieldKey) || !KeyPattern().IsMatch(field.FieldKey.Trim()))
-                throw new InvalidDomainValueException($"Field key '{field.FieldKey}' is invalid (lowercase letters, digits and hyphens only).");
+            // Field keys are camelCase now (the builder derives them
+            // from the label in real time), so they may contain upper
+            // case letters; they must still start with a letter. Old
+            // hyphenated keys (full-name) still pass this pattern, so
+            // existing forms re-save without changes. The form key
+            // itself stays lowercase-only (it becomes a table name).
+            if (string.IsNullOrWhiteSpace(field.FieldKey) || !FieldKeyPattern().IsMatch(field.FieldKey.Trim()))
+                throw new InvalidDomainValueException($"Field key '{field.FieldKey}' is invalid (must start with a letter; letters, digits and hyphens only).");
             if (!seen.Add(field.FieldKey.Trim()))
                 throw new InvalidDomainValueException($"Duplicate field key '{field.FieldKey}'.");
             if (string.IsNullOrWhiteSpace(field.Label))
@@ -779,6 +785,9 @@ public sealed partial class DynamicFormService(
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]*$")]
     private static partial Regex KeyPattern();
+
+    [GeneratedRegex("^[a-zA-Z][a-zA-Z0-9-]*$")]
+    private static partial Regex FieldKeyPattern();
 
     [GeneratedRegex("^[a-zA-Z][a-zA-Z0-9_-]*$")]
     private static partial Regex AttributeNamePattern();

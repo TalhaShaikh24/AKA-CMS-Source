@@ -105,8 +105,14 @@ $(function () {
   function physicalTableName(formKey) {
     return 'FormData_' + slug(formKey || 'form').replace(/-/g, '_');
   }
+  // Physical column name: PascalCase from the field key. The key
+  // itself stays camelCase (fullName); only the SQL column is
+  // PascalCase (FullName). Hyphenated old keys map the same way:
+  // full-name -> FullName, so both key styles land on one column.
   function physicalColumnName(fieldKey) {
-    return String(fieldKey || '').replace(/-/g, '_');
+    return String(fieldKey || '').split('-').filter(function (p) { return p.length > 0; }).map(function (part) {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join('');
   }
 
   // The form being edited. `selected` is its index, or -1 when nothing
@@ -142,6 +148,36 @@ $(function () {
     var n = 2;
     while (fields.some(function (f) { return f.fieldKey === key; })) {
       key = base + '-' + (n++);
+    }
+    return key;
+  }
+
+  // Label -> camelCase field key, in real time: "Full Name" becomes
+  // "fullName", "CNIC Number" becomes "cnicNumber", "Address Line 2"
+  // becomes "addressLine2". Non-letters/digits split words, so a label
+  // typed with spaces, hyphens or underscores all ends up the same.
+  function toCamelCase(text) {
+    var words = String(text || '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '';
+    var out = words.map(function (w, i) {
+      var lower = w.toLowerCase();
+      return i === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join('');
+    // A key must start with a letter (the server rejects digit-first
+    // keys), so a label like "2nd Address" gets a "field" prefix.
+    if (/^[0-9]/.test(out)) out = 'field' + out;
+    return out;
+  }
+
+  // Like uniqueKey, but camelCase style (numeric suffix, no hyphen)
+  // and case-insensitive, so "fullName" and "FullName" still clash.
+  function uniqueCamelKey(base, self) {
+    var key = base;
+    var n = 2;
+    while (fields.some(function (f) {
+      return f !== self && String(f.fieldKey).toLowerCase() === key.toLowerCase();
+    })) {
+      key = base + (n++);
     }
     return key;
   }
@@ -191,7 +227,7 @@ $(function () {
   // A fresh field of the given type, with the defaults the builder uses.
   function newField(type, presetCols) {
     var f = {
-      fieldKey: uniqueKey(slug(TYPE_LABELS[type] || 'Field')),
+      fieldKey: uniqueCamelKey(toCamelCase(TYPE_LABELS[type] || 'Field') || 'field', null),
       label: TYPE_LABELS[type] || 'Field',
       fieldType: type,
       placeholder: '', helpText: '', isRequired: false, defaultValue: '',
@@ -787,7 +823,7 @@ $(function () {
     var labelTitle = isSectionField ? 'Section Title' : isButton ? 'Button Text' : isLink ? 'Link Text' : 'Label';
     var html = '';
     html += '<div class="field"><label>' + labelTitle + '</label><input class="input" id="ppLabel" value="' + esc(f.label) + '"></div>';
-    html += '<div class="field"><label>Field Key</label><input class="input" id="ppKey" value="' + esc(f.fieldKey) + '"><span class="hint">Used as the data name. Lowercase, hyphens.</span></div>';
+    html += '<div class="field"><label>Field Key</label><input class="input" id="ppKey" value="' + esc(f.fieldKey) + '"><span class="hint">Follows the label automatically, in camelCase. You can still edit it by hand.</span></div>';
     html += '<div class="field"><label>Type</label><div><span class="pill">' + esc(TYPE_LABELS[t] || t) + '</span></div></div>';
     // SQL Data Type: the type of this field's column in the form's
     // physical table (FormData_...). Static fields store nothing, so
@@ -944,8 +980,32 @@ $(function () {
     if ($input.hasClass('pp-rule-pattern')) { f.validationRules[Number($input.data('ri'))].pattern = $.trim($input.val()); return; }
     if ($input.hasClass('pp-rule-message')) { f.validationRules[Number($input.data('ri'))].message = $input.val(); return; }
     var id = this.id;
-    if (id === 'ppLabel') f.label = $input.val();
-    else if (id === 'ppKey') f.fieldKey = slug($input.val()) || f.fieldKey;
+    if (id === 'ppLabel') {
+      f.label = $input.val();
+      // Real time: the field key IS the label, in camelCase. The key
+      // input is updated in place (no full panel re-render, so the
+      // cursor stays in the label box). A section's key is also its
+      // children's parentKey, so those follow it too, or the children
+      // would be orphaned by a title change.
+      var camel = toCamelCase(f.label);
+      if (camel) {
+        var oldKey = f.fieldKey;
+        f.fieldKey = uniqueCamelKey(camel, f);
+        if (isSection(f) && oldKey !== f.fieldKey) {
+          fields.forEach(function (child) {
+            if (child.parentKey === oldKey) child.parentKey = f.fieldKey;
+          });
+        }
+        $('#ppKey').val(f.fieldKey);
+      }
+    }
+    else if (id === 'ppKey') {
+      // Hand-typed keys keep their case (camelCase is allowed now);
+      // only characters a key may not contain are dropped. A blank or
+      // digit-first key is ignored, keeping the previous valid key.
+      var typed = String($input.val() || '').replace(/[^a-zA-Z0-9-]+/g, '');
+      if (typed && /^[a-zA-Z]/.test(typed)) f.fieldKey = typed;
+    }
     else if (id === 'ppSpan') f.columnSpan = Number($input.val());
     else if (id === 'ppRequired') f.isRequired = $input.is(':checked');
     else if (id === 'ppShowBorder') f.showBorder = $input.is(':checked');

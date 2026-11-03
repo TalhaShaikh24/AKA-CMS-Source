@@ -11,7 +11,10 @@
        (the 1-to-1 link to the JSON entry: one physical row per entry,
        and deleting the entry deletes its physical row automatically)
      [SubmittedBy], [SubmittedAt]
-     one column per non-static field (field key with '-' -> '_')
+     one column per non-static field, named in PascalCase from the
+     field key: fullName -> FullName, full-name -> FullName (hyphens
+     drop, each part's first letter is capitalized). The field key
+     itself stays camelCase — only the SQL column is PascalCase.
 
    Datatypes: the field's SqlDataType when set, otherwise the default
    for its type (text/email/select/radio/hidden -> NVARCHAR(255),
@@ -57,11 +60,13 @@ BEGIN
         THROW 50000, 'Form not found.', 1;
     SET @TableName = N'FormData_' + REPLACE(@FormKey, '-', '_');
 
-    /* Field list for this form, with the effective SQL type per field. */
+    /* Field list for this form, with the effective SQL type per field.
+       ColumnName starts as the field key and is converted to
+       PascalCase by the cursor below. */
     SELECT
         f.[FieldKey],
         f.[FieldType],
-        REPLACE(f.[FieldKey], '-', '_') AS [ColumnName],
+        f.[FieldKey] AS [ColumnName],
         CASE
             WHEN f.[FieldType] = 'lookup' THEN N'INT'
             WHEN f.[SqlDataType] IS NOT NULL AND f.[SqlDataType] <> N'' THEN f.[SqlDataType]
@@ -79,6 +84,46 @@ BEGIN
     FROM [dbo].[CMS_DynamicFormFields] f
     WHERE f.[FormId] = @FormId
       AND f.[FieldType] NOT IN ('heading', 'paragraph', 'section', 'button', 'link');
+
+    /* Column names are PascalCase, derived from the field key:
+       fullName -> FullName, full-name -> FullName. Hyphens are
+       dropped and each part's first letter is capitalized; the rest
+       of each part is kept as-is, so a camelCase key keeps its humps.
+       A cursor is used (not STRING_SPLIT with ordinal) so this runs
+       on SQL Server versions older than 2022 too. */
+    DECLARE @PasKey NVARCHAR(100);
+    DECLARE @PasRest NVARCHAR(100);
+    DECLARE @PasPart NVARCHAR(100);
+    DECLARE @PasPos INT;
+    DECLARE @PasCol NVARCHAR(128);
+    DECLARE pascal_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT [FieldKey] FROM #Fields;
+    OPEN pascal_cursor;
+    FETCH NEXT FROM pascal_cursor INTO @PasKey;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @PasCol = N'';
+        SET @PasRest = @PasKey;
+        WHILE LEN(@PasRest) > 0
+        BEGIN
+            SET @PasPos = CHARINDEX('-', @PasRest);
+            IF @PasPos = 0
+            BEGIN
+                SET @PasPart = @PasRest;
+                SET @PasRest = N'';
+            END
+            ELSE
+            BEGIN
+                SET @PasPart = LEFT(@PasRest, @PasPos - 1);
+                SET @PasRest = SUBSTRING(@PasRest, @PasPos + 1, LEN(@PasRest));
+            END
+            IF LEN(@PasPart) > 0
+                SET @PasCol = @PasCol + UPPER(LEFT(@PasPart, 1)) + SUBSTRING(@PasPart, 2, LEN(@PasPart));
+        END
+        UPDATE #Fields SET [ColumnName] = @PasCol WHERE [FieldKey] = @PasKey;
+        FETCH NEXT FROM pascal_cursor INTO @PasKey;
+    END
+    CLOSE pascal_cursor;
+    DEALLOCATE pascal_cursor;
 
     /* Datatype safety: only letters, digits, parentheses, comma.
        Anything else (space, quote, semicolon, bracket) is rejected
@@ -202,7 +247,7 @@ BEGIN
 
     SELECT
         f.[FieldKey],
-        REPLACE(f.[FieldKey], '-', '_') AS [ColumnName],
+        f.[FieldKey] AS [ColumnName],
         f.[FieldType],
         CASE
             WHEN f.[FieldType] = 'lookup' THEN N'INT'
@@ -224,6 +269,42 @@ BEGIN
     LEFT JOIN [dbo].[CMS_DynamicForms] sf ON sf.[FormId] = f.[LookupFormId]
     WHERE f.[FormId] = @FormId
       AND f.[FieldType] NOT IN ('heading', 'paragraph', 'section', 'button', 'link');
+
+    /* Same PascalCase conversion as in Ensure (see there): the
+       column a value lands in is the PascalCase form of its key. */
+    DECLARE @PasKey NVARCHAR(100);
+    DECLARE @PasRest NVARCHAR(100);
+    DECLARE @PasPart NVARCHAR(100);
+    DECLARE @PasPos INT;
+    DECLARE @PasCol NVARCHAR(128);
+    DECLARE pascal_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT [FieldKey] FROM #UpsertFields;
+    OPEN pascal_cursor;
+    FETCH NEXT FROM pascal_cursor INTO @PasKey;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @PasCol = N'';
+        SET @PasRest = @PasKey;
+        WHILE LEN(@PasRest) > 0
+        BEGIN
+            SET @PasPos = CHARINDEX('-', @PasRest);
+            IF @PasPos = 0
+            BEGIN
+                SET @PasPart = @PasRest;
+                SET @PasRest = N'';
+            END
+            ELSE
+            BEGIN
+                SET @PasPart = LEFT(@PasRest, @PasPos - 1);
+                SET @PasRest = SUBSTRING(@PasRest, @PasPos + 1, LEN(@PasRest));
+            END
+            IF LEN(@PasPart) > 0
+                SET @PasCol = @PasCol + UPPER(LEFT(@PasPart, 1)) + SUBSTRING(@PasPart, 2, LEN(@PasPart));
+        END
+        UPDATE #UpsertFields SET [ColumnName] = @PasCol WHERE [FieldKey] = @PasKey;
+        FETCH NEXT FROM pascal_cursor INTO @PasKey;
+    END
+    CLOSE pascal_cursor;
+    DEALLOCATE pascal_cursor;
 
     /* OPENJSON on an object gives key/value/type per property:
        string -> the text itself, number/bool -> its text,
