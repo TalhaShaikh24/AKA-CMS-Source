@@ -24,6 +24,7 @@ public sealed partial class DynamicFormService(
         await ValidateLookupsAsync(request, null);
         await EnsureKeyAvailableAsync(request.FormKey, null);
         var id = await repository.SaveAsync(0, request, performedBy);
+        await EnsurePhysicalTableTreeAsync(id, new HashSet<int>());
         return await GetByIdAsync(id);
     }
 
@@ -34,8 +35,40 @@ public sealed partial class DynamicFormService(
         await ValidateLookupsAsync(request, formId);
         await EnsureKeyAvailableAsync(request.FormKey, formId);
         var id = await repository.SaveAsync(formId, request, performedBy);
+        // Saving a form (again) is what creates its physical table and
+        // backfills entries made before this feature existed, so an old
+        // form needs one Save — not a new form — to get its table.
+        await EnsurePhysicalTableTreeAsync(id, new HashSet<int>());
+        await BackfillPhysicalRowsAsync(id);
         return await GetByIdAsync(id);
     }
+
+    /* Physical tables, in dependency order: a form's lookup sources
+       first (their tables must exist before this form's foreign keys
+       can be created), then this form. `visited` stops lookup cycles
+       (A looks up B, B looks up A) from recursing forever. */
+    private async Task EnsurePhysicalTableTreeAsync(int formId, HashSet<int> visited)
+    {
+        if (!visited.Add(formId)) return;
+        var form = await GetByIdAsync(formId);
+        foreach (var field in form.Fields.Where(f => f.FieldType == "lookup" && f.LookupFormId is not null))
+            await EnsurePhysicalTableTreeAsync(field.LookupFormId!.Value, visited);
+        await repository.EnsurePhysicalTableAsync(formId);
+    }
+
+    private async Task BackfillPhysicalRowsAsync(int formId)
+    {
+        var submissions = await repository.GetSubmissionsByFormAsync(formId);
+        foreach (var sub in submissions)
+        {
+            var detail = await GetSubmissionAsync(sub.SubmissionId);
+            await repository.UpsertPhysicalRowAsync(
+                formId, detail.SubmissionId, detail.SubmittedBy, StoredFromDetail(detail));
+        }
+    }
+
+    private static List<(string FieldKey, string ValueJson)> StoredFromDetail(DynamicFormSubmissionDetailDto detail)
+        => detail.Values.Select(kv => (kv.Key, kv.Value.GetRawText())).ToList();
 
     /// <summary>Options for a lookup field. Once the source form has
     /// submissions, the distinct values actually submitted for that field
@@ -159,6 +192,21 @@ public sealed partial class DynamicFormService(
             }
 
             var submissionId = await repository.SubmitAsync(formId, submittedBy, stored);
+            // Physical mirror: the JSON entry is the source of truth,
+            // the FormData_ row mirrors it. If the mirror fails, the
+            // JSON entry is removed again instead of leaving the two
+            // stores out of sync (a retry then creates one entry, not
+            // a duplicate).
+            try
+            {
+                await EnsurePhysicalTableTreeAsync(formId, new HashSet<int>());
+                await repository.UpsertPhysicalRowAsync(formId, submissionId, submittedBy, stored);
+            }
+            catch
+            {
+                await repository.DeleteSubmissionAsync(submissionId, submittedBy);
+                throw;
+            }
             return await GetSubmissionAsync(submissionId);
         }
         catch
@@ -166,6 +214,104 @@ public sealed partial class DynamicFormService(
             TryDeleteFolder(folder);
             throw;
         }
+    }
+
+    /* Edit one entry. Same validation as a submit, except a file field
+       keeps its old file when no new file is uploaded. The JSON values
+       are replaced wholesale, then the physical row is upserted by
+       SubmissionId (never a second row): an edit updates the row, it
+       does not create one. If the physical upsert fails, the JSON edit
+       is already saved, so retrying the same edit repairs the mirror
+       instead of duplicating anything. */
+    public async Task<DynamicFormSubmissionDetailDto> UpdateSubmissionAsync(
+        int submissionId, Dictionary<string, JsonElement> values,
+        IReadOnlyList<SubmissionFileUpload> files, int performedBy)
+    {
+        var existing = await GetSubmissionAsync(submissionId);
+        var form = await GetByIdAsync(existing.FormId);
+        if (!form.IsActive)
+            throw new InvalidDomainValueException("This form is inactive and does not accept submissions.");
+
+        var byKey = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in values) byKey[kv.Key] = kv.Value;
+        var fileByKey = files
+            .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var existingFileKeys = form.Fields
+            .Where(f => f.FieldType == "file"
+                && existing.Values.TryGetValue(f.FieldKey, out var v)
+                && v.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(v.GetString()))
+            .Select(f => f.FieldKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        ValidateSubmission(form, byKey, fileByKey, existingFileKeys);
+
+        var uploadsRoot = ResolveUploadsPath();
+        var folderToken = Guid.NewGuid().ToString("N");
+        var folder = Path.Combine(uploadsRoot, "forms", form.FormId.ToString(), folderToken);
+        var stored = new List<(string FieldKey, string ValueJson)>();
+        var replacedFiles = new List<string>();
+        try
+        {
+            foreach (var field in form.Fields)
+            {
+                if (DynamicFormFieldTypes.IsStatic(field.FieldType)) continue;
+                if (field.FieldType == "file")
+                {
+                    if (fileByKey.TryGetValue(field.FieldKey, out var upload))
+                    {
+                        Directory.CreateDirectory(folder);
+                        var safeName = SanitizeFileName(upload.FileName);
+                        var storedName = $"{Guid.NewGuid():N}_{safeName}";
+                        var fullPath = Path.Combine(folder, storedName);
+                        await using (var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write))
+                        {
+                            await upload.Content.CopyToAsync(stream);
+                        }
+                        var relative = $"forms/{form.FormId}/{folderToken}/{storedName}";
+                        stored.Add((field.FieldKey, JsonSerializer.Serialize(relative)));
+                        if (existing.Values.TryGetValue(field.FieldKey, out var old)
+                            && old.ValueKind == JsonValueKind.String
+                            && !string.IsNullOrWhiteSpace(old.GetString()))
+                            replacedFiles.Add(old.GetString()!);
+                    }
+                    else if (existing.Values.TryGetValue(field.FieldKey, out var kept)
+                        && kept.ValueKind == JsonValueKind.String)
+                    {
+                        stored.Add((field.FieldKey, kept.GetRawText()));
+                    }
+                    continue;
+                }
+                if (byKey.TryGetValue(field.FieldKey, out var element))
+                    stored.Add((field.FieldKey, element.GetRawText()));
+            }
+
+            await repository.UpdateSubmissionAsync(submissionId, form.FormId, stored, performedBy);
+            await EnsurePhysicalTableTreeAsync(form.FormId, new HashSet<int>());
+            await repository.UpsertPhysicalRowAsync(form.FormId, submissionId, existing.SubmittedBy, stored);
+        }
+        catch
+        {
+            TryDeleteFolder(folder);
+            throw;
+        }
+
+        // Old files replaced by new uploads are removed (best effort);
+        // the new files are already saved, so a failed cleanup is not
+        // an error for the user.
+        var rootFull = Path.GetFullPath(uploadsRoot);
+        foreach (var relative in replacedFiles)
+        {
+            try
+            {
+                var full = Path.GetFullPath(Path.Combine(rootFull, relative));
+                if (full.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(full)) File.Delete(full);
+            }
+            catch { /* best effort */ }
+        }
+        return await GetSubmissionAsync(submissionId);
     }
 
     public async Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsAsync(int formId)
@@ -190,6 +336,11 @@ public sealed partial class DynamicFormService(
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         await repository.DeleteSubmissionAsync(submissionId, performedBy);
+        // The physical row goes with it. With the cascade foreign key
+        // on SubmissionId this is usually already done by the JSON
+        // delete itself; the explicit delete covers tables created
+        // before that key existed.
+        await repository.DeletePhysicalRowAsync(detail.FormId, submissionId);
 
         var uploadsRoot = ResolveUploadsPath();
         var rootFull = Path.GetFullPath(uploadsRoot);
@@ -265,7 +416,8 @@ public sealed partial class DynamicFormService(
     private static void ValidateSubmission(
         DynamicFormDetailDto form,
         Dictionary<string, JsonElement> byKey,
-        Dictionary<string, SubmissionFileUpload> fileByKey)
+        Dictionary<string, SubmissionFileUpload> fileByKey,
+        IReadOnlyCollection<string>? existingFileKeys = null)
     {
         var failures = new List<ValidationFailure>();
         foreach (var field in form.Fields)
@@ -275,7 +427,11 @@ public sealed partial class DynamicFormService(
             if (field.FieldType == "file")
             {
                 var upload = fileByKey.TryGetValue(field.FieldKey, out var u) ? u : null;
-                if (field.IsRequired && upload is null)
+                // On an edit, a file the user did not re-upload still
+                // counts as present: the old file stays in place.
+                var hasExisting = existingFileKeys is not null
+                    && existingFileKeys.Contains(field.FieldKey, StringComparer.OrdinalIgnoreCase);
+                if (field.IsRequired && upload is null && !hasExisting)
                     failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} is required."));
                 else if (upload is not null && !AcceptAllows(field.Accept, upload.FileName, upload.ContentType))
                     failures.Add(new ValidationFailure(field.FieldKey, $"File type not allowed for {field.Label}."));
@@ -397,6 +553,60 @@ public sealed partial class DynamicFormService(
         try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); } catch { /* best effort */ }
     }
 
+    // Upper-cased, allowlisted SQL type, or null for "auto default".
+    // Only the forms in this list can ever reach the DDL generator:
+    // anything with a space, quote, semicolon or bracket is rejected
+    // here, in the API layer, before it touches the database.
+    private static string? NormalizeSqlDataType(string? raw, string fieldKey)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var dt = raw.Trim().ToUpperInvariant();
+        string[] exact = { "INT", "BIGINT", "SMALLINT", "TINYINT", "BIT", "FLOAT", "REAL", "DATE", "TIME", "DATETIME2", "DATETIME" };
+        if (exact.Contains(dt)) return dt;
+
+        var open = dt.IndexOf('(');
+        var close = dt.IndexOf(')');
+        if (open <= 0 || close != dt.Length - 1) 
+            throw new InvalidDomainValueException($"Field '{fieldKey}' has an invalid SQL data type '{raw}'.");
+        var prefix = dt[..open];
+        var inside = dt[(open + 1)..close];
+        var parts = inside.Split(',');
+        int ParsePart(string s, string what)
+        {
+            if (!int.TryParse(s, out var n) || n < 0)
+                throw new InvalidDomainValueException($"Field '{fieldKey}' has an invalid SQL data type '{raw}'.");
+            return n;
+        }
+        switch (prefix)
+        {
+            case "NVARCHAR":
+                if (inside != "MAX" && ParsePart(inside, "length") > 4000)
+                    throw new InvalidDomainValueException($"Field '{fieldKey}' NVARCHAR length must be at most 4000 (or MAX).");
+                if (inside != "MAX") _ = ParsePart(inside, "length");
+                return dt;
+            case "VARCHAR":
+                if (inside != "MAX" && ParsePart(inside, "length") > 8000)
+                    throw new InvalidDomainValueException($"Field '{fieldKey}' VARCHAR length must be at most 8000 (or MAX).");
+                if (inside != "MAX") _ = ParsePart(inside, "length");
+                return dt;
+            case "CHAR":
+            case "NCHAR":
+                _ = ParsePart(inside, "length");
+                return dt;
+            case "DECIMAL":
+            case "NUMERIC":
+                if (parts.Length != 2)
+                    throw new InvalidDomainValueException($"Field '{fieldKey}' has an invalid SQL data type '{raw}'.");
+                var precision = ParsePart(parts[0], "precision");
+                var scale = ParsePart(parts[1], "scale");
+                if (precision > 38 || scale > precision)
+                    throw new InvalidDomainValueException($"Field '{fieldKey}' DECIMAL precision must be at most 38 and scale at most precision.");
+                return dt;
+            default:
+                throw new InvalidDomainValueException($"Field '{fieldKey}' has an invalid SQL data type '{raw}'.");
+        }
+    }
+
     private async Task ValidateLookupsAsync(SaveDynamicFormRequest request, int? selfFormId)
     {
         foreach (var field in request.Fields.Where(f => f.FieldType == "lookup"))
@@ -407,8 +617,15 @@ public sealed partial class DynamicFormService(
                 throw new InvalidDomainValueException($"Lookup field '{field.FieldKey}' cannot look up its own form.");
             var source = await repository.GetByIdAsync(field.LookupFormId.Value)
                 ?? throw new InvalidDomainValueException($"Lookup field '{field.FieldKey}' points at form {field.LookupFormId}, which does not exist.");
-            if (!source.Fields.Any(f => string.Equals(f.FieldKey, field.LookupFieldKey, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidDomainValueException($"Lookup field '{field.FieldKey}' points at field '{field.LookupFieldKey}', which does not exist in form '{source.FormKey}'.");
+            var sourceField = source.Fields.FirstOrDefault(f =>
+                string.Equals(f.FieldKey, field.LookupFieldKey, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidDomainValueException($"Lookup field '{field.FieldKey}' points at field '{field.LookupFieldKey}', which does not exist in form '{source.FormKey}'.");
+            // A lookup source must hold one value per entry: a
+            // multi-select, grid or file field cannot be the display
+            // column of a lookup, because its value is not one value.
+            if (sourceField.FieldType is "multiselect" or "checkboxGroup" or "grid" or "file"
+                or "heading" or "paragraph" or "section" or "button" or "link")
+                throw new InvalidDomainValueException($"Lookup field '{field.FieldKey}' cannot use '{field.LookupFieldKey}' as its source: that field holds more than one value.");
         }
     }
 
@@ -446,6 +663,14 @@ public sealed partial class DynamicFormService(
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' needs a label.");
             if (!DynamicFormFieldTypes.All.Contains(field.FieldType))
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' has unsupported type '{field.FieldType}'.");
+            // Datatypes: static fields store nothing and lookup fields
+            // are always INT (foreign key), so neither keeps a type.
+            // Anything else is normalized to upper case and checked
+            // against the allowlist, so a bad type can never reach
+            // the generated DDL.
+            field.SqlDataType = DynamicFormFieldTypes.IsStatic(field.FieldType) || field.FieldType == "lookup"
+                ? null
+                : NormalizeSqlDataType(field.SqlDataType, field.FieldKey);
             if (DynamicFormFieldTypes.HasOptions(field.FieldType) && field.Options.Count == 0)
                 throw new InvalidDomainValueException($"Field '{field.FieldKey}' needs at least one option.");
             if (field.ColumnSpan is < 1 or > 12)

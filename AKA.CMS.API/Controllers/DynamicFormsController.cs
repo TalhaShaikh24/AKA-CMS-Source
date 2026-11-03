@@ -80,6 +80,34 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
     public async Task<ActionResult<DynamicFormSubmissionDetailDto>> Submit(int id)
     {
+        var (values, files, badRequest) = ParseSubmissionForm();
+        if (badRequest is not null) return badRequest;
+        var created = await service.SubmitAsync(id, values, files, currentUser.UserId);
+        return CreatedAtAction(nameof(GetSubmission), new { submissionId = created.SubmissionId }, created);
+    }
+
+    /// <summary>Edit one entry. Same multipart shape as a submit; a
+    /// file field left untouched keeps its old file. The physical
+    /// FormData_ row is updated by SubmissionId, never duplicated.</summary>
+    [HttpPut("submissions/{submissionId:int}")]
+    [Authorize(Policy = PermissionPolicies.DynamicFormsWrite)]
+    [RequestSizeLimit(100_000_000)]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DynamicFormSubmissionDetailDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<DynamicFormSubmissionDetailDto>> UpdateSubmission(int submissionId)
+    {
+        var (values, files, badRequest) = ParseSubmissionForm();
+        if (badRequest is not null) return badRequest;
+        var updated = await service.UpdateSubmissionAsync(submissionId, values, files, currentUser.UserId);
+        return Ok(updated);
+    }
+
+    // Shared multipart parsing for submit and edit: a "values" JSON
+    // part plus one file part per file field named "file_{fieldKey}".
+    private (Dictionary<string, JsonElement> Values, List<SubmissionFileUpload> Files, BadRequestObjectResult? Error) ParseSubmissionForm()
+    {
         var form = Request.Form;
         var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
         var valuesRaw = form["values"].FirstOrDefault();
@@ -89,13 +117,13 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
             {
                 using var doc = JsonDocument.Parse(valuesRaw);
                 if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                    return BadRequest("values must be a JSON object.");
+                    return (values, new List<SubmissionFileUpload>(), BadRequest("values must be a JSON object."));
                 foreach (var prop in doc.RootElement.EnumerateObject())
                     values[prop.Name] = prop.Value.Clone();
             }
             catch (JsonException)
             {
-                return BadRequest("values must be valid JSON.");
+                return (values, new List<SubmissionFileUpload>(), BadRequest("values must be valid JSON."));
             }
         }
 
@@ -114,9 +142,7 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
                 Content = file.OpenReadStream()
             });
         }
-
-        var created = await service.SubmitAsync(id, values, files, currentUser.UserId);
-        return CreatedAtAction(nameof(GetSubmission), new { submissionId = created.SubmissionId }, created);
+        return (values, files, null);
     }
 
     /// <summary>Entries list of one form, newest first.</summary>

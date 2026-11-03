@@ -74,6 +74,21 @@
   </div>
 </div>
 
+<div class="card" id="dfbPreviewTabs" style="margin-top:14px">
+  <div class="card-head">
+    <h3>Preview</h3>
+    <span class="hint">Live — unsaved changes included. The table is created only when you click “Save Form”.</span>
+  </div>
+  <div class="card-body">
+    <div class="seg" id="dfbTabSeg">
+      <button type="button" data-ptab="json" class="sel">JSON</button>
+      <button type="button" data-ptab="ddl">SQL Server DDL</button>
+    </div>
+    <pre id="dfbJsonPre" style="margin-top:12px;overflow:auto;max-height:420px;background:#f7f7f7;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;white-space:pre-wrap"></pre>
+    <pre id="dfbDdlPre" hidden style="margin-top:12px;overflow:auto;max-height:420px;background:#f7f7f7;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;white-space:pre-wrap"></pre>
+  </div>
+</div>
+
 <div class="dfb-navigator open" id="dfbNavigator">
   <div class="dfb-nav-head" id="dfbNavHead">
     <strong>Navigator</strong>

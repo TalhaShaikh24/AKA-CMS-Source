@@ -59,6 +59,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         public string? InfoText { get; set; }
         public int ColumnSpan { get; set; }
         public int SortOrder { get; set; }
+        public string? SqlDataType { get; set; }
     }
 
     public async Task<IReadOnlyList<DynamicFormListItemDto>> GetAllAsync()
@@ -106,7 +107,7 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 CustomAttributes = ParseCustomAttributes(f.CustomAttributesJson),
                 ValidationRules = ParseValidationRules(f.ValidationRulesJson),
                 InputMask = f.InputMask, ParentKey = f.ParentKey, ShowBorder = f.ShowBorder, ShowDivider = f.ShowDivider, ShowInfoIcon = f.ShowInfoIcon, InfoText = f.InfoText,
-                ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder
+                ColumnSpan = f.ColumnSpan, SortOrder = f.SortOrder, SqlDataType = f.SqlDataType
             }).ToList()
         };
     }
@@ -152,6 +153,8 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
                 ? (object)f.ValidationRules.Select(r => new { pattern = r.Pattern, message = r.Message }).ToList()
                 : null,
             inputMask = f.InputMask,
+            sqlDataType = DynamicFormFieldTypes.IsStatic(f.FieldType) || f.FieldType == "lookup"
+                ? null : f.SqlDataType,
             parentKey = f.ParentKey,
             showBorder = f.ShowBorder,
             showDivider = f.ShowDivider,
@@ -191,6 +194,73 @@ public sealed class DynamicFormRepository(DapperContext context) : IDynamicFormR
         p.Add("@PerformedBy", performedBy);
         await connection.ExecuteAsync(
             StoredProcedures.DynamicFormDelete, p, commandType: CommandType.StoredProcedure);
+    }
+
+    /* ---------------- physical tables (FormData_...) ---------------- */
+
+    public async Task EnsurePhysicalTableAsync(int formId)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormEnsurePhysicalTable, p, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpsertPhysicalRowAsync(
+        int formId, int submissionId, int? submittedBy, IReadOnlyList<(string FieldKey, string ValueJson)> values)
+    {
+        // Build one JSON object {fieldKey: value} with the values as
+        // real JSON (not strings of JSON) — the SP reads it with
+        // OPENJSON, so strings stay strings and arrays stay arrays.
+        string objectJson;
+        using (var stream = new MemoryStream())
+        {
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                writer.WriteStartObject();
+                foreach (var v in values)
+                {
+                    writer.WritePropertyName(v.FieldKey);
+                    writer.WriteRawValue(v.ValueJson);
+                }
+                writer.WriteEndObject();
+            }
+            objectJson = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        }
+
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        p.Add("@SubmissionId", submissionId);
+        p.Add("@SubmittedBy", submittedBy);
+        p.Add("@ValuesJson", objectJson);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormDataUpsert, p, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task DeletePhysicalRowAsync(int formId, int submissionId)
+    {
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@FormId", formId);
+        p.Add("@SubmissionId", submissionId);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormDataDeleteRow, p, commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpdateSubmissionAsync(
+        int submissionId, int formId, IReadOnlyList<(string FieldKey, string ValueJson)> values, int performedBy)
+    {
+        var payload = values.Select(v => new { fieldKey = v.FieldKey, valueJson = v.ValueJson }).ToList();
+        using var connection = context.CreateConnection();
+        var p = new DynamicParameters();
+        p.Add("@SubmissionId", submissionId);
+        p.Add("@FormId", formId);
+        p.Add("@ValuesJson", JsonSerializer.Serialize(payload));
+        p.Add("@PerformedBy", performedBy);
+        await connection.ExecuteAsync(
+            StoredProcedures.DynamicFormSubmissionUpdate, p, commandType: CommandType.StoredProcedure);
     }
 
     private static List<DynamicFormGridColumnDto> ParseGridColumns(string? optionsJson)

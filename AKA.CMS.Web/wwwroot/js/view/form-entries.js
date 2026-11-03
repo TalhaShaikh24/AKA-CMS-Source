@@ -70,6 +70,7 @@ $(function () {
             '<td>' + e.valueCount + '</td>' +
             '<td class="row-actions" style="white-space:nowrap">' +
               '<button class="btn btn-ghost btn-sm" type="button" data-view="' + e.submissionId + '">View</button> ' +
+              '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Render/' + formId + '?edit=' + e.submissionId + '" data-permission="DynamicForms:Write">Edit</a> ' +
               '<button class="btn btn-ghost btn-sm" type="button" data-delete="' + e.submissionId + '" data-permission="DynamicForms:Write">Delete</button>' +
             '</td></tr>';
         }).join('') || '<tr><td colspan="5" class="hint">No entries yet. Fill the form to create the first one.</td></tr>');

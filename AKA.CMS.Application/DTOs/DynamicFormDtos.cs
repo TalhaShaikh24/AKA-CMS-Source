@@ -96,6 +96,11 @@ public sealed class DynamicFormFieldDto
     public string? InfoText { get; set; }
     public int ColumnSpan { get; set; } = 6;
     public int SortOrder { get; set; }
+    /// <summary>SQL Server type for this field's column in the form's
+    /// physical table (FormData_...). Null = auto default by field type.
+    /// Lookup fields ignore this: their column is always INT, a foreign
+    /// key to the source table's SubmissionId.</summary>
+    public string? SqlDataType { get; set; }
 }
 
 public sealed class DynamicFormListItemDto

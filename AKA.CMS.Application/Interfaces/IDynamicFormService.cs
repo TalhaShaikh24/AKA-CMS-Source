@@ -10,6 +10,10 @@ public interface IDynamicFormRepository
     Task<int> SaveAsync(int formId, SaveDynamicFormRequest request, int performedBy);
     Task DeleteAsync(int formId, int performedBy);
     Task<int> SubmitAsync(int formId, int? submittedBy, IReadOnlyList<(string FieldKey, string ValueJson)> values);
+    Task EnsurePhysicalTableAsync(int formId);
+    Task UpsertPhysicalRowAsync(int formId, int submissionId, int? submittedBy, IReadOnlyList<(string FieldKey, string ValueJson)> values);
+    Task DeletePhysicalRowAsync(int formId, int submissionId);
+    Task UpdateSubmissionAsync(int submissionId, int formId, IReadOnlyList<(string FieldKey, string ValueJson)> values, int performedBy);
     Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsByFormAsync(int formId);
     Task<DynamicFormSubmissionDetailDto?> GetSubmissionByIdAsync(int submissionId);
     Task DeleteSubmissionAsync(int submissionId, int performedBy);
@@ -29,6 +33,9 @@ public interface IDynamicFormService
         IReadOnlyList<SubmissionFileUpload> files, int submittedBy);
     Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsAsync(int formId);
     Task<DynamicFormSubmissionDetailDto> GetSubmissionAsync(int submissionId);
+    Task<DynamicFormSubmissionDetailDto> UpdateSubmissionAsync(
+        int submissionId, Dictionary<string, JsonElement> values,
+        IReadOnlyList<SubmissionFileUpload> files, int performedBy);
     Task DeleteSubmissionAsync(int submissionId, int performedBy);
     Task<(string FileName, string ContentType, string StoragePath)> GetSubmissionFileAsync(int submissionId, string fieldKey);
 }
