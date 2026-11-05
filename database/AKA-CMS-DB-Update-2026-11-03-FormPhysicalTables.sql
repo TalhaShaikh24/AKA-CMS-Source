@@ -339,7 +339,7 @@ BEGIN
     IF OBJECT_ID(N'[dbo].' + QUOTENAME(@TableName), N'U') IS NULL
     BEGIN
         DECLARE @Cols NVARCHAR(MAX);
-        SELECT @Cols = STRING_AGG(QUOTENAME([ColumnName]) + N' ' + [EffectiveType] + N' NULL', N', ')
+        SELECT @Cols = STRING_AGG(CAST(QUOTENAME([ColumnName]) + N' ' + [EffectiveType] + N' NULL' AS NVARCHAR(MAX)), N', ')
         FROM #Fields;
         DECLARE @CreateSql NVARCHAR(MAX) =
             N'CREATE TABLE [dbo].' + QUOTENAME(@TableName) +
@@ -358,7 +358,7 @@ BEGIN
        data is a data-loss risk, so a datatype change only applies to
        tables created after it. */
     DECLARE @Missing NVARCHAR(MAX);
-    SELECT @Missing = STRING_AGG(QUOTENAME(f.[ColumnName]) + N' ' + f.[EffectiveType] + N' NULL', N', ')
+    SELECT @Missing = STRING_AGG(CAST(QUOTENAME(f.[ColumnName]) + N' ' + f.[EffectiveType] + N' NULL' AS NVARCHAR(MAX)), N', ')
     FROM #Fields f
     WHERE NOT EXISTS (
         SELECT 1 FROM sys.columns c
@@ -516,8 +516,8 @@ BEGIN
     DECLARE @ExprList NVARCHAR(MAX);
     DECLARE @SetList NVARCHAR(MAX);
     SELECT
-        @ColList = STRING_AGG(QUOTENAME([ColumnName]), N', '),
-        @ExprList = STRING_AGG(
+        @ColList = STRING_AGG(CAST(QUOTENAME([ColumnName]) AS NVARCHAR(MAX)), N', '),
+        @ExprList = STRING_AGG(CAST(
             CASE
                 WHEN [FieldType] = 'lookup' THEN
                     N'(SELECT TOP 1 p.[EntryId] FROM [dbo].' + QUOTENAME([SourceTable]) + N' p ' +
@@ -535,8 +535,8 @@ BEGIN
                     N'(SELECT [ValueText] FROM #Vals WHERE [FieldKey] = ''' + REPLACE([FieldKey], '''', '''''') + N''')'
                 ELSE
                     N'TRY_CAST((SELECT [ValueText] FROM #Vals WHERE [FieldKey] = ''' + REPLACE([FieldKey], '''', '''''') + N''') AS ' + [EffectiveType] + N')'
-            END, N', '),
-        @SetList = STRING_AGG(
+            END AS NVARCHAR(MAX)), N', '),
+        @SetList = STRING_AGG(CAST(
             QUOTENAME([ColumnName]) + N' = ' +
             CASE
                 WHEN [FieldType] = 'lookup' THEN
@@ -555,7 +555,7 @@ BEGIN
                     N'(SELECT [ValueText] FROM #Vals WHERE [FieldKey] = ''' + REPLACE([FieldKey], '''', '''''') + N''')'
                 ELSE
                     N'TRY_CAST((SELECT [ValueText] FROM #Vals WHERE [FieldKey] = ''' + REPLACE([FieldKey], '''', '''''') + N''') AS ' + [EffectiveType] + N')'
-            END, N', ')
+            END AS NVARCHAR(MAX)), N', ')
     FROM #UpsertFields;
 
     DECLARE @UpsertSql NVARCHAR(MAX);

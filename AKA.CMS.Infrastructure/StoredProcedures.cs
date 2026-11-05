@@ -186,6 +186,12 @@ public static class StoredProcedures
     public const string SyncOutboxAck = "sp_CMS_SyncOutbox_Ack";
 
     public const string LookupGet = "sp_CMS_Lookup_Get";
+    public const string WorkflowSave = "sp_CMS_Workflow_Save";
+    public const string WorkflowGetById = "sp_CMS_Workflow_GetById";
+    public const string WorkflowGetAll = "sp_CMS_Workflow_GetAll";
+    public const string WorkflowGetSectionsByForm = "sp_CMS_Workflow_GetSectionsByForm";
+    public const string WorkflowDelete = "sp_CMS_Workflow_Delete";
+
     public const string WorkflowStateGetAll = "sp_CMS_WorkflowState_GetAll";
     public const string WorkflowTransitionGetAll = "sp_CMS_WorkflowTransition_GetAll";
     public const string WorkflowTransitionCreate = "sp_CMS_WorkflowTransition_Create";

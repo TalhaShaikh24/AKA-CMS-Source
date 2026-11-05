@@ -10,7 +10,8 @@ namespace AKA.CMS.Application.Services;
 
 public sealed partial class DynamicFormService(
     IDynamicFormRepository repository,
-    IOptions<FileStorageOptions> storageOptions) : IDynamicFormService
+    IOptions<FileStorageOptions> storageOptions,
+    IWorkflowRepository? workflowRepository = null) : IDynamicFormService
 {
     public Task<IReadOnlyList<DynamicFormListItemDto>> GetAllAsync() => repository.GetAllAsync();
 
@@ -157,7 +158,7 @@ public sealed partial class DynamicFormService(
             .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey);
+        ValidateSubmission(form, byKey, fileByKey, null, await GetHiddenSectionKeysAsync(formId));
 
         // Files are written first, under one folder per entry, so the
         // stored value is the file's path. If the DB save then fails,
@@ -245,7 +246,7 @@ public sealed partial class DynamicFormService(
             .Select(f => f.FieldKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey, existingFileKeys);
+        ValidateSubmission(form, byKey, fileByKey, existingFileKeys, await GetHiddenSectionKeysAsync(form.FormId));
 
         var uploadsRoot = ResolveUploadsPath();
         var folderToken = Guid.NewGuid().ToString("N");
@@ -413,16 +414,58 @@ public sealed partial class DynamicFormService(
     // format, regex patterns + custom messages, length and number ranges,
     // and file Accept. Failures carry the field key so the renderer can
     // show each message inline under its own field.
+    /// <summary>Section keys the active workflow hides for this form.
+    /// The workflow is the authority here, not anything the client
+    /// sends — otherwise anyone could bypass a required field by
+    /// claiming its section was hidden. No workflow (or the workflow
+    /// tables not run yet) means nothing is hidden, so submits keep
+    /// working exactly as before.</summary>
+    private async Task<IReadOnlyCollection<string>> GetHiddenSectionKeysAsync(int formId)
+    {
+        if (workflowRepository is null) return Array.Empty<string>();
+        try
+        {
+            var sections = await workflowRepository.GetSectionsByFormAsync(formId);
+            return sections.Sections.Where(s => !s.IsVisible).Select(s => s.SectionKey).ToList();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>True when the field sits inside one of the hidden
+    /// sections: walk its ParentKey chain up to the section row.</summary>
+    private static bool IsInHiddenSection(
+        DynamicFormFieldDto field, DynamicFormDetailDto form, IReadOnlyCollection<string> hiddenSectionKeys)
+    {
+        var byKey = form.Fields.ToDictionary(f => f.FieldKey, StringComparer.OrdinalIgnoreCase);
+        var cursor = field;
+        while (cursor?.ParentKey is not null && byKey.TryGetValue(cursor.ParentKey, out var parent))
+        {
+            if (hiddenSectionKeys.Contains(parent.FieldKey, StringComparer.OrdinalIgnoreCase)) return true;
+            cursor = parent;
+        }
+        return false;
+    }
+
     private static void ValidateSubmission(
         DynamicFormDetailDto form,
         Dictionary<string, JsonElement> byKey,
         Dictionary<string, SubmissionFileUpload> fileByKey,
-        IReadOnlyCollection<string>? existingFileKeys = null)
+        IReadOnlyCollection<string>? existingFileKeys = null,
+        IReadOnlyCollection<string>? hiddenSectionKeys = null)
     {
         var failures = new List<ValidationFailure>();
         foreach (var field in form.Fields)
         {
             if (DynamicFormFieldTypes.IsStatic(field.FieldType) || field.FieldType == "hidden") continue;
+
+            // A field inside a section the workflow hid is not
+            // validated at all: the user never saw it, so it cannot
+            // be required, and its format and range do not matter.
+            if (hiddenSectionKeys is not null && hiddenSectionKeys.Count > 0
+                && IsInHiddenSection(field, form, hiddenSectionKeys)) continue;
 
             if (field.FieldType == "file")
             {

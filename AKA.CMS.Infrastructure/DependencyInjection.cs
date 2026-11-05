@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IPatientRepository, PatientRepository>();
         services.AddScoped<IFacilityRepository, FacilityRepository>();
         services.AddScoped<IDynamicFormRepository, DynamicFormRepository>();
+        services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IGeographyRepository, GeographyRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<ICaseRepository, CaseRepository>();
@@ -65,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IFacilityService, FacilityService>();
         services.AddScoped<IDynamicFormService, DynamicFormService>();
+        services.AddScoped<IWorkflowService, WorkflowService>();
         services.AddScoped<IGeographyService, GeographyService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<ICaseService, CaseService>();

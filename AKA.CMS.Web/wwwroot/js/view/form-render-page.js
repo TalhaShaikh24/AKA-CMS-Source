@@ -5,7 +5,17 @@
    Edit mode (?edit=<submissionId>, from the Entries page) loads the
    saved entry, pre-fills the form with it, and saves with PUT
    /api/dynamic-forms/submissions/{id} instead — the physical
-   FormData_ row is updated by SubmissionId, never duplicated. */
+   FormData_ row is updated by SubmissionId, never duplicated.
+   Workflow (boss request 2026-11-05): on load, a new entry first asks
+   Get Workflow Sections (GET /api/workflows/by-form/{id}/sections)
+   which sections show. Hidden sections are dropped from the form
+   definition BEFORE rendering, so the wizard never shows an empty
+   step and validation never asks for a field the user cannot see.
+   The server applies the same rule when it validates the submission.
+   Edit mode shows everything: hiding a section there would drop its
+   saved values on save. If the workflow call fails (no workflow, no
+   permission, SQL not run yet) the whole form shows — the safe
+   default. */
 $(function () {
   if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
@@ -13,6 +23,42 @@ $(function () {
 
   var formId = $('#dfFormId').val();
   var editId = null;
+
+  // Workflow hide/show, applied to the definition before render.
+  // A section is hidden when the workflow says IsVisible = false;
+  // Hide/Show actions then run in order on top (a Hide action on a
+  // field hides just that field, on a section hides the whole
+  // section). A field is hidden when it is hidden itself or any
+  // ancestor section is hidden. Disable/Require actions are stored
+  // by the API but not applied by this page yet — next step.
+  function applyWorkflowToFormDef(wf) {
+    var hiddenSections = {};
+    var hiddenFields = {};
+    (wf.sections || []).forEach(function (s) {
+      if (!s.isVisible) hiddenSections[s.sectionKey] = true;
+      (s.actions || []).forEach(function (a) {
+        if (a.actionType === 'Hide') {
+          if (a.targetKey) hiddenFields[a.targetKey] = true;
+          else hiddenSections[s.sectionKey] = true;
+        } else if (a.actionType === 'Show') {
+          if (a.targetKey) delete hiddenFields[a.targetKey];
+          else delete hiddenSections[s.sectionKey];
+        }
+      });
+    });
+    var byKey = {};
+    (formDef.fields || []).forEach(function (f) { byKey[f.fieldKey] = f; });
+    function fieldHidden(f) {
+      if (hiddenSections[f.fieldKey] || hiddenFields[f.fieldKey]) return true;
+      var cursor = f;
+      while (cursor && cursor.parentKey) {
+        if (hiddenSections[cursor.parentKey]) return true;
+        cursor = byKey[cursor.parentKey];
+      }
+      return false;
+    }
+    formDef.fields = (formDef.fields || []).filter(function (f) { return !fieldHidden(f); });
+  }
   try { editId = new URLSearchParams(window.location.search).get('edit'); } catch (e) { editId = null; }
   var formDef = null;
 
@@ -101,7 +147,21 @@ $(function () {
         });
         return;
       }
-      CMSFormRenderer.render($('#dfRenderBody'), f);
+      // New entry: load the active workflow first, then render
+      // without the sections it hides. Any failure renders the
+      // whole form (the error handler returns true: no toast for
+      // a non-critical enhancement).
+      cmsAjax({
+        url: '/api/workflows/by-form/' + formId + '/sections', method: 'GET',
+        success: function (wf) {
+          applyWorkflowToFormDef(wf);
+          CMSFormRenderer.render($('#dfRenderBody'), formDef);
+        },
+        error: function () {
+          CMSFormRenderer.render($('#dfRenderBody'), formDef);
+          return true;
+        }
+      });
     },
     error: function () {
       $('#dfRenderBody').html('<div class="hint">Form not found.</div>');
