@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "Workflows";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "workflows";
+    ViewData["RequiredPermission"] = "Workflows:Read";
+}
+<style>
+  .modal{max-width:640px}
+  .wf-sec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .wf-sec-row:last-child{border-bottom:0}
+  .wf-sec-row .sec-name{flex:1;min-width:0}
+  .wf-sec-row .sec-name code{color:var(--muted);font-size:12px}
+  .wf-seg button{padding:6px 14px;font-size:13px}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Workflows</h1>
+    <p class="sub">Show or hide form sections when a form loads</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" id="newWorkflowBtn" type="button" data-permission="Workflows:Write">+ New Workflow</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Workflows</h3>
+    <span class="hint" id="wfCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="wfTable">
+      <thead>
+        <tr><th>Workflow</th><th>Form</th><th>Sections</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="wfTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="wfModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="wfModalTitle">New Workflow</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <form id="wfForm" novalidate>
+      <input type="hidden" id="wfId">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field field-span-2" id="fWfName">
+            <label>Workflow Name <span class="req">*</span></label>
+            <input class="input" id="wfName" placeholder="e.g. Registration - Field Visit" autocomplete="off">
+            <span class="field-error">Workflow name is required.</span>
+          </div>
+          <div class="field field-span-2" id="fWfForm">
+            <label>Form <span class="req">*</span></label>
+            <select class="input select2" id="wfFormSel" placeholder="Select a form"></select>
+            <span class="field-error">Please select a form.</span>
+          </div>
+          <div class="field field-span-2">
+            <label>Description</label>
+            <textarea class="input" id="wfDesc" rows="2" placeholder="What is this workflow for?"></textarea>
+          </div>
+          <div class="field field-span-2">
+            <label class="check-row"><input type="checkbox" id="wfActive" checked><span class="check-label">Active — only one workflow per form can be active; saving as Active deactivates the form's other workflows</span></label>
+          </div>
+          <div class="field field-span-2" id="wfSectionsWrap" style="display:none">
+            <label>Sections — choose what shows on load</label>
+            <div id="wfSections"></div>
+            <span class="hint">Only Show / Hide in this step. Disable / Require actions come later.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="wfSaveBtn">Save Workflow</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/workflows.js" asp-append-version="true"></script>
+}
