@@ -1,7 +1,8 @@
 /* Workflows — list + create/edit modal. Data comes from /api/workflows
-   via cmsAjax. Scope is step 1 only: Show / Hide sections on load.
-   Actions (Disable / Require / MakeOptional) are saved as an empty list
-   and have no UI in this round. */
+   via cmsAjax. Each section has a Show / Hide switch plus an Actions
+   list: one row per action (type + target field inside the section),
+   saved as sections[].actions[] and applied by the render page and
+   by server-side validation on submit. */
 $(function () {
   if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
@@ -10,8 +11,16 @@ $(function () {
   var editingId = null;        // workflow id being edited, null = new
   var formsLoaded = false;     // form dropdown options populated once
   var formSections = [];       // sections of the selected form, in form order
+  var formFields = [];         // all fields of the selected form (action targets)
   var sectionVisible = {};     // sectionKey -> bool (what the switches say)
+  var sectionActions = {};     // sectionKey -> [{ actionType, targetKey }] in row order
   var savedVisibility = null;  // visibility from the workflow being edited
+  var savedActions = null;     // actions from the workflow being edited
+
+  // Action types the API allowlists (SP 34 + WorkflowService).
+  var ACTION_TYPES = ['Show', 'Hide', 'Disable', 'Enable', 'Require', 'MakeOptional'];
+  // Display-only field types can never be an action target.
+  var NON_TARGET_TYPES = { heading: 1, paragraph: 1, link: 1, button: 1, hidden: 1 };
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -77,16 +86,25 @@ $(function () {
       success: function (form) {
         // Sections are fields with fieldType 'section', in the form's
         // own order (sortOrder). Nested sections keep their own key.
-        formSections = (form.fields || [])
-          .filter(function (f) { return f.fieldType === 'section'; })
+        // All fields are kept too: an action's target is a field
+        // inside its section (parentKey = the section key).
+        formFields = (form.fields || []).slice()
           .sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+        formSections = formFields
+          .filter(function (f) { return f.fieldType === 'section'; });
         sectionVisible = {};
+        sectionActions = {};
         formSections.forEach(function (s) {
           // Editing: keep the saved choice; new: everything shows.
           sectionVisible[s.fieldKey] = savedVisibility && savedVisibility.hasOwnProperty(s.fieldKey)
             ? savedVisibility[s.fieldKey] : true;
+          // Editing: keep the saved actions (already in sort order);
+          // new: no actions.
+          sectionActions[s.fieldKey] = savedActions && savedActions[s.fieldKey]
+            ? savedActions[s.fieldKey].slice() : [];
         });
         savedVisibility = null;
+        savedActions = null;
         renderSections();
       },
       error: function () { $('#wfSectionsWrap').hide(); }
@@ -99,16 +117,87 @@ $(function () {
     } else {
       $('#wfSections').html(formSections.map(function (s) {
         var visible = sectionVisible[s.fieldKey] !== false;
-        return '<div class="wf-sec-row">' +
+        return '<div class="wf-sec-block" data-secblock="' + esc(s.fieldKey) + '">' +
+          '<div class="wf-sec-row">' +
           '<div class="sec-name"><strong>' + esc(s.label) + '</strong><br><code>' + esc(s.fieldKey) + '</code></div>' +
           '<div class="seg wf-seg">' +
             '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-vis="true" class="' + (visible ? 'sel' : '') + '">Show</button>' +
             '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-vis="false" class="' + (visible ? '' : 'sel') + '">Hide</button>' +
+          '</div></div>' +
+          '<div class="wf-actions">' +
+            '<div class="wf-act-head"><span class="hint">Actions on load</span> ' +
+            '<button type="button" class="btn btn-ghost btn-sm wf-act-add" data-add-act="' + esc(s.fieldKey) + '">+ Add action</button></div>' +
+            '<div class="wf-act-list" data-actlist="' + esc(s.fieldKey) + '"></div>' +
           '</div></div>';
       }).join(''));
+      formSections.forEach(function (s) { renderActions(s.fieldKey); });
     }
     $('#wfSectionsWrap').show();
   }
+
+  /* Fields an action of this section may target: its direct children
+     that take input (a nested section is a target too — hiding it
+     hides everything inside it). Display-only types are excluded. */
+  function sectionTargetFields(sectionKey) {
+    return formFields.filter(function (f) {
+      return (f.parentKey || null) === sectionKey && !NON_TARGET_TYPES[f.fieldType];
+    });
+  }
+
+  function actionRowHtml(sectionKey, idx, action) {
+    var targets = sectionTargetFields(sectionKey);
+    return '<div class="wf-act-row">' +
+      '<select class="input wf-act-type" data-sec="' + esc(sectionKey) + '" data-idx="' + idx + '">' +
+        ACTION_TYPES.map(function (t) {
+          return '<option value="' + t + '"' + (action.actionType === t ? ' selected' : '') + '>' + t + '</option>';
+        }).join('') +
+      '</select>' +
+      '<select class="input wf-act-target" data-sec="' + esc(sectionKey) + '" data-idx="' + idx + '">' +
+        '<option value="">Whole section</option>' +
+        targets.map(function (f) {
+          return '<option value="' + esc(f.fieldKey) + '"' +
+            (action.targetKey === f.fieldKey ? ' selected' : '') + '>' +
+            esc(f.label) + ' (' + esc(f.fieldKey) + ')</option>';
+        }).join('') +
+      '</select>' +
+      '<button type="button" class="btn btn-ghost btn-sm wf-act-del" data-sec="' + esc(sectionKey) + '" data-idx="' + idx + '" title="Remove action">✕</button>' +
+    '</div>';
+  }
+
+  // Rebuild one section's action rows from state (add/remove only —
+  // typing in a row updates state without a rebuild, so focus stays).
+  function renderActions(sectionKey) {
+    var list = (sectionActions[sectionKey] || []);
+    $('[data-actlist="' + sectionKey + '"]').html(list.map(function (a, i) {
+      return actionRowHtml(sectionKey, i, a);
+    }).join('') || '<div class="hint">No actions — this section shows as-is.</div>');
+  }
+
+  // Add action row: a new row defaults to Hide on the whole section.
+  $(document).on('click', '.wf-act-add', function () {
+    var sec = $(this).data('add-act');
+    (sectionActions[sec] = sectionActions[sec] || []).push({ actionType: 'Hide', targetKey: null });
+    renderActions(sec);
+  });
+
+  // Remove action row.
+  $(document).on('click', '.wf-act-del', function () {
+    var sec = $(this).data('sec');
+    var idx = Number($(this).data('idx'));
+    (sectionActions[sec] || []).splice(idx, 1);
+    renderActions(sec);
+  });
+
+  // Type / target change: state only, no rebuild.
+  $(document).on('change', '.wf-act-type, .wf-act-target', function () {
+    var $el = $(this);
+    var sec = $el.data('sec');
+    var idx = Number($el.data('idx'));
+    var row = (sectionActions[sec] || [])[idx];
+    if (!row) return;
+    if ($el.hasClass('wf-act-type')) row.actionType = $el.val();
+    else row.targetKey = $el.val() || null;
+  });
 
   // Show/Hide switch for one section.
   $(document).on('click', '.wf-seg button', function () {
@@ -133,11 +222,12 @@ $(function () {
   $('#newWorkflowBtn').on('click', function () {
     editingId = null;
     savedVisibility = null;
+    savedActions = null;
     $('#wfForm')[0].reset();
     $('#wfId').val('');
     $('#wfActive').prop('checked', true);
     $('#fWfName, #fWfForm').removeClass('invalid');
-    formSections = []; sectionVisible = {};
+    formSections = []; formFields = []; sectionVisible = {}; sectionActions = {};
     $('#wfSectionsWrap').hide();
     if (!formsLoaded) loadForms();
     $('#wfFormSel').val(null).trigger('change');
@@ -156,9 +246,15 @@ $(function () {
         $('#wfDesc').val(w.description || '');
         $('#wfActive').prop('checked', !!w.isActive);
         $('#fWfName, #fWfForm').removeClass('invalid');
-        // Saved visibility, applied when the form's sections load.
+        // Saved visibility + actions, applied when the form's sections load.
         savedVisibility = {};
-        (w.sections || []).forEach(function (s) { savedVisibility[s.sectionKey] = !!s.isVisible; });
+        savedActions = {};
+        (w.sections || []).forEach(function (s) {
+          savedVisibility[s.sectionKey] = !!s.isVisible;
+          savedActions[s.sectionKey] = (s.actions || []).slice()
+            .sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
+            .map(function (a) { return { actionType: a.actionType, targetKey: a.targetKey || null }; });
+        });
         // The form must be selectable before its sections can load:
         // wait for the dropdown options when they are not there yet.
         if (formsLoaded) {
@@ -193,7 +289,11 @@ $(function () {
           sectionKey: s.fieldKey,
           isVisible: sectionVisible[s.fieldKey] !== false,
           displayOrder: i,
-          actions: []
+          // Row order is the sort order the API and the render page
+          // apply the actions in.
+          actions: (sectionActions[s.fieldKey] || []).map(function (a, j) {
+            return { actionType: a.actionType, targetKey: a.targetKey || null, sortOrder: j };
+          })
         };
       })
     };

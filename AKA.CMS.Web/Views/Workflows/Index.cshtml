@@ -5,12 +5,19 @@
     ViewData["RequiredPermission"] = "Workflows:Read";
 }
 <style>
-  .modal{max-width:640px}
+  .modal{max-width:720px}
   .wf-sec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
   .wf-sec-row:last-child{border-bottom:0}
   .wf-sec-row .sec-name{flex:1;min-width:0}
   .wf-sec-row .sec-name code{color:var(--muted);font-size:12px}
   .wf-seg button{padding:6px 14px;font-size:13px}
+  .wf-sec-block{padding-bottom:10px;border-bottom:1px solid var(--border)}
+  .wf-sec-block:last-child{border-bottom:0}
+  .wf-actions{padding:6px 0 4px 0}
+  .wf-act-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .wf-act-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .wf-act-row select{flex:1;min-width:0}
+  .wf-act-row .wf-act-del{flex:none}
 </style>
 
 <div class="page-head">
@@ -68,7 +75,7 @@
           <div class="field field-span-2" id="wfSectionsWrap" style="display:none">
             <label>Sections — choose what shows on load</label>
             <div id="wfSections"></div>
-            <span class="hint">Only Show / Hide in this step. Disable / Require actions come later.</span>
+            <span class="hint">Show / Hide controls the whole section. An action targets one field inside the section — or the whole section when no field is picked — and runs when the form loads: Hide, Disable, Require and MakeOptional change the field; Show and Enable undo them.</span>
           </div>
         </div>
       </div>

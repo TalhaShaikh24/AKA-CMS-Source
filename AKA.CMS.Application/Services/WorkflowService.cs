@@ -77,6 +77,12 @@ public sealed class WorkflowService(IWorkflowRepository repository, IDynamicForm
                 if (!ActionTypes.Contains(action.ActionType, StringComparer.OrdinalIgnoreCase))
                     throw new InvalidDomainValueException(
                         $"Action type '{action.ActionType}' is invalid (Show, Hide, Disable, Enable, Require, MakeOptional).");
+                // A target must be a real field of this form — a typo
+                // must fail here with 400, not silently do nothing.
+                if (!string.IsNullOrWhiteSpace(action.TargetKey)
+                    && !form.Fields.Any(f => string.Equals(f.FieldKey, action.TargetKey, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidDomainValueException(
+                        $"Action target '{action.TargetKey}' is not a field of this form.");
                 if (action.SortOrder < 0)
                     throw new InvalidDomainValueException($"Action '{action.ActionType}' sort order must be 0 or more.");
             }

@@ -158,7 +158,7 @@ public sealed partial class DynamicFormService(
             .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey, null, await GetHiddenSectionKeysAsync(formId));
+        ValidateSubmission(form, byKey, fileByKey, null, await GetWorkflowRulesAsync(formId, form));
 
         // Files are written first, under one folder per entry, so the
         // stored value is the file's path. If the DB save then fails,
@@ -246,7 +246,7 @@ public sealed partial class DynamicFormService(
             .Select(f => f.FieldKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey, existingFileKeys, await GetHiddenSectionKeysAsync(form.FormId));
+        ValidateSubmission(form, byKey, fileByKey, existingFileKeys, await GetWorkflowRulesAsync(form.FormId, form));
 
         var uploadsRoot = ResolveUploadsPath();
         var folderToken = Guid.NewGuid().ToString("N");
@@ -414,24 +414,95 @@ public sealed partial class DynamicFormService(
     // format, regex patterns + custom messages, length and number ranges,
     // and file Accept. Failures carry the field key so the renderer can
     // show each message inline under its own field.
-    /// <summary>Section keys the active workflow hides for this form.
-    /// The workflow is the authority here, not anything the client
-    /// sends — otherwise anyone could bypass a required field by
-    /// claiming its section was hidden. No workflow (or the workflow
-    /// tables not run yet) means nothing is hidden, so submits keep
-    /// working exactly as before.</summary>
-    private async Task<IReadOnlyCollection<string>> GetHiddenSectionKeysAsync(int formId)
+    /// <summary>What the active workflow says about validation, read
+    /// from the DB (never from the client): which sections and fields
+    /// hide, and which fields the workflow makes required or optional.
+    /// Actions run in the order the sections API returns them, so a
+    /// later action wins over an earlier one on the same field.
+    /// Disable/Enable have no validation effect — a disabled field
+    /// still submits its value. No workflow (or the workflow tables
+    /// not run yet) means empty rules, so submits keep working
+    /// exactly as before.</summary>
+    private sealed record WorkflowValidationRules(
+        HashSet<string> HiddenSectionKeys,
+        HashSet<string> HiddenFieldKeys,
+        HashSet<string> RequiredFieldKeys,
+        HashSet<string> OptionalFieldKeys);
+
+    private async Task<WorkflowValidationRules> GetWorkflowRulesAsync(int formId, DynamicFormDetailDto form)
     {
-        if (workflowRepository is null) return Array.Empty<string>();
+        var empty = new WorkflowValidationRules(
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        if (workflowRepository is null) return empty;
         try
         {
-            var sections = await workflowRepository.GetSectionsByFormAsync(formId);
-            return sections.Sections.Where(s => !s.IsVisible).Select(s => s.SectionKey).ToList();
+            var response = await workflowRepository.GetSectionsByFormAsync(formId);
+            var hiddenSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var hiddenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var optional = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var section in response.Sections)
+            {
+                if (!section.IsVisible) hiddenSections.Add(section.SectionKey);
+                foreach (var action in section.Actions)
+                {
+                    // A null target means the whole section: every
+                    // field inside it, nested sections included.
+                    var targets = action.TargetKey is null
+                        ? FieldsInSection(form, section.SectionKey)
+                        : new List<string> { action.TargetKey };
+                    switch (action.ActionType.ToLowerInvariant())
+                    {
+                        case "hide":
+                            if (action.TargetKey is null) hiddenSections.Add(section.SectionKey);
+                            else hiddenFields.Add(action.TargetKey);
+                            break;
+                        case "show":
+                            if (action.TargetKey is null) hiddenSections.Remove(section.SectionKey);
+                            else hiddenFields.Remove(action.TargetKey);
+                            break;
+                        case "require":
+                            foreach (var t in targets) { required.Add(t); optional.Remove(t); }
+                            break;
+                        case "makeoptional":
+                            foreach (var t in targets) { optional.Add(t); required.Remove(t); }
+                            break;
+                    }
+                }
+            }
+            return new WorkflowValidationRules(hiddenSections, hiddenFields, required, optional);
         }
         catch
         {
-            return Array.Empty<string>();
+            return empty;
         }
+    }
+
+    /// <summary>Field keys inside a section, nested sections included:
+    /// walk the ParentKey chain down from the section.</summary>
+    private static List<string> FieldsInSection(DynamicFormDetailDto form, string sectionKey)
+    {
+        var byParent = form.Fields
+            .Where(f => f.ParentKey is not null)
+            .GroupBy(f => f.ParentKey!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Select(f => f.FieldKey).ToList(), StringComparer.OrdinalIgnoreCase);
+        var found = new List<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(sectionKey);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (!byParent.TryGetValue(current, out var kids)) continue;
+            foreach (var kid in kids)
+            {
+                found.Add(kid);
+                queue.Enqueue(kid);
+            }
+        }
+        return found;
     }
 
     /// <summary>True when the field sits inside one of the hidden
@@ -449,23 +520,55 @@ public sealed partial class DynamicFormService(
         return false;
     }
 
+    /// <summary>True when the field itself, or any section above it,
+    /// was hidden by a Hide action: a field-level Hide hides just
+    /// that field, a section Hide hides everything inside it.</summary>
+    private static bool IsHiddenByAction(
+        DynamicFormFieldDto field, DynamicFormDetailDto form, HashSet<string> hiddenFieldKeys)
+    {
+        var byKey = form.Fields.ToDictionary(f => f.FieldKey, StringComparer.OrdinalIgnoreCase);
+        DynamicFormFieldDto? cursor = field;
+        while (cursor is not null)
+        {
+            if (hiddenFieldKeys.Contains(cursor.FieldKey)) return true;
+            cursor = cursor.ParentKey is not null && byKey.TryGetValue(cursor.ParentKey, out var parent) ? parent : null;
+        }
+        return false;
+    }
+
     private static void ValidateSubmission(
         DynamicFormDetailDto form,
         Dictionary<string, JsonElement> byKey,
         Dictionary<string, SubmissionFileUpload> fileByKey,
         IReadOnlyCollection<string>? existingFileKeys = null,
-        IReadOnlyCollection<string>? hiddenSectionKeys = null)
+        WorkflowValidationRules? workflowRules = null)
     {
         var failures = new List<ValidationFailure>();
         foreach (var field in form.Fields)
         {
             if (DynamicFormFieldTypes.IsStatic(field.FieldType) || field.FieldType == "hidden") continue;
 
-            // A field inside a section the workflow hid is not
-            // validated at all: the user never saw it, so it cannot
-            // be required, and its format and range do not matter.
-            if (hiddenSectionKeys is not null && hiddenSectionKeys.Count > 0
-                && IsInHiddenSection(field, form, hiddenSectionKeys)) continue;
+            // A field the workflow hides — its whole section, or the
+            // field itself — is not validated at all: the user never
+            // saw it, so it cannot be required, and its format and
+            // range do not matter.
+            if (workflowRules is not null
+                && ((workflowRules.HiddenSectionKeys.Count > 0
+                        && IsInHiddenSection(field, form, workflowRules.HiddenSectionKeys))
+                    || (workflowRules.HiddenFieldKeys.Count > 0
+                        && IsHiddenByAction(field, form, workflowRules.HiddenFieldKeys))))
+                continue;
+
+            // Required is the form's own flag, adjusted by the
+            // workflow: a Require action makes an optional field
+            // required, a MakeOptional action frees a required field.
+            // The workflow is the authority here, not the client.
+            var isRequired = field.IsRequired;
+            if (workflowRules is not null)
+            {
+                if (workflowRules.OptionalFieldKeys.Contains(field.FieldKey)) isRequired = false;
+                else if (workflowRules.RequiredFieldKeys.Contains(field.FieldKey)) isRequired = true;
+            }
 
             if (field.FieldType == "file")
             {
@@ -474,7 +577,7 @@ public sealed partial class DynamicFormService(
                 // counts as present: the old file stays in place.
                 var hasExisting = existingFileKeys is not null
                     && existingFileKeys.Contains(field.FieldKey, StringComparer.OrdinalIgnoreCase);
-                if (field.IsRequired && upload is null && !hasExisting)
+                if (isRequired && upload is null && !hasExisting)
                     failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} is required."));
                 else if (upload is not null && !AcceptAllows(field.Accept, upload.FileName, upload.ContentType))
                     failures.Add(new ValidationFailure(field.FieldKey, $"File type not allowed for {field.Label}."));
@@ -485,7 +588,7 @@ public sealed partial class DynamicFormService(
             if (!present) value = default;
             if (IsSubmissionEmpty(field, value))
             {
-                if (field.IsRequired)
+                if (isRequired)
                     failures.Add(new ValidationFailure(field.FieldKey, $"{field.Label} is required."));
                 continue;
             }

@@ -11,7 +11,10 @@
    which sections show. Hidden sections are dropped from the form
    definition BEFORE rendering, so the wizard never shows an empty
    step and validation never asks for a field the user cannot see.
-   The server applies the same rule when it validates the submission.
+   Require / MakeOptional rewrite a field's required flag the same
+   way, and Disable / Enable are applied to the rendered controls
+   after render (their values still submit). The server applies the
+   same rules when it validates the submission.
    Edit mode shows everything: hiding a section there would drop its
    saved values on save. If the workflow call fails (no workflow, no
    permission, SQL not run yet) the whole form shows — the safe
@@ -24,16 +27,42 @@ $(function () {
   var formId = $('#dfFormId').val();
   var editId = null;
 
-  // Workflow hide/show, applied to the definition before render.
+  // Workflow actions, applied to the definition before render.
   // A section is hidden when the workflow says IsVisible = false;
   // Hide/Show actions then run in order on top (a Hide action on a
   // field hides just that field, on a section hides the whole
   // section). A field is hidden when it is hidden itself or any
-  // ancestor section is hidden. Disable/Require actions are stored
-  // by the API but not applied by this page yet — next step.
+  // ancestor section is hidden. Require / MakeOptional rewrite the
+  // field's isRequired, so the asterisk and the client-side
+  // validation both follow the workflow. Disable / Enable cannot
+  // live in the definition (the renderer has no disabled flag), so
+  // they are returned here and applied to the DOM after render —
+  // the value still submits, because the collector reads disabled
+  // inputs too. Returns the keys to disable after render.
   function applyWorkflowToFormDef(wf) {
     var hiddenSections = {};
     var hiddenFields = {};
+    var requiredMap = {};   // fieldKey -> true (Require) / false (MakeOptional)
+    var disabledMap = {};   // fieldKey -> true while a Disable is in force
+    var byKey = {};
+    (formDef.fields || []).forEach(function (f) { byKey[f.fieldKey] = f; });
+    // Every field below a section, nested sections included.
+    function descendantsOf(sectionKey) {
+      var out = [];
+      (formDef.fields || []).forEach(function (f) {
+        var cursor = f;
+        while (cursor && cursor.parentKey) {
+          if (cursor.parentKey === sectionKey) { out.push(f.fieldKey); break; }
+          cursor = byKey[cursor.parentKey];
+        }
+      });
+      return out;
+    }
+    // A null target means the whole section; otherwise one field.
+    function applyToTargets(sectionKey, targetKey, fn) {
+      if (targetKey) { fn(targetKey); return; }
+      descendantsOf(sectionKey).forEach(fn);
+    }
     (wf.sections || []).forEach(function (s) {
       if (!s.isVisible) hiddenSections[s.sectionKey] = true;
       (s.actions || []).forEach(function (a) {
@@ -43,21 +72,45 @@ $(function () {
         } else if (a.actionType === 'Show') {
           if (a.targetKey) delete hiddenFields[a.targetKey];
           else delete hiddenSections[s.sectionKey];
+        } else if (a.actionType === 'Disable') {
+          applyToTargets(s.sectionKey, a.targetKey, function (k) { disabledMap[k] = true; });
+        } else if (a.actionType === 'Enable') {
+          applyToTargets(s.sectionKey, a.targetKey, function (k) { delete disabledMap[k]; });
+        } else if (a.actionType === 'Require') {
+          applyToTargets(s.sectionKey, a.targetKey, function (k) { requiredMap[k] = true; });
+        } else if (a.actionType === 'MakeOptional') {
+          applyToTargets(s.sectionKey, a.targetKey, function (k) { requiredMap[k] = false; });
         }
       });
     });
-    var byKey = {};
-    (formDef.fields || []).forEach(function (f) { byKey[f.fieldKey] = f; });
     function fieldHidden(f) {
       if (hiddenSections[f.fieldKey] || hiddenFields[f.fieldKey]) return true;
       var cursor = f;
       while (cursor && cursor.parentKey) {
-        if (hiddenSections[cursor.parentKey]) return true;
+        if (hiddenSections[cursor.parentKey] || hiddenFields[cursor.parentKey]) return true;
         cursor = byKey[cursor.parentKey];
       }
       return false;
     }
     formDef.fields = (formDef.fields || []).filter(function (f) { return !fieldHidden(f); });
+    // Required follows the workflow: the asterisk renders from
+    // isRequired, and validate() reads the same definition.
+    formDef.fields.forEach(function (f) {
+      if (requiredMap.hasOwnProperty(f.fieldKey)) f.isRequired = requiredMap[f.fieldKey];
+    });
+    return Object.keys(disabledMap);
+  }
+
+  // Disable the workflow-disabled fields in the rendered DOM. The
+  // values still submit: collect() reads disabled inputs too.
+  function applyDisabledFields($root, keys) {
+    (keys || []).forEach(function (key) {
+      var $wrap = $root.find('[data-fkey="' + key + '"]');
+      if (!$wrap.length) return;
+      $wrap.addClass('dfb-disabled');
+      $wrap.find('input, select, textarea, button').prop('disabled', true);
+      $wrap.find('select').trigger('change'); // let Select2 show the disabled state
+    });
   }
   try { editId = new URLSearchParams(window.location.search).get('edit'); } catch (e) { editId = null; }
   var formDef = null;
@@ -154,8 +207,9 @@ $(function () {
       cmsAjax({
         url: '/api/workflows/by-form/' + formId + '/sections', method: 'GET',
         success: function (wf) {
-          applyWorkflowToFormDef(wf);
+          var disabledKeys = applyWorkflowToFormDef(wf);
           CMSFormRenderer.render($('#dfRenderBody'), formDef);
+          applyDisabledFields($('#dfRenderBody'), disabledKeys);
         },
         error: function () {
           CMSFormRenderer.render($('#dfRenderBody'), formDef);
