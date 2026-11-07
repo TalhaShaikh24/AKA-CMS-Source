@@ -347,24 +347,34 @@ $(function () {
 
   function actRowHtml(idx, row) {
     return '<div class="wm-act-row">' +
-      '<input class="input wm-act-code" data-idx="' + idx + '" placeholder="Code (SUBMIT)" value="' + esc(row.actionCode) + '">' +
-      '<input class="input wm-act-title" data-idx="' + idx + '" placeholder="Button text (Submit)" value="' + esc(row.actionTitle) + '">' +
-      '<select class="input wm-act-next" data-idx="' + idx + '">' +
-        steps.map(function (s) {
-          return '<option value="' + esc(s.stepCode) + '"' + (row.nextStepCode === s.stepCode ? ' selected' : '') + '>' +
-            esc(s.stepTitle) + '</option>';
-        }).join('') +
-      '</select>' +
-      '<select class="input wm-act-role" data-idx="' + idx + '">' +
-        '<option value="">— No role —</option>' +
-        roles.map(function (r) {
-          return '<option value="' + r.roleId + '"' + (row.nextRoleId === r.roleId ? ' selected' : '') + '>' +
-            esc(r.description) + '</option>';
-        }).join('') +
-      '</select>' +
-      '<label class="chk"><input type="checkbox" class="wm-act-move" data-idx="' + idx + '"' + (row.saveOrMove ? ' checked' : '') + '> Save+Move</label>' +
-      '<label class="chk"><input type="checkbox" class="wm-act-mail" data-idx="' + idx + '"' + (row.isSendEmail ? ' checked' : '') + '> Email</label>' +
-      '<button type="button" class="btn btn-ghost btn-sm wm-act-del" data-idx="' + idx + '" title="Remove button">✕</button>' +
+      '<div class="wm-act-grid">' +
+        '<div class="field"><label>Button Code</label>' +
+          '<input class="input wm-act-code" data-idx="' + idx + '" placeholder="e.g. SUBMIT" value="' + esc(row.actionCode) + '"></div>' +
+        '<div class="field"><label>Button Text</label>' +
+          '<input class="input wm-act-title" data-idx="' + idx + '" placeholder="e.g. Submit" value="' + esc(row.actionTitle) + '"></div>' +
+        '<div class="field"><label>Goes to</label>' +
+          '<select class="input wm-act-next" data-idx="' + idx + '">' +
+            steps.map(function (s) {
+              return '<option value="' + esc(s.stepCode) + '"' + (row.nextStepCode === s.stepCode ? ' selected' : '') + '>' +
+                esc(s.stepTitle) + '</option>';
+            }).join('') +
+          '</select></div>' +
+        '<div class="field"><label>Assigned to</label>' +
+          '<select class="input wm-act-role" data-idx="' + idx + '">' +
+            '<option value="">— No role —</option>' +
+            roles.map(function (r) {
+              return '<option value="' + r.roleId + '"' + (row.nextRoleId === r.roleId ? ' selected' : '') + '>' +
+                esc(r.description) + '</option>';
+            }).join('') +
+          '</select></div>' +
+      '</div>' +
+      '<div class="wm-act-opts">' +
+        '<div class="wm-act-opt"><label class="switch"><input type="checkbox" class="wm-act-move" data-idx="' + idx + '"' + (row.saveOrMove ? ' checked' : '') + '><span class="sl"></span></label>' +
+          '<div class="opt-text"><b>Save + move</b><span>Saves the form, then moves to the next step</span></div></div>' +
+        '<div class="wm-act-opt"><label class="switch"><input type="checkbox" class="wm-act-mail" data-idx="' + idx + '"' + (row.isSendEmail ? ' checked' : '') + '><span class="sl"></span></label>' +
+          '<div class="opt-text"><b>Send email</b><span>Only saved for now — no email is sent yet</span></div></div>' +
+        '<button type="button" class="btn btn-ghost btn-sm wm-act-del" data-idx="' + idx + '" title="Remove button">✕</button>' +
+      '</div>' +
     '</div>';
   }
 
