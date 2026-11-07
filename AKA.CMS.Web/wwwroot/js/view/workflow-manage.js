@@ -14,6 +14,7 @@ $(function () {
   var steps = [];            // steps of this workflow, in order
   var roles = [];            // all roles (dropdowns)
   var formSections = [];     // sections of the workflow's form
+  var formLoaded = false;    // form definition arrived (sections need it)
   var editingStepId = null;  // step in the form, null = new
   var secStepId = null;      // step selected on the sections tab
   var secState = {};         // sectionKey -> { isVisible, isEnable }
@@ -73,11 +74,16 @@ $(function () {
     if (steps.length) {
       if (!steps.some(function (s) { return s.workflowStepId === secStepId; })) secStepId = steps[0].workflowStepId;
       if (!steps.some(function (s) { return s.workflowStepId === actStepId; })) actStepId = steps[0].workflowStepId;
-      $('#wmSecStepSel').val(String(secStepId));
-      $('#wmActStepSel').val(String(actStepId));
+      // Programmatic .val() fires no change event, so load the tab data
+      // here — otherwise the lists stay empty until the user re-picks
+      // the step (boot race: form load and steps load finish in any order).
+      $('#wmSecStepSel').val(String(secStepId)).trigger('change');
+      $('#wmActStepSel').val(String(actStepId)).trigger('change');
     } else {
       secStepId = null;
       actStepId = null;
+      $('#wmSecList').html('<div class="hint">Add a step first — sections are configured per step.</div>');
+      $('#wmActList').html('<div class="hint">Add a step first — buttons are configured per step.</div>');
     }
   }
 
@@ -87,6 +93,7 @@ $(function () {
       url: '/api/dynamic-forms/' + workflow.formId, method: 'GET',
       fallbackMsg: 'Could not load form sections.',
       success: function (form) {
+        formLoaded = true;
         formSections = (form.fields || [])
           .filter(function (f) { return f.fieldType === 'section'; })
           .sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
@@ -208,6 +215,10 @@ $(function () {
   }
 
   function renderSecList() {
+    if (!formLoaded) {
+      $('#wmSecList').html('<div class="hint">Loading sections…</div>');
+      return;
+    }
     if (!formSections.length) {
       $('#wmSecList').html('<div class="hint">This form has no sections.</div>');
       return;
