@@ -1,9 +1,14 @@
-/* Workflow Manage — one workflow's steps, each step's sections and
-   each step's buttons. Data comes from /api/workflows via cmsAjax.
-   Steps are saved one at a time; sections and buttons are saved
-   wholesale per step (the whole list every time, like the workflow
-   save). A step with no section rows falls back to the workflow's
-   own sections — see the sections tab hint. */
+/* Workflow Manage — one page, no tabs. Top to bottom:
+   1. flow strip (the whole workflow at a glance, click a card to
+      select — and edit — that step), 2. step form, 3. steps table,
+   4. the selected step's detail: what shows here (sections) and
+   what happens next (buttons). Data comes from /api/workflows via
+   cmsAjax. Steps are saved one at a time; sections and buttons are
+   saved wholesale per step (the whole list every time, like the
+   workflow save). A step with no section rows falls back to the
+   workflow's own sections — see the sections hint.
+   The first step is auto-selected on boot, so its sections and
+   buttons load without any click. */
 $(function () {
   if (window.cmsAuth && !window.cmsAuth.isLoggedIn()) { window.location.href = '/Account/Login'; return; }
   CMS.bindLayout();
@@ -16,23 +21,17 @@ $(function () {
   var formSections = [];     // sections of the workflow's form
   var formLoaded = false;    // form definition arrived (sections need it)
   var editingStepId = null;  // step in the form, null = new
-  var secStepId = null;      // step selected on the sections tab
+  var selectedStepId = null; // step whose sections/buttons are shown
   var secState = {};         // sectionKey -> { isVisible, isEnable }
-  var actStepId = null;      // step selected on the buttons tab
-  var actRows = [];          // button rows of that step, in order
+  var actRows = [];          // button rows of the selected step, in order
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   }); }
 
-  /* ---------------- tabs ---------------- */
-  $('#wmTabs').on('click', '[data-tab]', function () {
-    var tab = $(this).data('tab');
-    $('#wmTabs button').removeClass('btn-primary').addClass('btn-ghost');
-    $(this).removeClass('btn-ghost').addClass('btn-primary');
-    $('.wm-tab').removeClass('active');
-    $('#wmTab-' + tab).addClass('active');
-  });
+  function stepById(id) {
+    return steps.filter(function (s) { return s.workflowStepId === id; })[0] || null;
+  }
 
   /* ---------------- shared loads ---------------- */
   function loadRoles(onDone) {
@@ -56,34 +55,24 @@ $(function () {
       fallbackMsg: 'Could not load steps.',
       success: function (res) {
         steps = res || [];
-        renderStepsTable();
-        fillStepDropdowns();
+        onStepsLoaded();
         if (typeof onDone === 'function') onDone();
       }
     });
   }
 
-  function fillStepDropdowns() {
-    var opts = steps.map(function (s) {
-      return '<option value="' + s.workflowStepId + '">' + esc(s.stepTitle) + ' (' + esc(s.stepCode) + ')</option>';
-    }).join('');
-    $('#wmSecStepSel').html(opts);
-    $('#wmActStepSel').html(opts);
-    CMS.initSelect2(document);
-    // Keep the selected step if it still exists, else take the first.
+  // Steps arrived (boot, or after a save/delete): redraw the strip and
+  // the table, then keep the selected step — or take the first one, so
+  // the detail below never sits empty while steps exist.
+  function onStepsLoaded() {
+    renderStepsTable();
+    renderFlowStrip();
     if (steps.length) {
-      if (!steps.some(function (s) { return s.workflowStepId === secStepId; })) secStepId = steps[0].workflowStepId;
-      if (!steps.some(function (s) { return s.workflowStepId === actStepId; })) actStepId = steps[0].workflowStepId;
-      // Programmatic .val() fires no change event, so load the tab data
-      // here — otherwise the lists stay empty until the user re-picks
-      // the step (boot race: form load and steps load finish in any order).
-      $('#wmSecStepSel').val(String(secStepId)).trigger('change');
-      $('#wmActStepSel').val(String(actStepId)).trigger('change');
+      if (!stepById(selectedStepId)) selectedStepId = steps[0].workflowStepId;
+      selectStep(selectedStepId);
     } else {
-      secStepId = null;
-      actStepId = null;
-      $('#wmSecList').html('<div class="hint">Add a step first — sections are configured per step.</div>');
-      $('#wmActList').html('<div class="hint">Add a step first — buttons are configured per step.</div>');
+      selectedStepId = null;
+      renderDetail();
     }
   }
 
@@ -97,44 +86,66 @@ $(function () {
         formSections = (form.fields || [])
           .filter(function (f) { return f.fieldType === 'section'; })
           .sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
-        if (secStepId) loadStepSections(secStepId);
+        if (selectedStepId) loadStepSections(selectedStepId);
       }
     });
   }
 
-  /* ---------------- steps tab ---------------- */
-  function renderStepsTable() {
-    $('#wmStepCount').text(steps.length + ' step' + (steps.length === 1 ? '' : 's'));
-    $('#wmStepsTbody').html(steps.map(function (s) {
-      return '<tr>' +
-        '<td><strong>' + esc(s.stepTitle) + '</strong><br><span class="hint"><code>' + esc(s.stepCode) + '</code></span></td>' +
-        '<td>' + esc(s.responsibleRoleName || '—') + '</td>' +
-        '<td>' + (s.isStart ? '<span class="pill" style="background:#e6f4ea;color:#1e7e34">Start</span>' : '—') + '</td>' +
-        '<td>' + (s.isEnd ? '<span class="pill">End</span>' : '—') + '</td>' +
-        '<td>' + (s.sla == null ? '—' : s.sla) + '</td>' +
-        '<td>' + s.displayOrder + '</td>' +
-        '<td class="row-actions" style="white-space:nowrap">' +
-          '<button class="btn btn-ghost btn-sm" data-step-edit="' + s.workflowStepId + '" type="button" data-permission="WorkflowSteps:Write">Edit</button> ' +
-          '<button class="btn btn-ghost btn-sm" data-step-del="' + s.workflowStepId + '" type="button" data-permission="WorkflowSteps:Write">Delete</button>' +
-        '</td></tr>';
-    }).join('') || '<tr><td colspan="7" class="hint">No steps yet. Add the first step below — one step must be the start step.</td></tr>');
-    if (window.CMS && CMS.applyPermissions) CMS.applyPermissions(document);
+  /* ---------------- 1. flow strip ---------------- */
+  function renderFlowStrip() {
+    var html = steps.map(function (s, i) {
+      var flags = (s.isStart ? ' · START' : '') + (s.isEnd ? ' · END' : '');
+      var meta = esc(s.responsibleRoleName || 'No role') + ' · ' + (s.sla == null ? 'No SLA' : s.sla + 'd');
+      var card = '<button type="button" class="wm-flow-card' + (s.workflowStepId === selectedStepId ? ' sel' : '') + '" data-flow-step="' + s.workflowStepId + '">' +
+        '<span class="fc-num">STEP ' + (i + 1) + esc(flags) + '</span>' +
+        '<span class="fc-title">' + esc(s.stepTitle) + '</span>' +
+        '<span class="fc-meta">' + meta + '</span></button>';
+      return (i ? '<span class="wm-flow-arrow">→</span>' : '') + card;
+    }).join('');
+    html += '<button type="button" class="wm-flow-card wm-flow-add" data-flow-add="1">+ Add step</button>';
+    $('#wmFlow').html(html || '<span class="hint">No steps yet — add the first step below.</span>');
   }
 
-  function resetStepForm() {
-    editingStepId = null;
-    $('#wmStepFormTitle').text('Add Step');
-    $('#wmStepForm')[0].reset();
-    $('#wmStepId').val('');
-    $('#wmStepOrder').val(steps.length);
-    $('#fStepCode, #fStepTitle').removeClass('invalid');
-  }
-
-  $('#wmStepCancelBtn').on('click', resetStepForm);
-
-  $(document).on('click', '[data-step-edit]', function () {
-    var s = steps.filter(function (x) { return x.workflowStepId === Number($(this).data('step-edit')); })[0];
+  // Card click selects the step AND opens it in the edit form; the
+  // "+ Add step" card clears the form instead.
+  $('#wmFlow').on('click', '[data-flow-step]', function () {
+    var s = stepById(Number($(this).data('flow-step')));
     if (!s) return;
+    selectStep(s.workflowStepId);
+    fillStepForm(s);
+  });
+  $('#wmFlow').on('click', '[data-flow-add]', function () {
+    resetStepForm();
+    $('#wmStepTitle').focus();
+  });
+
+  /* ---------------- selection + detail ---------------- */
+  function selectStep(stepId) {
+    selectedStepId = stepId;
+    $('#wmFlow .wm-flow-card').removeClass('sel');
+    $('#wmFlow [data-flow-step="' + stepId + '"]').addClass('sel');
+    $('#wmStepsTbody tr').removeClass('sel');
+    $('#wmStepsTbody tr[data-step-row="' + stepId + '"]').addClass('sel');
+    renderDetail();
+    loadStepSections(stepId);
+    loadStepActions(stepId);
+  }
+
+  function renderDetail() {
+    var s = stepById(selectedStepId);
+    if (!s) {
+      $('#wmDetailHint').show();
+      $('#wmDetailPanels').hide();
+      return;
+    }
+    $('#wmDetailHint').hide();
+    $('#wmDetailPanels').show();
+    $('#wmSecStepName').text(s.stepTitle + ' (' + s.stepCode + ')');
+    $('#wmActStepName').text(s.stepTitle + ' (' + s.stepCode + ')');
+  }
+
+  /* ---------------- 2. step form ---------------- */
+  function fillStepForm(s) {
     editingStepId = s.workflowStepId;
     $('#wmStepFormTitle').text('Edit Step');
     $('#wmStepId').val(s.workflowStepId);
@@ -147,17 +158,18 @@ $(function () {
     $('#wmStepEnd').prop('checked', !!s.isEnd);
     $('#fStepCode, #fStepTitle').removeClass('invalid');
     $('#wmStepCode').focus();
-  });
+  }
 
-  $(document).on('click', '[data-step-del]', function () {
-    var id = Number($(this).data('step-del'));
-    if (!window.confirm('Delete this step? Its sections and buttons go with it.')) return;
-    cmsAjax({
-      url: '/api/workflows/steps/' + id, method: 'DELETE',
-      fallbackMsg: 'Could not delete step.',
-      success: function () { CMS.toast('Step deleted.', 'success'); loadSteps(); }
-    });
-  });
+  function resetStepForm() {
+    editingStepId = null;
+    $('#wmStepFormTitle').text('Add Step');
+    $('#wmStepForm')[0].reset();
+    $('#wmStepId').val('');
+    $('#wmStepOrder').val(steps.length);
+    $('#fStepCode, #fStepTitle').removeClass('invalid');
+  }
+
+  $('#wmStepCancelBtn').on('click', resetStepForm);
 
   $('#wmStepForm').on('submit', function (e) {
     e.preventDefault();
@@ -196,9 +208,54 @@ $(function () {
   $('#wmStepCode').on('input', function () { $('#fStepCode').removeClass('invalid'); });
   $('#wmStepTitle').on('input', function () { $('#fStepTitle').removeClass('invalid'); });
 
-  /* ---------------- sections tab ---------------- */
+  /* ---------------- 3. steps table ---------------- */
+  function renderStepsTable() {
+    $('#wmStepCount').text(steps.length + ' step' + (steps.length === 1 ? '' : 's'));
+    $('#wmStepsTbody').html(steps.map(function (s, i) {
+      return '<tr class="wm-step-row' + (s.workflowStepId === selectedStepId ? ' sel' : '') + '" data-step-row="' + s.workflowStepId + '">' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td><strong>' + esc(s.stepTitle) + '</strong><br><span class="hint"><code>' + esc(s.stepCode) + '</code></span></td>' +
+        '<td>' + esc(s.responsibleRoleName || '—') + '</td>' +
+        '<td>' + (s.sla == null ? '—' : s.sla) + '</td>' +
+        '<td>' + (s.isStart ? 'Yes' : '—') + '</td>' +
+        '<td>' + (s.isEnd ? 'Yes' : '—') + '</td>' +
+        '<td class="row-actions" style="white-space:nowrap">' +
+          '<button class="btn btn-ghost btn-sm" data-step-edit="' + s.workflowStepId + '" type="button" data-permission="WorkflowSteps:Write">Edit</button> ' +
+          '<button class="btn btn-ghost btn-sm" data-step-del="' + s.workflowStepId + '" type="button" data-permission="WorkflowSteps:Write">Delete</button>' +
+        '</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="hint">No steps yet. Add the first step above — one step must be the start step.</td></tr>');
+    if (window.CMS && CMS.applyPermissions) CMS.applyPermissions(document);
+  }
+
+  // Row click selects the step; Edit/Delete buttons handle themselves.
+  $('#wmStepsTbody').on('click', 'tr[data-step-row]', function (e) {
+    if ($(e.target).closest('button').length) return;
+    selectStep(Number($(this).data('step-row')));
+  });
+
+  $(document).on('click', '[data-step-edit]', function () {
+    var s = stepById(Number($(this).data('step-edit')));
+    if (!s) return;
+    fillStepForm(s);
+  });
+
+  $(document).on('click', '[data-step-del]', function () {
+    var id = Number($(this).data('step-del'));
+    if (!window.confirm('Delete this step? Its sections and buttons go with it.')) return;
+    cmsAjax({
+      url: '/api/workflows/steps/' + id, method: 'DELETE',
+      fallbackMsg: 'Could not delete step.',
+      success: function () {
+        CMS.toast('Step deleted.', 'success');
+        if (editingStepId === id) resetStepForm();
+        loadSteps();
+      }
+    });
+  });
+
+  /* ---------------- 4a. sections ("What shows at this step") ---------------- */
   function loadStepSections(stepId) {
-    secStepId = stepId;
+    selectedStepId = stepId;
     cmsAjax({
       url: '/api/workflows/steps/' + stepId + '/sections', method: 'GET',
       fallbackMsg: 'Could not load step sections.',
@@ -232,16 +289,11 @@ $(function () {
           '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-vis="false" class="' + (st.isVisible ? '' : 'sel') + '">Hide</button>' +
         '</div>' +
         '<div class="seg wm-sec-en">' +
-          '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-en="true" class="' + (st.isEnable ? 'sel' : '') + '">Enabled</button>' +
-          '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-en="false" class="' + (st.isEnable ? '' : 'sel') + '">Disabled</button>' +
+          '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-en="true" class="' + (st.isEnable ? 'sel' : '') + '">Editable</button>' +
+          '<button type="button" data-sec="' + esc(s.fieldKey) + '" data-en="false" class="' + (st.isEnable ? '' : 'sel') + '">Read-only</button>' +
         '</div></div>';
     }).join(''));
   }
-
-  $('#wmSecStepSel').on('change', function () {
-    var id = $(this).val();
-    if (id) loadStepSections(Number(id));
-  });
 
   $(document).on('click', '.wm-sec-vis button', function () {
     var $btn = $(this);
@@ -260,23 +312,23 @@ $(function () {
   });
 
   $('#wmSecSaveBtn').on('click', function () {
-    if (!secStepId) { CMS.toast('Select a step first.', 'error'); return; }
+    if (!selectedStepId) { CMS.toast('Select a step first.', 'error'); return; }
     var payload = formSections.map(function (s, i) {
       var st = secState[s.fieldKey] || { isVisible: true, isEnable: true };
       return { sectionKey: s.fieldKey, isVisible: st.isVisible, isEnable: st.isEnable, displayOrder: i };
     });
     var $btn = $(this).prop('disabled', true);
     cmsAjax({
-      url: '/api/workflows/steps/' + secStepId + '/sections', method: 'PUT',
+      url: '/api/workflows/steps/' + selectedStepId + '/sections', method: 'PUT',
       json: true, data: payload,
       fallbackMsg: 'Could not save sections.',
       success: function () { CMS.toast('Sections saved.', 'success'); loadSteps(); }
     }).always(function () { $btn.prop('disabled', false); });
   });
 
-  /* ---------------- buttons tab ---------------- */
+  /* ---------------- 4b. buttons ("What happens next") ---------------- */
   function loadStepActions(stepId) {
-    actStepId = stepId;
+    selectedStepId = stepId;
     cmsAjax({
       url: '/api/workflows/steps/' + stepId + '/actions', method: 'GET',
       fallbackMsg: 'Could not load buttons.',
@@ -296,7 +348,7 @@ $(function () {
   function actRowHtml(idx, row) {
     return '<div class="wm-act-row">' +
       '<input class="input wm-act-code" data-idx="' + idx + '" placeholder="Code (SUBMIT)" value="' + esc(row.actionCode) + '">' +
-      '<input class="input wm-act-title" data-idx="' + idx + '" placeholder="Title (Submit)" value="' + esc(row.actionTitle) + '">' +
+      '<input class="input wm-act-title" data-idx="' + idx + '" placeholder="Button text (Submit)" value="' + esc(row.actionTitle) + '">' +
       '<select class="input wm-act-next" data-idx="' + idx + '">' +
         steps.map(function (s) {
           return '<option value="' + esc(s.stepCode) + '"' + (row.nextStepCode === s.stepCode ? ' selected' : '') + '>' +
@@ -320,11 +372,6 @@ $(function () {
     $('#wmActList').html(actRows.map(function (r, i) { return actRowHtml(i, r); }).join('') ||
       '<div class="hint">No buttons at this step — the form shows no action buttons here.</div>');
   }
-
-  $('#wmActStepSel').on('change', function () {
-    var id = $(this).val();
-    if (id) loadStepActions(Number(id));
-  });
 
   $('#wmActAddBtn').on('click', function () {
     actRows.push({ actionCode: '', actionTitle: '', nextStepCode: steps.length ? steps[0].stepCode : '',
@@ -351,7 +398,7 @@ $(function () {
   });
 
   $('#wmActSaveBtn').on('click', function () {
-    if (!actStepId) { CMS.toast('Select a step first.', 'error'); return; }
+    if (!selectedStepId) { CMS.toast('Select a step first.', 'error'); return; }
     var bad = actRows.some(function (r) { return !$.trim(r.actionCode) || !$.trim(r.actionTitle) || !r.nextStepCode; });
     if (bad) { CMS.toast('Every button needs a code, a title and a next step.', 'error'); return; }
     var payload = actRows.map(function (r, i) {
@@ -362,7 +409,7 @@ $(function () {
     });
     var $btn = $(this).prop('disabled', true);
     cmsAjax({
-      url: '/api/workflows/steps/' + actStepId + '/actions', method: 'PUT',
+      url: '/api/workflows/steps/' + selectedStepId + '/actions', method: 'PUT',
       json: true, data: payload,
       fallbackMsg: 'Could not save buttons.',
       success: function () { CMS.toast('Buttons saved.', 'success'); loadSteps(); }

@@ -8,11 +8,20 @@
 <input type="hidden" id="wmWorkflowId" value="@(workflowId?.ToString() ?? "")">
 
 <style>
-  .wm-tabs{display:flex;gap:8px;margin-bottom:14px}
-  .wm-tabs button{padding:8px 16px;font-size:13px}
-  .wm-tab{display:none}
-  .wm-tab.active{display:block}
   .wm-step-form .field{margin-bottom:10px}
+  .wm-flow{display:flex;align-items:stretch;overflow-x:auto;padding:6px 2px 12px}
+  .wm-flow-card{flex:0 0 auto;min-width:160px;max-width:230px;border:1.5px solid var(--border);border-radius:12px;background:#fff;padding:10px 12px;cursor:pointer;text-align:left;font:inherit}
+  .wm-flow-card:hover{border-color:var(--navy)}
+  .wm-flow-card.sel{border-color:var(--navy);background:#eef2f8;box-shadow:0 2px 8px rgba(25,63,122,.2)}
+  .wm-flow-card .fc-num{display:block;font-size:11px;color:var(--muted);font-weight:700}
+  .wm-flow-card .fc-title{display:block;font-weight:700;font-size:14px;margin:2px 0}
+  .wm-flow-card .fc-meta{display:block;font-size:12px;color:var(--muted)}
+  .wm-flow-arrow{align-self:center;flex:0 0 auto;padding:0 8px;color:var(--muted);font-size:20px;font-weight:700}
+  .wm-flow-add{border-style:dashed;color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .wm-step-row{cursor:pointer}
+  .wm-step-row.sel td{background:#eef2f8}
+  .wm-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @@media (max-width:900px){.wm-detail-grid{grid-template-columns:1fr}}
   .wm-sec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
   .wm-sec-row:last-child{border-bottom:0}
   .wm-sec-row .sec-name{flex:1;min-width:0}
@@ -33,101 +42,94 @@
   </div>
 </div>
 
-<div class="wm-tabs" id="wmTabs">
-  <button class="btn btn-primary" type="button" data-tab="steps">Steps</button>
-  <button class="btn btn-ghost" type="button" data-tab="sections">Sections per step</button>
-  <button class="btn btn-ghost" type="button" data-tab="buttons">Buttons per step</button>
+<!-- 1. Flow strip: the whole workflow at a glance. Click a card to select (and edit) that step. -->
+<div class="card">
+  <div class="card-body">
+    <div id="wmFlow" class="wm-flow"></div>
+    <span class="hint">Click a step to see its sections and buttons below — or to edit it. The first step is selected automatically.</span>
+  </div>
 </div>
 
-<div class="wm-tab active" id="wmTab-steps">
-  <div class="card">
-    <div class="card-head">
-      <h3>Steps</h3>
-      <span class="hint" id="wmStepCount"></span>
-    </div>
-    <div class="card-body">
-      <table class="table">
-        <thead>
-          <tr><th>Step</th><th>Role</th><th>Start</th><th>End</th><th>SLA (days)</th><th>Order</th><th></th></tr>
-        </thead>
-        <tbody id="wmStepsTbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <div class="card-head"><h3 id="wmStepFormTitle">Add Step</h3></div>
-    <div class="card-body">
-      <form id="wmStepForm" novalidate>
-        <input type="hidden" id="wmStepId">
-        <div class="form-grid wm-step-form">
-          <div class="field" id="fStepCode">
-            <label>Step Code <span class="req">*</span></label>
-            <input class="input" id="wmStepCode" placeholder="e.g. InitiateCase" autocomplete="off">
-            <span class="field-error">Step code is required.</span>
-          </div>
-          <div class="field" id="fStepTitle">
-            <label>Step Title <span class="req">*</span></label>
-            <input class="input" id="wmStepTitle" placeholder="e.g. Initiate Case" autocomplete="off">
-            <span class="field-error">Step title is required.</span>
-          </div>
-          <div class="field">
-            <label>Responsible Role</label>
-            <select class="input select2" id="wmStepRole"></select>
-          </div>
-          <div class="field">
-            <label>SLA (days)</label>
-            <input class="input" id="wmStepSla" type="number" min="0" placeholder="e.g. 10">
-          </div>
-          <div class="field">
-            <label>Display Order</label>
-            <input class="input" id="wmStepOrder" type="number" min="0" value="0">
-          </div>
-          <div class="field">
-            <label class="check-row"><input type="checkbox" id="wmStepStart"><span class="check-label">Start step — marking this one the start unmarks the current start step</span></label>
-            <label class="check-row"><input type="checkbox" id="wmStepEnd"><span class="check-label">End step — the route finishes here</span></label>
-          </div>
+<!-- 2. Step form: add a new step, or edit the selected one. -->
+<div class="card" style="margin-top:14px">
+  <div class="card-head"><h3 id="wmStepFormTitle">Add Step</h3><span class="hint" id="wmStepCount"></span></div>
+  <div class="card-body">
+    <form id="wmStepForm" novalidate>
+      <input type="hidden" id="wmStepId">
+      <div class="form-grid wm-step-form">
+        <div class="field" id="fStepTitle">
+          <label>Step Title <span class="req">*</span></label>
+          <input class="input" id="wmStepTitle" placeholder="e.g. Initiate Case" autocomplete="off">
+          <span class="field-error">Step title is required.</span>
         </div>
+        <div class="field" id="fStepCode">
+          <label>Step Code <span class="req">*</span></label>
+          <input class="input" id="wmStepCode" placeholder="e.g. InitiateCase" autocomplete="off">
+          <span class="hint">Code system ke liye hai — misal: Review</span>
+          <span class="field-error">Step code is required.</span>
+        </div>
+        <div class="field">
+          <label>Responsible Role</label>
+          <select class="input select2" id="wmStepRole"></select>
+        </div>
+        <div class="field">
+          <label>SLA (days)</label>
+          <input class="input" id="wmStepSla" type="number" min="0" placeholder="e.g. 10">
+        </div>
+        <div class="field">
+          <label class="check-row"><input type="checkbox" id="wmStepStart"><span class="check-label">Is Start — first step of the workflow</span></label>
+          <label class="check-row"><input type="checkbox" id="wmStepEnd"><span class="check-label">Is End — last step, the workflow ends here</span></label>
+        </div>
+        <div class="field">
+          <label>Display Order</label>
+          <input class="input" id="wmStepOrder" type="number" min="0" value="0">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-primary" type="submit" id="wmStepSaveBtn">Save Step</button>
+        <button class="btn btn-ghost" type="button" id="wmStepCancelBtn">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 3. Steps table: every step in order. Click a row to select it. -->
+<div class="card" style="margin-top:14px">
+  <div class="card-head"><h3>Steps</h3></div>
+  <div class="card-body">
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Step</th><th>Who</th><th>Days</th><th>First?</th><th>Last?</th><th></th></tr>
+      </thead>
+      <tbody id="wmStepsTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 4. Selected step detail: what shows here, and what happens next. -->
+<div id="wmDetail" style="margin-top:14px">
+  <div id="wmDetailHint" class="card"><div class="card-body"><span class="hint">Select a step above to set its sections and buttons.</span></div></div>
+  <div id="wmDetailPanels" class="wm-detail-grid" style="display:none">
+    <div class="card">
+      <div class="card-head"><h3>What shows at this step</h3><span class="hint" id="wmSecStepName"></span></div>
+      <div class="card-body">
+        <div id="wmSecList"></div>
+        <span class="hint">Show = the section shows at this step. Editable = its fields can be changed — a read-only section shows but cannot be edited. A step with no rows saved here falls back to the workflow's own sections.</span>
         <div style="display:flex;gap:10px;margin-top:12px">
-          <button class="btn btn-primary" type="submit" id="wmStepSaveBtn">Save Step</button>
-          <button class="btn btn-ghost" type="button" id="wmStepCancelBtn">Cancel</button>
+          <button class="btn btn-primary" type="button" id="wmSecSaveBtn">Save Sections</button>
         </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="wm-tab" id="wmTab-sections">
-  <div class="card">
-    <div class="card-head"><h3>Sections per step</h3></div>
-    <div class="card-body">
-      <div class="field" style="max-width:420px">
-        <label>Step</label>
-        <select class="input select2" id="wmSecStepSel"></select>
-      </div>
-      <div id="wmSecList" style="margin-top:10px"></div>
-      <span class="hint">Visible = the section shows at this step. Enabled = its fields can be edited — a disabled section shows read-only. A step with no rows saved here falls back to the workflow's own sections.</span>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn btn-primary" type="button" id="wmSecSaveBtn">Save Sections</button>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="wm-tab" id="wmTab-buttons">
-  <div class="card">
-    <div class="card-head"><h3>Buttons per step</h3></div>
-    <div class="card-body">
-      <div class="field" style="max-width:420px">
-        <label>Step</label>
-        <select class="input select2" id="wmActStepSel"></select>
+    <div class="card">
+      <div class="card-head"><h3>What happens next</h3><span class="hint" id="wmActStepName"></span></div>
+      <div class="card-body">
+        <div id="wmActList"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn btn-ghost" type="button" id="wmActAddBtn">+ Add button</button>
+          <button class="btn btn-primary" type="button" id="wmActSaveBtn">Save Buttons</button>
+        </div>
+        <span class="hint">A button moves the request to its next step and next role. No email is sent — the email flag is only stored for now.</span>
       </div>
-      <div id="wmActList" style="margin-top:10px"></div>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn btn-ghost" type="button" id="wmActAddBtn">+ Add button</button>
-        <button class="btn btn-primary" type="button" id="wmActSaveBtn">Save Buttons</button>
-      </div>
-      <span class="hint">A button moves the request to its next step and next role. Next step must be a step of this workflow. No email is sent — the email flag is only stored for now.</span>
     </div>
   </div>
 </div>
