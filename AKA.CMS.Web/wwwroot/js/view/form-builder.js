@@ -1579,8 +1579,8 @@ $(function () {
     var submitCount = fields.filter(function (f) {
       return f.fieldType === 'button' && f.buttonAction === 'submit';
     }).length;
-    if (submitCount !== 1) {
-      CMS.toast('The form must contain exactly one Submit button (found ' + submitCount + '). Add a Button field and set its type to Submit.', 'error');
+    if (submitCount > 1) {
+      CMS.toast('A form can have at most one Submit button (found ' + submitCount + '). Remove the extra Submit button fields — the page already has its own Submit button.', 'error');
       return;
     }
     for (var gi = 0; gi < fields.length; gi++) {
