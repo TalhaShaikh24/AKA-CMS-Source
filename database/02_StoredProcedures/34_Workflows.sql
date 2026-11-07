@@ -25,6 +25,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_Workflow_Save]
     @WorkflowName NVARCHAR(100),
     @FormId       INT,
     @Description  NVARCHAR(500) = NULL,
+    @WorkflowCode VARCHAR(50) = NULL,
     @IsActive     BIT = 1,
     @SectionsJson NVARCHAR(MAX) = NULL,
     @PerformedBy  INT
@@ -36,6 +37,10 @@ BEGIN
         THROW 50000, 'Workflow not found.', 1;
     IF NOT EXISTS (SELECT 1 FROM [dbo].[CMS_DynamicForms] WHERE [FormId] = @FormId AND [IsActive] = 1)
         THROW 50000, 'Form not found or inactive.', 1;
+    IF @WorkflowCode IS NOT NULL AND EXISTS (
+        SELECT 1 FROM [dbo].[CMS_Workflows]
+        WHERE [WorkflowCode] = @WorkflowCode AND [WorkflowId] <> @WorkflowId)
+        THROW 50000, 'Another workflow already uses this code.', 1;
     IF @SectionsJson IS NOT NULL AND ISJSON(@SectionsJson) <> 1
         THROW 50000, 'Sections must be valid JSON.', 1;
 
@@ -69,16 +74,16 @@ BEGIN
 
         IF @WorkflowId = 0
         BEGIN
-            INSERT INTO [dbo].[CMS_Workflows] ([WorkflowName], [FormId], [Description], [IsActive], [CreatedBy])
-            VALUES (@WorkflowName, @FormId, @Description, @IsActive, @PerformedBy);
+            INSERT INTO [dbo].[CMS_Workflows] ([WorkflowName], [FormId], [Description], [WorkflowCode], [IsActive], [CreatedBy])
+            VALUES (@WorkflowName, @FormId, @Description, @WorkflowCode, @IsActive, @PerformedBy);
             SET @WorkflowId = SCOPE_IDENTITY();
         END
         ELSE
         BEGIN
             UPDATE [dbo].[CMS_Workflows]
             SET [WorkflowName] = @WorkflowName, [FormId] = @FormId,
-                [Description] = @Description, [IsActive] = @IsActive,
-                [UpdatedAt] = SYSUTCDATETIME()
+                [Description] = @Description, [WorkflowCode] = @WorkflowCode,
+                [IsActive] = @IsActive, [UpdatedAt] = SYSUTCDATETIME()
             WHERE [WorkflowId] = @WorkflowId;
         END
 
@@ -142,7 +147,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT w.[WorkflowId], w.[WorkflowName], w.[FormId], f.[FormKey], f.[Title] AS [FormTitle],
+    SELECT w.[WorkflowId], w.[WorkflowName], w.[WorkflowCode], w.[FormId], f.[FormKey], f.[Title] AS [FormTitle],
            w.[Description], w.[IsActive], w.[CreatedBy], w.[CreatedAt], w.[UpdatedAt]
     FROM [dbo].[CMS_Workflows] w
     INNER JOIN [dbo].[CMS_DynamicForms] f ON f.[FormId] = w.[FormId]
@@ -168,7 +173,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT w.[WorkflowId], w.[WorkflowName], w.[FormId], f.[FormKey], f.[Title] AS [FormTitle],
+    SELECT w.[WorkflowId], w.[WorkflowName], w.[WorkflowCode], w.[FormId], f.[FormKey], f.[Title] AS [FormTitle],
            w.[Description], w.[IsActive], w.[CreatedAt], w.[UpdatedAt],
            (SELECT COUNT(*) FROM [dbo].[CMS_WorkflowSections] s WHERE s.[WorkflowId] = w.[WorkflowId]) AS [SectionCount]
     FROM [dbo].[CMS_Workflows] w
@@ -182,7 +187,8 @@ GO
    workflow's sections (first result set) and their actions (second
    result set). No active workflow -> both sets are empty. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_Workflow_GetSectionsByForm]
-    @FormId INT
+    @FormId     INT,
+    @InstanceId INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -195,10 +201,36 @@ BEGIN
 
     SELECT @WorkflowId AS [WorkflowId];
 
-    SELECT s.[SectionKey], s.[IsVisible], s.[DisplayOrder]
-    FROM [dbo].[CMS_WorkflowSections] s
-    WHERE s.[WorkflowId] = @WorkflowId AND s.[IsActive] = 1
-    ORDER BY s.[DisplayOrder], s.[WorkflowSectionId];
+    /* Step-aware: an instance at a step uses that step's section
+       rows (IsVisible + IsEnable). No step rows for the step (or no
+       instance) falls back to the workflow's own sections, with
+       IsEnable = 1 — the form behaves exactly as before. */
+    DECLARE @StepId INT = NULL;
+    IF @InstanceId IS NOT NULL
+    BEGIN
+        SELECT @StepId = s.[WorkflowStepId]
+        FROM [dbo].[CMS_WorkflowInstances] i
+        INNER JOIN [dbo].[CMS_WorkflowSteps] s
+            ON s.[WorkflowId] = i.[WorkflowId] AND s.[StepCode] = i.[CurrentStepCode]
+        WHERE i.[WorkflowInstanceId] = @InstanceId AND i.[WorkflowId] = @WorkflowId;
+    END
+
+    IF @StepId IS NOT NULL AND EXISTS (
+        SELECT 1 FROM [dbo].[CMS_WorkflowStepSections]
+        WHERE [WorkflowStepId] = @StepId AND [IsActive] = 1)
+    BEGIN
+        SELECT ss.[SectionKey], ss.[IsVisible], ss.[IsEnable], ss.[DisplayOrder]
+        FROM [dbo].[CMS_WorkflowStepSections] ss
+        WHERE ss.[WorkflowStepId] = @StepId AND ss.[IsActive] = 1
+        ORDER BY ss.[DisplayOrder], ss.[WorkflowStepSectionId];
+    END
+    ELSE
+    BEGIN
+        SELECT s.[SectionKey], s.[IsVisible], CAST(1 AS BIT) AS [IsEnable], s.[DisplayOrder]
+        FROM [dbo].[CMS_WorkflowSections] s
+        WHERE s.[WorkflowId] = @WorkflowId AND s.[IsActive] = 1
+        ORDER BY s.[DisplayOrder], s.[WorkflowSectionId];
+    END
 
     SELECT s.[SectionKey], a.[ActionType], a.[TargetKey], a.[SortOrder]
     FROM [dbo].[CMS_WorkflowActions] a

@@ -42,10 +42,10 @@ public sealed class WorkflowService(IWorkflowRepository repository, IDynamicForm
         await repository.DeleteAsync(workflowId, performedBy);
     }
 
-    public async Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId)
+    public async Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId, int? instanceId = null)
     {
         await EnsureFormExistsAsync(formId);
-        return await repository.GetSectionsByFormAsync(formId);
+        return await repository.GetSectionsByFormAsync(formId, instanceId);
     }
 
     private async Task<DynamicFormDetailDto> EnsureFormExistsAsync(int formId)
@@ -56,6 +56,15 @@ public sealed class WorkflowService(IWorkflowRepository repository, IDynamicForm
     {
         if (string.IsNullOrWhiteSpace(request.WorkflowName))
             throw new InvalidDomainValueException("Workflow name is required.");
+        // A client-facing code is short and unique where set; the SP
+        // enforces uniqueness, this only rejects nonsense early.
+        if (request.WorkflowCode is not null)
+        {
+            request.WorkflowCode = request.WorkflowCode.Trim();
+            if (request.WorkflowCode.Length == 0) request.WorkflowCode = null;
+            else if (request.WorkflowCode.Length > 50)
+                throw new InvalidDomainValueException("Workflow code must be 50 characters or less.");
+        }
         // A section key must be a real section of this form — a typo
         // must fail here with 400, not silently hide nothing on load.
         var formSections = new HashSet<string>(

@@ -33,13 +33,16 @@ public sealed class WorkflowsController(IWorkflowService service, ICurrentUser c
     /// sections in display order, each with its actions. Empty
     /// sections means no active workflow, and the form shows
     /// everything. This is the API the boss named — the Render page
-    /// calls it on load and hides the sections it says to hide.</summary>
+    /// calls it on load and hides the sections it says to hide.
+    /// With instanceId, the sections are the ones of the instance's
+    /// current step (with IsEnable); without one, the workflow's
+    /// own sections.</summary>
     [HttpGet("by-form/{formId:int}/sections")]
     [Authorize(Policy = PermissionPolicies.WorkflowsRead)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WorkflowSectionsResponseDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<WorkflowSectionsResponseDto>> GetSectionsByForm(int formId)
-        => Ok(await service.GetSectionsByFormAsync(formId));
+    public async Task<ActionResult<WorkflowSectionsResponseDto>> GetSectionsByForm(int formId, [FromQuery] int? instanceId)
+        => Ok(await service.GetSectionsByFormAsync(formId, instanceId));
 
     [HttpPost]
     [Authorize(Policy = PermissionPolicies.WorkflowsWrite)]

@@ -30,12 +30,12 @@ public interface IDynamicFormService
     Task<IReadOnlyList<DynamicFormFieldOptionDto>> GetLookupOptionsAsync(int formId, string fieldKey);
     Task<DynamicFormSubmissionDetailDto> SubmitAsync(
         int formId, Dictionary<string, JsonElement> values,
-        IReadOnlyList<SubmissionFileUpload> files, int submittedBy);
+        IReadOnlyList<SubmissionFileUpload> files, int submittedBy, int? instanceId = null);
     Task<IReadOnlyList<DynamicFormSubmissionListItemDto>> GetSubmissionsAsync(int formId);
     Task<DynamicFormSubmissionDetailDto> GetSubmissionAsync(int submissionId);
     Task<DynamicFormSubmissionDetailDto> UpdateSubmissionAsync(
         int submissionId, Dictionary<string, JsonElement> values,
-        IReadOnlyList<SubmissionFileUpload> files, int performedBy);
+        IReadOnlyList<SubmissionFileUpload> files, int performedBy, int? instanceId = null);
     Task DeleteSubmissionAsync(int submissionId, int performedBy);
     Task<(string FileName, string ContentType, string StoragePath)> GetSubmissionFileAsync(int submissionId, string fieldKey);
 }

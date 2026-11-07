@@ -63,6 +63,10 @@ public static class PermissionPolicies
     public const string DynamicFormsSubmit = "Permissions:DynamicForms:Submit";
     public const string WorkflowsRead = "Permissions:Workflows:Read";
     public const string WorkflowsWrite = "Permissions:Workflows:Write";
+    public const string WorkflowStepsRead = "Permissions:WorkflowSteps:Read";
+    public const string WorkflowStepsWrite = "Permissions:WorkflowSteps:Write";
+    public const string WorkflowInstancesRead = "Permissions:WorkflowInstances:Read";
+    public const string WorkflowInstancesWrite = "Permissions:WorkflowInstances:Write";
     public const string TasksRead = "Permissions:Tasks:Read";
     public const string TasksWrite = "Permissions:Tasks:Write";
     public const string WorkflowConfigRead = "Permissions:WorkflowConfig:Read";

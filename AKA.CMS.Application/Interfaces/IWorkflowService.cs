@@ -8,7 +8,7 @@ public interface IWorkflowRepository
     Task<WorkflowDetailDto?> GetByIdAsync(int workflowId);
     Task<int> SaveAsync(int workflowId, SaveWorkflowRequest request, int performedBy);
     Task DeleteAsync(int workflowId, int performedBy);
-    Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId);
+    Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId, int? instanceId = null);
 }
 
 public interface IWorkflowService
@@ -21,6 +21,9 @@ public interface IWorkflowService
 
     /// <summary>The Get Workflow Sections API: the form's active
     /// workflow's sections and actions. Empty sections means no
-    /// active workflow, and the form shows everything.</summary>
-    Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId);
+    /// active workflow, and the form shows everything. With an
+    /// instanceId, the sections are the ones of the instance's
+    /// current step (with IsEnable); without one, the workflow's
+    /// own sections.</summary>
+    Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId, int? instanceId = null);
 }

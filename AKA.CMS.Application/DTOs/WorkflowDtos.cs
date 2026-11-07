@@ -20,6 +20,10 @@ public sealed class WorkflowSectionDto
 {
     public string SectionKey { get; set; } = string.Empty;
     public bool IsVisible { get; set; }
+    /// <summary>Step-aware only: whether the section's fields can be
+    /// edited at the current step. Always true for the per-workflow
+    /// (no-instance) response.</summary>
+    public bool IsEnable { get; set; } = true;
     public int DisplayOrder { get; set; }
     public List<WorkflowActionDto> Actions { get; set; } = new();
 }
@@ -28,6 +32,7 @@ public sealed class WorkflowDetailDto
 {
     public int WorkflowId { get; set; }
     public string WorkflowName { get; set; } = string.Empty;
+    public string? WorkflowCode { get; set; }
     public int FormId { get; set; }
     public string FormKey { get; set; } = string.Empty;
     public string FormTitle { get; set; } = string.Empty;
@@ -40,6 +45,7 @@ public sealed class WorkflowListItemDto
 {
     public int WorkflowId { get; set; }
     public string WorkflowName { get; set; } = string.Empty;
+    public string? WorkflowCode { get; set; }
     public int FormId { get; set; }
     public string FormKey { get; set; } = string.Empty;
     public string FormTitle { get; set; } = string.Empty;
@@ -76,6 +82,8 @@ public sealed class SaveWorkflowSectionRequest
 public sealed class SaveWorkflowRequest
 {
     public string WorkflowName { get; set; } = string.Empty;
+    /// <summary>Client-facing code, e.g. 'CI'. Optional; unique where set.</summary>
+    public string? WorkflowCode { get; set; }
     public int FormId { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;

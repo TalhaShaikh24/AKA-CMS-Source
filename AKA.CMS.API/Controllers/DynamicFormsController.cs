@@ -78,11 +78,11 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(DynamicFormSubmissionDetailDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<DynamicFormSubmissionDetailDto>> Submit(int id)
+    public async Task<ActionResult<DynamicFormSubmissionDetailDto>> Submit(int id, [FromQuery] int? instanceId)
     {
         var (values, files, badRequest) = ParseSubmissionForm();
         if (badRequest is not null) return badRequest;
-        var created = await service.SubmitAsync(id, values, files, currentUser.UserId);
+        var created = await service.SubmitAsync(id, values, files, currentUser.UserId, instanceId);
         return CreatedAtAction(nameof(GetSubmission), new { submissionId = created.SubmissionId }, created);
     }
 
@@ -96,11 +96,11 @@ public sealed class DynamicFormsController(IDynamicFormService service, ICurrent
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DynamicFormSubmissionDetailDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<DynamicFormSubmissionDetailDto>> UpdateSubmission(int submissionId)
+    public async Task<ActionResult<DynamicFormSubmissionDetailDto>> UpdateSubmission(int submissionId, [FromQuery] int? instanceId)
     {
         var (values, files, badRequest) = ParseSubmissionForm();
         if (badRequest is not null) return badRequest;
-        var updated = await service.UpdateSubmissionAsync(submissionId, values, files, currentUser.UserId);
+        var updated = await service.UpdateSubmissionAsync(submissionId, values, files, currentUser.UserId, instanceId);
         return Ok(updated);
     }
 

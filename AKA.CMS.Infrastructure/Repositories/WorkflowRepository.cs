@@ -4,6 +4,7 @@ using AKA.CMS.Application.DTOs;
 using AKA.CMS.Application.Interfaces;
 using AKA.CMS.Infrastructure.Persistence;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace AKA.CMS.Infrastructure.Repositories;
 
@@ -13,6 +14,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
     {
         public int WorkflowId { get; set; }
         public string WorkflowName { get; set; } = string.Empty;
+        public string? WorkflowCode { get; set; }
         public int FormId { get; set; }
         public string FormKey { get; set; } = string.Empty;
         public string FormTitle { get; set; } = string.Empty;
@@ -29,6 +31,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
         public int WorkflowId { get; set; }
         public string SectionKey { get; set; } = string.Empty;
         public bool IsVisible { get; set; }
+        public bool IsEnable { get; set; } = true;
         public int DisplayOrder { get; set; }
         public bool IsActive { get; set; }
     }
@@ -53,6 +56,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
         {
             WorkflowId = r.WorkflowId,
             WorkflowName = r.WorkflowName,
+            WorkflowCode = r.WorkflowCode,
             FormId = r.FormId,
             FormKey = r.FormKey,
             FormTitle = r.FormTitle,
@@ -95,14 +99,24 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
         var p = new DynamicParameters();
         p.Add("@WorkflowId", workflowId);
         p.Add("@WorkflowName", request.WorkflowName);
+        p.Add("@WorkflowCode", request.WorkflowCode);
         p.Add("@FormId", request.FormId);
         p.Add("@Description", request.Description);
         p.Add("@IsActive", request.IsActive);
         p.Add("@SectionsJson", sectionsJson);
         p.Add("@PerformedBy", performedBy);
-        var id = await connection.QuerySingleAsync<int>(
-            StoredProcedures.WorkflowSave, p, commandType: CommandType.StoredProcedure);
-        return id;
+        try
+        {
+            return await connection.QuerySingleAsync<int>(
+                StoredProcedures.WorkflowSave, p, commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            // The SP validates (duplicate code, bad key, wrong step/action)
+            // and THROWs 50000; surface it as a 400, not a 500.
+            throw new InvalidDomainValueException(ex.Message);
+        }
+
     }
 
     public async Task DeleteAsync(int workflowId, int performedBy)
@@ -111,16 +125,26 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
         var p = new DynamicParameters();
         p.Add("@WorkflowId", workflowId);
         p.Add("@PerformedBy", performedBy);
-        await connection.ExecuteAsync(
-            StoredProcedures.WorkflowDelete, p, commandType: CommandType.StoredProcedure);
+        try
+        {
+            await connection.ExecuteAsync(
+                StoredProcedures.WorkflowDelete, p, commandType: CommandType.StoredProcedure);
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            // The SP validates (duplicate code, bad key, wrong step/action)
+            // and THROWs 50000; surface it as a 400, not a 500.
+            throw new InvalidDomainValueException(ex.Message);
+        }
+
     }
 
-    public async Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId)
+    public async Task<WorkflowSectionsResponseDto> GetSectionsByFormAsync(int formId, int? instanceId = null)
     {
         using var connection = context.CreateConnection();
         using var multi = await connection.QueryMultipleAsync(
             StoredProcedures.WorkflowGetSectionsByForm,
-            new { FormId = formId },
+            new { FormId = formId, InstanceId = instanceId },
             commandType: CommandType.StoredProcedure);
         var workflowId = (await multi.ReadAsync<int?>()).FirstOrDefault();
         var sections = (await multi.ReadAsync<SectionRow>()).ToList();
@@ -132,6 +156,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
             {
                 SectionKey = s.SectionKey,
                 IsVisible = s.IsVisible,
+                IsEnable = s.IsEnable,
                 DisplayOrder = s.DisplayOrder,
                 Actions = actions
                     .Where(a => string.Equals(a.SectionKey, s.SectionKey, StringComparison.OrdinalIgnoreCase))
@@ -153,6 +178,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
         {
             WorkflowId = header.WorkflowId,
             WorkflowName = header.WorkflowName,
+            WorkflowCode = header.WorkflowCode,
             FormId = header.FormId,
             FormKey = header.FormKey,
             FormTitle = header.FormTitle,
@@ -162,6 +188,7 @@ public sealed class WorkflowRepository(DapperContext context) : IWorkflowReposit
             {
                 SectionKey = s.SectionKey,
                 IsVisible = s.IsVisible,
+                IsEnable = s.IsEnable,
                 DisplayOrder = s.DisplayOrder,
                 Actions = actions
                     .Where(a => a.WorkflowSectionId == s.WorkflowSectionId)

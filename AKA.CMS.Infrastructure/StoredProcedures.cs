@@ -192,6 +192,22 @@ public static class StoredProcedures
     public const string WorkflowGetSectionsByForm = "sp_CMS_Workflow_GetSectionsByForm";
     public const string WorkflowDelete = "sp_CMS_Workflow_Delete";
 
+    public const string WorkflowStepSave = "sp_CMS_WorkflowStep_Save";
+    public const string WorkflowStepGetByWorkflow = "sp_CMS_WorkflowStep_GetByWorkflow";
+    public const string WorkflowStepGetById = "sp_CMS_WorkflowStep_GetById";
+    public const string WorkflowStepDelete = "sp_CMS_WorkflowStep_Delete";
+    public const string WorkflowStepSectionsSave = "sp_CMS_WorkflowStepSections_Save";
+    public const string WorkflowStepSectionsGetByStep = "sp_CMS_WorkflowStepSections_GetByStep";
+    public const string WorkflowStepActionsSave = "sp_CMS_WorkflowStepActions_Save";
+    public const string WorkflowStepActionsGetByStep = "sp_CMS_WorkflowStepActions_GetByStep";
+    public const string WorkflowInstanceStart = "sp_CMS_WorkflowInstance_Start";
+    public const string WorkflowInstanceGetById = "sp_CMS_WorkflowInstance_GetById";
+    public const string WorkflowInstanceGetMyTasks = "sp_CMS_WorkflowInstance_GetMyTasks";
+    public const string WorkflowInstanceGetUserAccess = "sp_CMS_WorkflowInstance_GetUserAccess";
+    public const string WorkflowInstanceGetActions = "sp_CMS_WorkflowInstance_GetActions";
+    public const string WorkflowInstanceExecuteAction = "sp_CMS_WorkflowInstance_ExecuteAction";
+    public const string WorkflowInstanceGetLog = "sp_CMS_WorkflowInstance_GetLog";
+
     public const string WorkflowStateGetAll = "sp_CMS_WorkflowState_GetAll";
     public const string WorkflowTransitionGetAll = "sp_CMS_WorkflowTransition_GetAll";
     public const string WorkflowTransitionCreate = "sp_CMS_WorkflowTransition_Create";

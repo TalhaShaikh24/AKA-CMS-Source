@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "My Tasks";
+    ViewData["Breadcrumb"] = "Workflows";
+    ViewData["ActivePage"] = "mytasks";
+    ViewData["RequiredPermission"] = "WorkflowInstances:Read";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>My Tasks</h1>
+    <p class="sub">Workflow requests waiting for your role</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Waiting for you</h3>
+    <span class="hint" id="mtCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="mtTable">
+      <thead>
+        <tr><th>Workflow</th><th>Form</th><th>Current step</th><th>Assigned role</th><th>SLA date</th><th></th></tr>
+      </thead>
+      <tbody id="mtTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mtLogModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="mtLogTitle">History</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <div class="modal-body" id="mtLogBody"><div class="hint">Loading&hellip;</div></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/my-tasks.js" asp-append-version="true"></script>
+}

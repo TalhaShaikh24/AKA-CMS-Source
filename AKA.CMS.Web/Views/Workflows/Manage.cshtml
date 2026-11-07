@@ -1,0 +1,137 @@
+@{
+    ViewData["Title"] = "Manage Workflow";
+    ViewData["Breadcrumb"] = "System";
+    ViewData["ActivePage"] = "workflows";
+    ViewData["RequiredPermission"] = "Workflows:Read";
+    var workflowId = ViewBag.WorkflowId as int?;
+}
+<input type="hidden" id="wmWorkflowId" value="@(workflowId?.ToString() ?? "")">
+
+<style>
+  .wm-tabs{display:flex;gap:8px;margin-bottom:14px}
+  .wm-tabs button{padding:8px 16px;font-size:13px}
+  .wm-tab{display:none}
+  .wm-tab.active{display:block}
+  .wm-step-form .field{margin-bottom:10px}
+  .wm-sec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .wm-sec-row:last-child{border-bottom:0}
+  .wm-sec-row .sec-name{flex:1;min-width:0}
+  .wm-sec-row .sec-name code{color:var(--muted);font-size:12px}
+  .wm-act-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+  .wm-act-row input,.wm-act-row select{flex:1;min-width:120px}
+  .wm-act-row .chk{flex:none;display:flex;align-items:center;gap:4px;font-size:13px}
+  .wm-act-row .wm-act-del{flex:none}
+</style>
+
+<div class="page-head">
+  <div class="page-title">
+    <h1 id="wmTitle">Manage Workflow</h1>
+    <p class="sub" id="wmSub">Steps, sections and buttons</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="@Url.Action("Index", "Workflows")">Back to Workflows</a>
+  </div>
+</div>
+
+<div class="wm-tabs" id="wmTabs">
+  <button class="btn btn-primary" type="button" data-tab="steps">Steps</button>
+  <button class="btn btn-ghost" type="button" data-tab="sections">Sections per step</button>
+  <button class="btn btn-ghost" type="button" data-tab="buttons">Buttons per step</button>
+</div>
+
+<div class="wm-tab active" id="wmTab-steps">
+  <div class="card">
+    <div class="card-head">
+      <h3>Steps</h3>
+      <span class="hint" id="wmStepCount"></span>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr><th>Step</th><th>Role</th><th>Start</th><th>End</th><th>SLA (days)</th><th>Order</th><th></th></tr>
+        </thead>
+        <tbody id="wmStepsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="card-head"><h3 id="wmStepFormTitle">Add Step</h3></div>
+    <div class="card-body">
+      <form id="wmStepForm" novalidate>
+        <input type="hidden" id="wmStepId">
+        <div class="form-grid wm-step-form">
+          <div class="field" id="fStepCode">
+            <label>Step Code <span class="req">*</span></label>
+            <input class="input" id="wmStepCode" placeholder="e.g. InitiateCase" autocomplete="off">
+            <span class="field-error">Step code is required.</span>
+          </div>
+          <div class="field" id="fStepTitle">
+            <label>Step Title <span class="req">*</span></label>
+            <input class="input" id="wmStepTitle" placeholder="e.g. Initiate Case" autocomplete="off">
+            <span class="field-error">Step title is required.</span>
+          </div>
+          <div class="field">
+            <label>Responsible Role</label>
+            <select class="input select2" id="wmStepRole"></select>
+          </div>
+          <div class="field">
+            <label>SLA (days)</label>
+            <input class="input" id="wmStepSla" type="number" min="0" placeholder="e.g. 10">
+          </div>
+          <div class="field">
+            <label>Display Order</label>
+            <input class="input" id="wmStepOrder" type="number" min="0" value="0">
+          </div>
+          <div class="field">
+            <label class="check-row"><input type="checkbox" id="wmStepStart"><span class="check-label">Start step — marking this one the start unmarks the current start step</span></label>
+            <label class="check-row"><input type="checkbox" id="wmStepEnd"><span class="check-label">End step — the route finishes here</span></label>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn btn-primary" type="submit" id="wmStepSaveBtn">Save Step</button>
+          <button class="btn btn-ghost" type="button" id="wmStepCancelBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="wm-tab" id="wmTab-sections">
+  <div class="card">
+    <div class="card-head"><h3>Sections per step</h3></div>
+    <div class="card-body">
+      <div class="field" style="max-width:420px">
+        <label>Step</label>
+        <select class="input select2" id="wmSecStepSel"></select>
+      </div>
+      <div id="wmSecList" style="margin-top:10px"></div>
+      <span class="hint">Visible = the section shows at this step. Enabled = its fields can be edited — a disabled section shows read-only. A step with no rows saved here falls back to the workflow's own sections.</span>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-primary" type="button" id="wmSecSaveBtn">Save Sections</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wm-tab" id="wmTab-buttons">
+  <div class="card">
+    <div class="card-head"><h3>Buttons per step</h3></div>
+    <div class="card-body">
+      <div class="field" style="max-width:420px">
+        <label>Step</label>
+        <select class="input select2" id="wmActStepSel"></select>
+      </div>
+      <div id="wmActList" style="margin-top:10px"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-ghost" type="button" id="wmActAddBtn">+ Add button</button>
+        <button class="btn btn-primary" type="button" id="wmActSaveBtn">Save Buttons</button>
+      </div>
+      <span class="hint">A button moves the request to its next step and next role. Next step must be a step of this workflow. No email is sent — the email flag is only stored for now.</span>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/workflow-manage.js" asp-append-version="true"></script>
+}

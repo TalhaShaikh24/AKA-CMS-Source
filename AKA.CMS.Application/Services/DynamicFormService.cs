@@ -144,7 +144,7 @@ public sealed partial class DynamicFormService(
 
     public async Task<DynamicFormSubmissionDetailDto> SubmitAsync(
         int formId, Dictionary<string, JsonElement> values,
-        IReadOnlyList<SubmissionFileUpload> files, int submittedBy)
+        IReadOnlyList<SubmissionFileUpload> files, int submittedBy, int? instanceId = null)
     {
         var form = await GetByIdAsync(formId);
         if (!form.IsActive)
@@ -158,7 +158,7 @@ public sealed partial class DynamicFormService(
             .GroupBy(f => f.FieldKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey, null, await GetWorkflowRulesAsync(formId, form));
+        ValidateSubmission(form, byKey, fileByKey, null, await GetWorkflowRulesAsync(formId, form, instanceId));
 
         // Files are written first, under one folder per entry, so the
         // stored value is the file's path. If the DB save then fails,
@@ -226,7 +226,7 @@ public sealed partial class DynamicFormService(
        instead of duplicating anything. */
     public async Task<DynamicFormSubmissionDetailDto> UpdateSubmissionAsync(
         int submissionId, Dictionary<string, JsonElement> values,
-        IReadOnlyList<SubmissionFileUpload> files, int performedBy)
+        IReadOnlyList<SubmissionFileUpload> files, int performedBy, int? instanceId = null)
     {
         var existing = await GetSubmissionAsync(submissionId);
         var form = await GetByIdAsync(existing.FormId);
@@ -246,7 +246,7 @@ public sealed partial class DynamicFormService(
             .Select(f => f.FieldKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        ValidateSubmission(form, byKey, fileByKey, existingFileKeys, await GetWorkflowRulesAsync(form.FormId, form));
+        ValidateSubmission(form, byKey, fileByKey, existingFileKeys, await GetWorkflowRulesAsync(form.FormId, form, instanceId));
 
         var uploadsRoot = ResolveUploadsPath();
         var folderToken = Guid.NewGuid().ToString("N");
@@ -429,7 +429,7 @@ public sealed partial class DynamicFormService(
         HashSet<string> RequiredFieldKeys,
         HashSet<string> OptionalFieldKeys);
 
-    private async Task<WorkflowValidationRules> GetWorkflowRulesAsync(int formId, DynamicFormDetailDto form)
+    private async Task<WorkflowValidationRules> GetWorkflowRulesAsync(int formId, DynamicFormDetailDto form, int? instanceId = null)
     {
         var empty = new WorkflowValidationRules(
             new HashSet<string>(StringComparer.OrdinalIgnoreCase),
@@ -439,7 +439,9 @@ public sealed partial class DynamicFormService(
         if (workflowRepository is null) return empty;
         try
         {
-            var response = await workflowRepository.GetSectionsByFormAsync(formId);
+            // An instance validates against its current step's
+            // sections; without one, the workflow's own sections.
+            var response = await workflowRepository.GetSectionsByFormAsync(formId, instanceId);
             var hiddenSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var hiddenFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -49,6 +49,8 @@ $(function () {
               ? '<span class="pill" style="background:#e6f4ea;color:#1e7e34">Active</span>'
               : '<span class="pill">Inactive</span>') + '</td>' +
             '<td class="row-actions" style="white-space:nowrap">' +
+              '<a class="btn btn-ghost btn-sm" href="/Workflows/Manage/' + w.workflowId + '" data-permission="Workflows:Write">Manage</a> ' +
+              (w.isActive ? '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Render/' + w.formId + '?workflowId=' + w.workflowId + '" data-permission="DynamicForms:Submit">Start</a> ' : '') +
               '<button class="btn btn-ghost btn-sm" data-edit="' + w.workflowId + '" type="button" data-permission="Workflows:Write">Edit</button> ' +
               '<button class="btn btn-ghost btn-sm" data-del="' + w.workflowId + '" type="button" data-permission="Workflows:Write">Delete</button>' +
             '</td></tr>';
@@ -243,6 +245,7 @@ $(function () {
         editingId = w.workflowId;
         $('#wfId').val(w.workflowId);
         $('#wfName').val(w.workflowName);
+        $('#wfCode').val(w.workflowCode || '');
         $('#wfDesc').val(w.description || '');
         $('#wfActive').prop('checked', !!w.isActive);
         $('#fWfName, #fWfForm').removeClass('invalid');
@@ -281,6 +284,7 @@ $(function () {
 
     var payload = {
       workflowName: name,
+      workflowCode: $.trim($('#wfCode').val()) || null,
       formId: Number(formId),
       description: $.trim($('#wfDesc').val()) || null,
       isActive: $('#wfActive').is(':checked'),

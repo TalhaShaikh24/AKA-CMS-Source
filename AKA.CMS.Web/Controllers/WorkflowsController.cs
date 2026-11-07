@@ -8,4 +8,13 @@ public sealed class WorkflowsController : Controller
 {
     [HttpGet]
     public IActionResult Index() => View();
+
+    /// <summary>Manage one workflow: its steps, each step's sections
+    /// and each step's buttons.</summary>
+    [HttpGet("Manage/{id:int}")]
+    public IActionResult Manage(int id)
+    {
+        ViewBag.WorkflowId = id;
+        return View();
+    }
 }
