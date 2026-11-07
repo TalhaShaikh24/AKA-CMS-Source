@@ -4,10 +4,15 @@
      1. 47_CMS_WorkflowModule.sql  (5 new tables + WorkflowCode + permissions)
      2. 35_WorkflowModule.sql     (step / step-section / step-action /
                                     instance stored procedures)
-     3. 34_Workflows.sql          (UPDATED procedures only: Save with
+     3. 34_Workflows.sql          (all 5 procedures: Save with
                                     WorkflowCode, GetById/GetAll with
                                     WorkflowCode, GetSectionsByForm
-                                    step-aware via @InstanceId)
+                                    step-aware via @InstanceId, plus
+                                    Delete — Delete was added 2026-11-07:
+                                    it was missing from this file because
+                                    it was unchanged in the 11-07 round,
+                                    so a DB that skipped the 11-05 file
+                                    had no sp_CMS_Workflow_Delete.)
    Idempotent: safe to re-run. After running: restart the API, then
    log out and back in (new permissions load at startup, JWT claims
    at login).
@@ -1070,5 +1075,25 @@ BEGIN
     INNER JOIN [dbo].[CMS_WorkflowSections] s ON s.[WorkflowSectionId] = a.[WorkflowSectionId]
     WHERE s.[WorkflowId] = @WorkflowId AND s.[IsActive] = 1 AND a.[IsActive] = 1
     ORDER BY a.[SortOrder], a.[WorkflowActionId];
+END
+GO
+
+/* ---- sp_CMS_Workflow_Delete (soft: deactivate) ----
+   From 34_Workflows.sql — was missing from this combined file
+   (unchanged in the 11-07 round, so it was left out). Added
+   2026-11-07 so this file alone covers all 20 workflow SPs. */
+CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_Workflow_Delete]
+    @WorkflowId  INT,
+    @PerformedBy INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE [dbo].[CMS_Workflows]
+    SET [IsActive] = 0, [UpdatedAt] = SYSUTCDATETIME()
+    WHERE [WorkflowId] = @WorkflowId;
+
+    INSERT INTO [dbo].[CMS_AuditLogs] ([TableName], [RecordId], [Action], [PerformedBy])
+    VALUES ('CMS_Workflows', CAST(@WorkflowId AS VARCHAR(50)), 'DELETE', @PerformedBy);
 END
 GO
