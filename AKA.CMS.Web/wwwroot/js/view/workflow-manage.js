@@ -17,7 +17,6 @@ $(function () {
   var workflowId = Number($('#wmWorkflowId').val() || 0);
   var workflow = null;       // workflow detail (name, form)
   var steps = [];            // steps of this workflow, in order
-  var roles = [];            // all roles (dropdowns)
   var workflowRoles = [];    // all workflow roles (dropdowns)
   var formSections = [];     // sections of the workflow's form
   var formLoaded = false;    // form definition arrived (sections need it)
@@ -35,21 +34,9 @@ $(function () {
   }
 
   /* ---------------- shared loads ---------------- */
-  function loadRoles(onDone) {
-    cmsAjax({
-      url: '/api/roles', method: 'GET',
-      fallbackMsg: 'Could not load roles.',
-      success: function (res) {
-        roles = (res || []).filter(function (r) { return r.isActive; });
-        $('#wmStepRole').html('<option value="">— No role —</option>' + roles.map(function (r) {
-          return '<option value="' + r.roleId + '">' + esc(r.description) + '</option>';
-        }).join(''));
-        CMS.initSelect2(document);
-        loadWorkflowRoles(onDone);
-      }
-    });
-  }
-
+  // User roles are no longer part of the workflow UI (2026-11-10):
+  // steps and buttons only carry a workflow role. The DB columns
+  // (ResponsibleRoleID / NextRoleID / CurrentRoleID) stay, unused.
   function loadWorkflowRoles(onDone) {
     cmsAjax({
       url: '/api/workflow-roles', method: 'GET',
@@ -114,7 +101,7 @@ $(function () {
   function renderFlowStrip() {
     var html = steps.map(function (s, i) {
       var flags = (s.isStart ? ' · START' : '') + (s.isEnd ? ' · END' : '');
-      var meta = esc(s.responsibleWorkflowRoleName || s.responsibleRoleName || 'No role') + ' · ' + (s.sla == null ? 'No SLA' : s.sla + 'd');
+      var meta = esc(s.responsibleWorkflowRoleName || 'No role') + ' · ' + (s.sla == null ? 'No SLA' : s.sla + 'd');
       var card = '<button type="button" class="wm-flow-card' + (s.workflowStepId === selectedStepId ? ' sel' : '') + '" data-flow-step="' + s.workflowStepId + '">' +
         '<span class="fc-num">STEP ' + (i + 1) + esc(flags) + '</span>' +
         '<span class="fc-title">' + esc(s.stepTitle) + '</span>' +
@@ -170,7 +157,6 @@ $(function () {
     $('#wmStepId').val(s.workflowStepId);
     $('#wmStepCode').val(s.stepCode);
     $('#wmStepTitle').val(s.stepTitle);
-    $('#wmStepRole').val(s.responsibleRoleID ? String(s.responsibleRoleID) : '').trigger('change');
     $('#wmStepWfRole').val(s.responsibleWorkflowRoleID ? String(s.responsibleWorkflowRoleID) : '').trigger('change');
     $('#wmStepSla').val(s.sla == null ? '' : s.sla);
     $('#wmStepOrder').val(s.displayOrder);
@@ -204,7 +190,7 @@ $(function () {
     var payload = {
       stepCode: code,
       stepTitle: title,
-      responsibleRoleID: $('#wmStepRole').val() ? Number($('#wmStepRole').val()) : null,
+      responsibleRoleID: null, // user roles no longer set from this page
       responsibleWorkflowRoleID: $('#wmStepWfRole').val() ? Number($('#wmStepWfRole').val()) : null,
       isStart: $('#wmStepStart').is(':checked'),
       isEnd: $('#wmStepEnd').is(':checked'),
@@ -237,7 +223,7 @@ $(function () {
       return '<tr class="wm-step-row' + (s.workflowStepId === selectedStepId ? ' sel' : '') + '" data-step-row="' + s.workflowStepId + '">' +
         '<td>' + (i + 1) + '</td>' +
         '<td><strong>' + esc(s.stepTitle) + '</strong><br><span class="hint"><code>' + esc(s.stepCode) + '</code></span></td>' +
-        '<td>' + esc(s.responsibleWorkflowRoleName || s.responsibleRoleName || '—') + '</td>' +
+        '<td>' + esc(s.responsibleWorkflowRoleName || '—') + '</td>' +
         '<td>' + (s.sla == null ? '—' : s.sla) + '</td>' +
         '<td>' + (s.isStart ? 'Yes' : '—') + '</td>' +
         '<td>' + (s.isEnd ? 'Yes' : '—') + '</td>' +
@@ -359,7 +345,7 @@ $(function () {
           .sort(function (a, b) { return (a.displayOrder || 0) - (b.displayOrder || 0); })
           .map(function (a) {
             return { actionCode: a.actionCode, actionTitle: a.actionTitle,
-              nextStepCode: a.nextStepCode, nextRoleId: a.nextRoleID || null,
+              nextStepCode: a.nextStepCode,
               nextWorkflowRoleId: a.nextWorkflowRoleID || null,
               saveOrMove: !!a.saveOrMove, isSendEmail: !!a.isSendEmail };
           });
@@ -380,14 +366,6 @@ $(function () {
             steps.map(function (s) {
               return '<option value="' + esc(s.stepCode) + '"' + (row.nextStepCode === s.stepCode ? ' selected' : '') + '>' +
                 esc(s.stepTitle) + '</option>';
-            }).join('') +
-          '</select></div>' +
-        '<div class="field"><label>Assigned to</label>' +
-          '<select class="input wm-act-role" data-idx="' + idx + '">' +
-            '<option value="">— No role —</option>' +
-            roles.map(function (r) {
-              return '<option value="' + r.roleId + '"' + (row.nextRoleId === r.roleId ? ' selected' : '') + '>' +
-                esc(r.description) + '</option>';
             }).join('') +
           '</select></div>' +
         '<div class="field"><label>Workflow role</label>' +
@@ -416,7 +394,7 @@ $(function () {
 
   $('#wmActAddBtn').on('click', function () {
     actRows.push({ actionCode: '', actionTitle: '', nextStepCode: steps.length ? steps[0].stepCode : '',
-      nextRoleId: null, nextWorkflowRoleId: null, saveOrMove: true, isSendEmail: false });
+      nextWorkflowRoleId: null, saveOrMove: true, isSendEmail: false });
     renderActList();
   });
 
@@ -426,14 +404,13 @@ $(function () {
   });
 
   // Typing in a row updates state without a rebuild, so focus stays.
-  $(document).on('input change', '.wm-act-code, .wm-act-title, .wm-act-next, .wm-act-role, .wm-act-wfrole, .wm-act-move, .wm-act-mail', function () {
+  $(document).on('input change', '.wm-act-code, .wm-act-title, .wm-act-next, .wm-act-wfrole, .wm-act-move, .wm-act-mail', function () {
     var $el = $(this);
     var row = actRows[Number($el.data('idx'))];
     if (!row) return;
     if ($el.hasClass('wm-act-code')) row.actionCode = $el.val();
     else if ($el.hasClass('wm-act-title')) row.actionTitle = $el.val();
     else if ($el.hasClass('wm-act-next')) row.nextStepCode = $el.val();
-    else if ($el.hasClass('wm-act-role')) row.nextRoleId = $el.val() ? Number($el.val()) : null;
     else if ($el.hasClass('wm-act-wfrole')) row.nextWorkflowRoleId = $el.val() ? Number($el.val()) : null;
     else if ($el.hasClass('wm-act-move')) row.saveOrMove = $el.is(':checked');
     else if ($el.hasClass('wm-act-mail')) row.isSendEmail = $el.is(':checked');
@@ -446,7 +423,7 @@ $(function () {
     var payload = actRows.map(function (r, i) {
       return { actionCode: $.trim(r.actionCode), actionTitle: $.trim(r.actionTitle),
         nextStepCode: r.nextStepCode, nextAssignmentType: 'Static',
-        nextRoleId: r.nextRoleId, nextWorkflowRoleId: r.nextWorkflowRoleId, saveOrMove: r.saveOrMove,
+        nextRoleId: null, nextWorkflowRoleId: r.nextWorkflowRoleId, saveOrMove: r.saveOrMove,
         isSendEmail: r.isSendEmail, displayOrder: i };
     });
     var $btn = $(this).prop('disabled', true);
@@ -474,6 +451,6 @@ $(function () {
       return true;
     }
   });
-  loadRoles();
+  loadWorkflowRoles();
   resetStepForm();
 });

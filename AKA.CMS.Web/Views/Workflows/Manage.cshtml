@@ -27,7 +27,7 @@
   .wm-sec-row .sec-name{flex:1;min-width:0}
   .wm-sec-row .sec-name code{color:var(--muted);font-size:12px}
   .wm-act-row{border:1.5px solid var(--border);border-radius:12px;background:#fff;padding:12px;margin-bottom:10px}
-  .wm-act-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .wm-act-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   .wm-act-grid .field{margin-bottom:0}
   .wm-act-opts{display:flex;gap:24px;align-items:center;margin-top:12px;flex-wrap:wrap}
   .wm-act-opt{display:flex;align-items:center;gap:10px}
@@ -74,14 +74,9 @@
           <span class="field-error">Step code is required.</span>
         </div>
         <div class="field">
-          <label>User Role</label>
-          <select class="input select2" id="wmStepRole"></select>
-          <span class="hint">Optional — or pick a workflow role below.</span>
-        </div>
-        <div class="field">
           <label>Workflow Role</label>
           <select class="input select2" id="wmStepWfRole"></select>
-          <span class="hint">Optional — who the step waits on, if not a user role.</span>
+          <span class="hint">Optional — who the step waits on.</span>
         </div>
         <div class="field">
           <label>SLA (days)</label>
