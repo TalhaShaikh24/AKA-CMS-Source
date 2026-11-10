@@ -8,6 +8,13 @@ $(function () {
 
   var allUsers = [];
   var allRoles = [];
+  var allWfRoles = [];
+  // Workflow roles the edit modal was prefilled with, and for which
+  // user — null until the prefill GET returns. The edit diff only
+  // removes roles when this is known (a save before the GET returns
+  // must never unassign a role by accident).
+  var wfRolesForUser = null;
+  var currentWfRoleIds = [];
   var filterState = { q: '', status: '' };
 
   /* ---------- filters ---------- */
@@ -53,6 +60,19 @@ $(function () {
         }).join('');
         $('#nuRoles').html(opts);
         $('#assignRoleSel').html(opts);
+      }
+    });
+    // Workflow roles (optional): same picker pattern as user roles.
+    // If the workflow SQL has not been run yet this fails silently
+    // and the field simply stays empty.
+    cmsAjax({
+      url: '/api/workflow-roles', method: 'GET',
+      error: function () { return true; },
+      success: function (res) {
+        allWfRoles = (res || []).filter(function (r) { return r.isActive; });
+        $('#nuWfRoles').html(allWfRoles.map(function (r) {
+          return '<option value="' + r.workflowRoleId + '">' + esc(r.title) + '</option>';
+        }).join(''));
       }
     });
   }
@@ -163,6 +183,9 @@ $(function () {
     $('#editUserId').val('');
     $('#nuUsername').prop('disabled', false);
     $('#nuRoles').val(null).trigger('change');
+    $('#nuWfRoles').val(null).trigger('change');
+    wfRolesForUser = null;
+    currentWfRoleIds = [];
     $('#fUserType').show();
     $('#fEditType').hide();
     $('#nuTypeSeg button').removeClass('sel');
@@ -183,6 +206,23 @@ $(function () {
       return roleNames.indexOf(r.description) >= 0 || roleNames.indexOf(r.roleName) >= 0;
     }).map(function (r) { return String(r.roleId); });
     $('#nuRoles').val(roleIds).trigger('change');
+  }
+
+  // Workflow roles the user already holds, for the edit prefill and
+  // the save diff. The list belongs to this user only once the GET
+  // returns (see wfRolesForUser).
+  function loadUserWfRoles(userId) {
+    wfRolesForUser = null;
+    currentWfRoleIds = [];
+    cmsAjax({
+      url: '/api/workflow-roles/users/' + userId + '/roles', method: 'GET',
+      error: function () { return true; },
+      success: function (res) {
+        currentWfRoleIds = (res || []).map(function (r) { return r.workflowRoleId; });
+        wfRolesForUser = userId;
+        $('#nuWfRoles').val(currentWfRoleIds.map(String)).trigger('change');
+      }
+    });
   }
 
   $(document).on('click', '[data-edit]', function () {
@@ -211,6 +251,7 @@ $(function () {
     $('#nuPassword').removeAttr('required');
     // Load user's current roles
     loadUserRoles(u.userId);
+    loadUserWfRoles(u.userId);
     $('#userModal').addClass('open');
   });
 
@@ -239,6 +280,47 @@ $(function () {
     })();
   }
 
+  // Workflow roles are assigned per role (PUT /api/workflow-roles/{id}/users
+  // replaces that role's user list), so each changed role needs its
+  // current list first: add the user for a newly picked role, drop
+  // them for an unpicked one. Sequential, like syncUserRoles. A
+  // failure (e.g. no WorkflowRoles:Write) does not block the save —
+  // done(true) lets the caller warn instead of claiming success.
+  function syncWfRoles(userId, newWfRoleIds, done) {
+    // .val() hands back a string; the role-user lists hold numbers —
+    // without this, the strict comparisons below (and the PUT body)
+    // would mix '6' with 6 and removals would never match.
+    userId = Number(userId);
+    var oldIds = wfRolesForUser === userId ? currentWfRoleIds : null;
+    var toAdd = newWfRoleIds.filter(function (id) { return !oldIds || oldIds.indexOf(id) < 0; });
+    var toRemove = oldIds ? oldIds.filter(function (id) { return newWfRoleIds.indexOf(id) < 0; }) : [];
+    var failed = false;
+    var queue = [];
+    toAdd.forEach(function (rid) { queue.push({ roleId: rid, add: true }); });
+    toRemove.forEach(function (rid) { queue.push({ roleId: rid, add: false }); });
+    (function next() {
+      var q = queue.shift();
+      if (!q) { done(failed); return; }
+      cmsAjax({
+        url: '/api/workflow-roles/' + q.roleId + '/users', method: 'GET',
+        fallbackMsg: 'Could not load workflow role users.',
+        success: function (res) {
+          var ids = (res || []).map(function (u) { return u.userId; });
+          if (q.add) { if (ids.indexOf(userId) < 0) ids.push(userId); }
+          else { ids = ids.filter(function (x) { return x !== userId; }); }
+          cmsAjax({
+            url: '/api/workflow-roles/' + q.roleId + '/users', method: 'PUT', json: true,
+            data: { userIds: ids },
+            fallbackMsg: 'Could not assign workflow roles.',
+            success: next,
+            error: function () { failed = true; next(); return true; }
+          });
+        },
+        error: function () { failed = true; next(); return true; }
+      });
+    })();
+  }
+
   $('#userForm').cmsValidate({
     onValid: function () {
       var id = $('#editUserId').val();
@@ -254,10 +336,13 @@ $(function () {
           },
           fallbackMsg: 'Could not update user.',
           success: function () {
+            var wfIds = ($('#nuWfRoles').val() || []).map(Number);
             syncUserRoles(id, newRoleIds, function () {
-              $('#userModal').removeClass('open');
-              CMS.toast('User updated.', 'success');
-              load();
+              syncWfRoles(id, wfIds, function (failed) {
+                $('#userModal').removeClass('open');
+                CMS.toast(failed ? 'User updated, but some workflow roles could not be assigned.' : 'User updated.', failed ? 'error' : 'success');
+                load();
+              });
             });
           }
         });
@@ -299,11 +384,21 @@ $(function () {
           url: '/api/users', method: 'POST', json: true,
           data: payload,
           fallbackMsg: 'Could not create user.',
-          success: function () {
+          success: function (created) {
             adUsers = null; // refresh already-added flags next time
-            $('#userModal').removeClass('open');
-            CMS.toast(isAd ? 'AD user added.' : 'User created.', 'success');
-            load();
+            var newId = created ? created.userId : null;
+            var wfIds = ($('#nuWfRoles').val() || []).map(Number);
+            if (!newId || !wfIds.length) {
+              $('#userModal').removeClass('open');
+              CMS.toast(isAd ? 'AD user added.' : 'User created.', 'success');
+              load();
+              return;
+            }
+            syncWfRoles(newId, wfIds, function (failed) {
+              $('#userModal').removeClass('open');
+              CMS.toast(failed ? 'User created, but some workflow roles could not be assigned.' : (isAd ? 'AD user added.' : 'User created.'), failed ? 'error' : 'success');
+              load();
+            });
           }
         });
       }
