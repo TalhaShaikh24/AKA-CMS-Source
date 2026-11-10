@@ -884,7 +884,7 @@ $(function () {
         '<button type="button" data-baction="submit"' + (buttonAction === 'submit' ? ' class="sel"' : '') + '>Submit</button>' +
         '<button type="button" data-baction="reset"' + (buttonAction === 'reset' ? ' class="sel"' : '') + '>Reset</button>' +
         '<button type="button" data-baction="button"' + (buttonAction === 'button' ? ' class="sel"' : '') + '>Button</button>' +
-        '</div><span class="hint">Every form needs exactly one Submit button.</span></div>';
+        '</div><span class="hint">A form can have at most one Submit button — the page already has its own.</span></div>';
     }
     if (CMSFormRenderer.OPTION_TYPES[t]) {
       html += '<div class="field"><label>Options</label><textarea class="input" id="ppOptions" rows="5">' + esc(optionsToText(f.options)) + '</textarea>' +

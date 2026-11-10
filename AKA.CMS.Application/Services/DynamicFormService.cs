@@ -923,12 +923,14 @@ public sealed partial class DynamicFormService(
             }
         }
 
-        // Every form must carry exactly one submit button — it is what the
-        // (future) submission pipeline will post through.
+        // A form may carry at most one submit button — the page already
+        // has its own Submit button, and workflow buttons handle the rest.
+        // (Was "exactly one" until 2026-11-10: the JS rule was relaxed on
+        // 2026-11-07 but this server check was missed.)
         var submitCount = request.Fields.Count(f =>
             f.FieldType == "button" && string.Equals(f.ButtonAction, "submit", StringComparison.OrdinalIgnoreCase));
-        if (submitCount != 1)
-            throw new InvalidDomainValueException($"The form must contain exactly one Submit button (found {submitCount}). Add a Button field and set its type to Submit.");
+        if (submitCount > 1)
+            throw new InvalidDomainValueException($"A form can have at most one Submit button (found {submitCount}). Remove the extra Submit button fields — the page already has its own Submit button.");
     }
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]*$")]
