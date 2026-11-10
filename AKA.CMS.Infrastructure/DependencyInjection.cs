@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IWorkflowStepRepository, WorkflowStepRepository>();
         services.AddScoped<IWorkflowInstanceRepository, WorkflowInstanceRepository>();
+        services.AddScoped<IWorkflowRoleRepository, WorkflowRoleRepository>();
         services.AddScoped<IGeographyRepository, GeographyRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<ICaseRepository, CaseRepository>();
@@ -71,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkflowService, WorkflowService>();
         services.AddScoped<IWorkflowStepService, WorkflowStepService>();
         services.AddScoped<IWorkflowInstanceService, WorkflowInstanceService>();
+        services.AddScoped<IWorkflowRoleService, WorkflowRoleService>();
         services.AddScoped<IGeographyService, GeographyService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<ICaseService, CaseService>();

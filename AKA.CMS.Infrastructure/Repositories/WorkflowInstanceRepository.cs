@@ -24,6 +24,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         public bool IsEndStep { get; set; }
         public int? CurrentRoleID { get; set; }
         public string? CurrentRoleName { get; set; }
+        public int? CurrentWorkflowRoleID { get; set; }
+        public string? CurrentWorkflowRoleName { get; set; }
         public int? CurrentUserID { get; set; }
         public int? SLA_NoOfDays { get; set; }
         public DateTime? SLA_Date { get; set; }
@@ -41,6 +43,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         public string? CurrentStepTitle { get; set; }
         public int? CurrentRoleID { get; set; }
         public string? CurrentRoleName { get; set; }
+        public int? CurrentWorkflowRoleID { get; set; }
+        public string? CurrentWorkflowRoleName { get; set; }
         public int? CurrentUserID { get; set; }
         public int? SLA_NoOfDays { get; set; }
         public DateTime? SLA_Date { get; set; }
@@ -70,6 +74,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         public string NextAssignmentType { get; set; } = "Static";
         public int? NextRoleID { get; set; }
         public string? NextRoleName { get; set; }
+        public int? NextWorkflowRoleID { get; set; }
+        public string? NextWorkflowRoleName { get; set; }
         public bool SaveOrMove { get; set; }
         public bool IsSendEmail { get; set; }
         public int DisplayOrder { get; set; }
@@ -117,6 +123,16 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         return rows.Select(ToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId)
+    {
+        using var connection = context.CreateConnection();
+        var rows = await connection.QueryAsync<InstanceRow>(
+            StoredProcedures.WorkflowInstanceGetMyRequests,
+            new { UserId = userId },
+            commandType: CommandType.StoredProcedure);
+        return rows.Select(ToDto).ToList();
+    }
+
     public async Task<WorkflowInstanceDto?> ExecuteActionAsync(int instanceId, string actionCode, string? comments, int performedBy)
     {
         using var connection = context.CreateConnection();
@@ -156,6 +172,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
             CurrentStepTitle = r.CurrentStepTitle,
             CurrentRoleID = r.CurrentRoleID,
             CurrentRoleName = r.CurrentRoleName,
+            CurrentWorkflowRoleID = r.CurrentWorkflowRoleID,
+            CurrentWorkflowRoleName = r.CurrentWorkflowRoleName,
             CurrentUserID = r.CurrentUserID,
             SLA_NoOfDays = r.SLA_NoOfDays,
             SLA_Date = r.SLA_Date,
@@ -194,6 +212,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
                 NextAssignmentType = a.NextAssignmentType,
                 NextRoleID = a.NextRoleID,
                 NextRoleName = a.NextRoleName,
+                NextWorkflowRoleID = a.NextWorkflowRoleID,
+                NextWorkflowRoleName = a.NextWorkflowRoleName,
                 SaveOrMove = a.SaveOrMove,
                 IsSendEmail = a.IsSendEmail,
                 DisplayOrder = a.DisplayOrder
@@ -201,7 +221,7 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         };
     }
 
-    public async Task<(bool IsAdmin, IReadOnlyList<int> RoleIds)> GetUserAccessAsync(int userId)
+    public async Task<(bool IsAdmin, IReadOnlyList<int> RoleIds, IReadOnlyList<int> WorkflowRoleIds)> GetUserAccessAsync(int userId)
     {
         using var connection = context.CreateConnection();
         using var multi = await connection.QueryMultipleAsync(
@@ -210,7 +230,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
             commandType: CommandType.StoredProcedure);
         var isAdmin = (await multi.ReadAsync<bool>()).FirstOrDefault();
         var roleIds = (await multi.ReadAsync<int>()).ToList();
-        return (isAdmin, roleIds);
+        var workflowRoleIds = (await multi.ReadAsync<int>()).ToList();
+        return (isAdmin, roleIds, workflowRoleIds);
     }
 
     private static WorkflowInstanceDto ToDto(InstanceRow r) => new()
@@ -228,6 +249,8 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         IsEndStep = r.IsEndStep,
         CurrentRoleID = r.CurrentRoleID,
         CurrentRoleName = r.CurrentRoleName,
+        CurrentWorkflowRoleID = r.CurrentWorkflowRoleID,
+        CurrentWorkflowRoleName = r.CurrentWorkflowRoleName,
         CurrentUserID = r.CurrentUserID,
         SLA_NoOfDays = r.SLA_NoOfDays,
         SLA_Date = r.SLA_Date,

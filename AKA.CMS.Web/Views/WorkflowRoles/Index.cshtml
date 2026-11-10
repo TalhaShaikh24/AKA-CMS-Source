@@ -1,0 +1,86 @@
+@{
+    ViewData["Title"] = "Workflow Roles";
+    ViewData["Breadcrumb"] = "Workflows";
+    ViewData["ActivePage"] = "workflowroles";
+    ViewData["RequiredPermission"] = "WorkflowRoles:Read";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>Workflow Roles</h1>
+    <p class="sub">Who a workflow step can wait on — separate from user roles. Assigning one to a user is optional.</p>
+  </div>
+  <button class="btn btn-primary" id="wrNewBtn" type="button" data-permission="WorkflowRoles:Write">+ New Role</button>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Roles</h3>
+    <span class="hint" id="wrCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="wrTable">
+      <thead>
+        <tr><th>Code</th><th>Title</th><th>Description</th><th>Users</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="wrTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="wrModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="wrModalTitle">New Role</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <form id="wrForm" novalidate>
+      <div class="modal-body">
+        <input type="hidden" id="wrRoleId">
+        <div class="field" id="fWrCode">
+          <label>Role Code <span class="req">*</span></label>
+          <input class="input" id="wrCode" placeholder="e.g. SUPERVISOR" autocomplete="off">
+          <span class="field-error">Role code is required.</span>
+        </div>
+        <div class="field" id="fWrTitle">
+          <label>Title <span class="req">*</span></label>
+          <input class="input" id="wrTitle" placeholder="e.g. Supervisor" autocomplete="off">
+          <span class="field-error">Title is required.</span>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea class="input" id="wrDesc" rows="2" placeholder="What this role does in the workflow"></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close type="button">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="wrSaveBtn">Save Role</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="wrUsersModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="wrUsersTitle">Users</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="wrUsersRoleId">
+      <div class="field">
+        <label>Users holding this role</label>
+        <select class="input select2" id="wrUsersSelect" multiple style="width:100%"></select>
+        <span class="hint">Optional — a user with no workflow roles is unaffected, and steps keep working on their user role.</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Cancel</button>
+      <button class="btn btn-primary" type="button" id="wrUsersSaveBtn" data-permission="WorkflowRoles:Write">Save Users</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/workflow-roles.js" asp-append-version="true"></script>
+}

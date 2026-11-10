@@ -34,16 +34,28 @@ public sealed class WorkflowInstanceService(
     public Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId)
         => instances.GetMyTasksAsync(userId);
 
+    public Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId)
+        => instances.GetMyRequestsAsync(userId);
+
     public async Task<WorkflowInstanceDto> ExecuteActionAsync(int instanceId, string actionCode, string? comments, int userId)
     {
         var instance = await GetByIdAsync(instanceId);
-        // The assignment check: only the role the instance is waiting
-        // on — or an admin — may press its buttons. The permission
-        // (WorkflowInstances:Read) only opens the door; this check
-        // decides whose task it is.
-        var (isAdmin, roleIds) = await instances.GetUserAccessAsync(userId);
-        if (instance.CurrentRoleID is not null && !isAdmin && !roleIds.Contains(instance.CurrentRoleID.Value))
-            throw new ForbiddenException("This task is assigned to another role.");
+        // The assignment check: only a role the instance is waiting
+        // on — user role OR workflow role — or an admin may press its
+        // buttons. A workflow role is optional: if the instance waits
+        // on neither role, anyone with Read may act (as before). The
+        // permission (WorkflowInstances:Read) only opens the door;
+        // this check decides whose task it is.
+        var (isAdmin, roleIds, workflowRoleIds) = await instances.GetUserAccessAsync(userId);
+        if (!isAdmin)
+        {
+            var roleMatch = instance.CurrentRoleID is not null && roleIds.Contains(instance.CurrentRoleID.Value);
+            var workflowRoleMatch = instance.CurrentWorkflowRoleID is not null
+                && workflowRoleIds.Contains(instance.CurrentWorkflowRoleID.Value);
+            var anyRoleSet = instance.CurrentRoleID is not null || instance.CurrentWorkflowRoleID is not null;
+            if (anyRoleSet && !roleMatch && !workflowRoleMatch)
+                throw new ForbiddenException("This task is assigned to another role.");
+        }
         var updated = await instances.ExecuteActionAsync(instanceId, actionCode, comments, userId)
             ?? throw new NotFoundException($"Workflow instance {instanceId} not found.");
         return updated;

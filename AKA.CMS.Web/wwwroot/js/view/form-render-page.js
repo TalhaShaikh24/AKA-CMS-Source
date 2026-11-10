@@ -289,16 +289,30 @@ $(function () {
   // The step's buttons replace the form's own Submit row.
   function renderStepButtons(actions) {
     var $box = $('#dfStepActions');
+    // Continue mode only: the request already exists, so its
+    // history (flow chart + log) is available.
+    var histBtn = instanceId ? ' <button type="button" class="btn btn-ghost" data-wfhistory="1">History</button>' : '';
     if (!actions.length) {
-      $box.html('<span class="hint">This step has no buttons.</span> <a class="btn btn-ghost" href="/MyTasks">Back to My Tasks</a>').show();
+      $box.html('<span class="hint">This step has no buttons.</span> <a class="btn btn-ghost" href="/MyTasks">Back to My Tasks</a>' + histBtn).show();
       $('#dfDefaultActions').hide();
       return;
     }
     $box.html(actions.map(function (a) {
       return '<button type="button" class="btn btn-primary" data-wfaction="' + esc(a.actionCode) + '">' + esc(a.actionTitle) + '</button>';
-    }).join('') + ' <a class="btn btn-ghost" href="/MyTasks">Back to My Tasks</a>').show();
+    }).join('') + ' <a class="btn btn-ghost" href="/MyTasks">Back to My Tasks</a>' + histBtn).show();
     $('#dfDefaultActions').hide();
   }
+
+  $(document).on('click', '[data-wfhistory]', function () {
+    if (!instanceId) return;
+    window.WorkflowHistory.open({
+      modal: '#dfHistoryModal', titleEl: '#dfHistoryTitle', bodyEl: '#dfHistoryBody',
+      instanceId: instanceId,
+      title: 'History — ' + (wfInstance
+        ? wfInstance.workflowName + ' — ' + (wfInstance.currentStepTitle || wfInstance.currentStepCode)
+        : 'Request')
+    });
+  });
 
   // Workflow continue mode (?instanceId=): the entry already exists;
   // open it at the instance's current step, with that step's sections

@@ -19,10 +19,11 @@ public interface IWorkflowInstanceRepository
     Task<int> StartAsync(int workflowId, int submissionId, string? comments, int performedBy);
     Task<WorkflowInstanceDto?> GetByIdAsync(int instanceId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId);
+    Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId);
     Task<WorkflowInstanceDto?> ExecuteActionAsync(int instanceId, string actionCode, string? comments, int performedBy);
     Task<IReadOnlyList<WorkflowInstanceLogDto>> GetLogAsync(int instanceId);
     Task<WorkflowStepActionsResponseDto?> GetActionsAsync(int instanceId);
-    Task<(bool IsAdmin, IReadOnlyList<int> RoleIds)> GetUserAccessAsync(int userId);
+    Task<(bool IsAdmin, IReadOnlyList<int> RoleIds, IReadOnlyList<int> WorkflowRoleIds)> GetUserAccessAsync(int userId);
 }
 
 public interface IWorkflowStepService
@@ -43,6 +44,7 @@ public interface IWorkflowInstanceService
     Task<WorkflowInstanceDto> StartAsync(StartWorkflowInstanceRequest request, int performedBy);
     Task<WorkflowInstanceDto> GetByIdAsync(int instanceId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId);
+    Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId);
     Task<WorkflowInstanceDto> ExecuteActionAsync(int instanceId, string actionCode, string? comments, int userId);
     Task<IReadOnlyList<WorkflowInstanceLogDto>> GetLogAsync(int instanceId);
     Task<WorkflowStepActionsResponseDto> GetActionsAsync(int instanceId);

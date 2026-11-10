@@ -11,7 +11,8 @@ public sealed class WorkflowStepService(
     IWorkflowStepRepository steps,
     IWorkflowRepository workflows,
     IDynamicFormRepository forms,
-    IRoleService roles) : IWorkflowStepService
+    IRoleService roles,
+    IWorkflowRoleService workflowRoles) : IWorkflowStepService
 {
     public async Task<IReadOnlyList<WorkflowStepDto>> GetByWorkflowAsync(int workflowId)
     {
@@ -88,6 +89,8 @@ public sealed class WorkflowStepService(
         var stepCodes = new HashSet<string>(
             workflowSteps.Select(s => s.StepCode), StringComparer.OrdinalIgnoreCase);
         var roleIds = new HashSet<int>((await roles.GetAllAsync()).Select(r => r.RoleId));
+        var workflowRoleIds = new HashSet<int>(
+            (await workflowRoles.GetAllAsync()).Where(r => r.IsActive).Select(r => r.WorkflowRoleId));
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var action in actions)
         {
@@ -108,6 +111,9 @@ public sealed class WorkflowStepService(
             if (action.NextRoleID is not null && !roleIds.Contains(action.NextRoleID.Value))
                 throw new InvalidDomainValueException(
                     $"Button '{action.ActionCode}' next role {action.NextRoleID} is not a real role.");
+            if (action.NextWorkflowRoleID is not null && !workflowRoleIds.Contains(action.NextWorkflowRoleID.Value))
+                throw new InvalidDomainValueException(
+                    $"Button '{action.ActionCode}' next workflow role {action.NextWorkflowRoleID} is not a real workflow role.");
             if (action.DisplayOrder < 0)
                 throw new InvalidDomainValueException($"Button '{action.ActionCode}' display order must be 0 or more.");
         }
@@ -133,6 +139,13 @@ public sealed class WorkflowStepService(
             var roleIds = new HashSet<int>((await roles.GetAllAsync()).Select(r => r.RoleId));
             if (!roleIds.Contains(request.ResponsibleRoleID.Value))
                 throw new InvalidDomainValueException($"Role {request.ResponsibleRoleID} is not a real role.");
+        }
+        if (request.ResponsibleWorkflowRoleID is not null)
+        {
+            var workflowRoleIds = new HashSet<int>(
+                (await workflowRoles.GetAllAsync()).Where(r => r.IsActive).Select(r => r.WorkflowRoleId));
+            if (!workflowRoleIds.Contains(request.ResponsibleWorkflowRoleID.Value))
+                throw new InvalidDomainValueException($"Workflow role {request.ResponsibleWorkflowRoleID} is not a real workflow role.");
         }
     }
 }

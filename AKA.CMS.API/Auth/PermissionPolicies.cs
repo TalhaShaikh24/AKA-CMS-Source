@@ -67,6 +67,8 @@ public static class PermissionPolicies
     public const string WorkflowStepsWrite = "Permissions:WorkflowSteps:Write";
     public const string WorkflowInstancesRead = "Permissions:WorkflowInstances:Read";
     public const string WorkflowInstancesWrite = "Permissions:WorkflowInstances:Write";
+    public const string WorkflowRolesRead = "Permissions:WorkflowRoles:Read";
+    public const string WorkflowRolesWrite = "Permissions:WorkflowRoles:Write";
     public const string TasksRead = "Permissions:Tasks:Read";
     public const string TasksWrite = "Permissions:Tasks:Write";
     public const string WorkflowConfigRead = "Permissions:WorkflowConfig:Read";

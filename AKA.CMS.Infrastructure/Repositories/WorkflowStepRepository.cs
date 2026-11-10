@@ -18,6 +18,8 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
         public string StepTitle { get; set; } = string.Empty;
         public int? ResponsibleRoleID { get; set; }
         public string? ResponsibleRoleName { get; set; }
+        public int? ResponsibleWorkflowRoleID { get; set; }
+        public string? ResponsibleWorkflowRoleName { get; set; }
         public bool IsStart { get; set; }
         public bool IsEnd { get; set; }
         public int? SLA { get; set; }
@@ -48,6 +50,8 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
         public string NextAssignmentType { get; set; } = "Static";
         public int? NextRoleID { get; set; }
         public string? NextRoleName { get; set; }
+        public int? NextWorkflowRoleID { get; set; }
+        public string? NextWorkflowRoleName { get; set; }
         public bool SaveOrMove { get; set; }
         public bool IsSendEmail { get; set; }
         public int DisplayOrder { get; set; }
@@ -82,6 +86,7 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
         p.Add("@StepCode", request.StepCode);
         p.Add("@StepTitle", request.StepTitle);
         p.Add("@ResponsibleRoleID", request.ResponsibleRoleID);
+        p.Add("@ResponsibleWorkflowRoleID", request.ResponsibleWorkflowRoleID);
         p.Add("@IsStart", request.IsStart);
         p.Add("@IsEnd", request.IsEnd);
         p.Add("@SLA", request.SLA);
@@ -186,6 +191,7 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
             nextStepCode = a.NextStepCode,
             nextAssignmentType = a.NextAssignmentType,
             nextRoleId = a.NextRoleID,
+            nextWorkflowRoleId = a.NextWorkflowRoleID,
             saveOrMove = a.SaveOrMove,
             isSendEmail = a.IsSendEmail,
             displayOrder = a.DisplayOrder
@@ -217,6 +223,8 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
         StepTitle = r.StepTitle,
         ResponsibleRoleID = r.ResponsibleRoleID,
         ResponsibleRoleName = r.ResponsibleRoleName,
+        ResponsibleWorkflowRoleID = r.ResponsibleWorkflowRoleID,
+        ResponsibleWorkflowRoleName = r.ResponsibleWorkflowRoleName,
         IsStart = r.IsStart,
         IsEnd = r.IsEnd,
         SLA = r.SLA,
@@ -237,6 +245,8 @@ public sealed class WorkflowStepRepository(DapperContext context) : IWorkflowSte
         NextAssignmentType = r.NextAssignmentType,
         NextRoleID = r.NextRoleID,
         NextRoleName = r.NextRoleName,
+        NextWorkflowRoleID = r.NextWorkflowRoleID,
+        NextWorkflowRoleName = r.NextWorkflowRoleName,
         SaveOrMove = r.SaveOrMove,
         IsSendEmail = r.IsSendEmail,
         DisplayOrder = r.DisplayOrder

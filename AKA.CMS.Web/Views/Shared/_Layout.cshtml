@@ -53,6 +53,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 9h8M8 13h5M8 17h3"/></svg>
         <span>My Tasks</span>
       </a>
+      <a href="@Url.Action("Index", "MyRequests")" class="@NavCls("myrequests")" data-key="myrequests" data-permission="WorkflowInstances:Read">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+        <span>My Requests</span>
+      </a>
       <a href="@Url.Action("Index", "Referrals")" class="@NavCls("referrals")" data-key="referrals" data-permission="Referrals:Read">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
         <span>Referrals</span>
@@ -102,6 +106,10 @@
       <a href="@Url.Action("Index", "Workflows")" class="@NavCls("workflows")" data-key="workflows" data-permission="Workflows:Read">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M8 7.5 15.5 11M8 16.5 15.5 13"/></svg>
         <span>Workflows</span>
+      </a>
+      <a href="@Url.Action("Index", "WorkflowRoles")" class="@NavCls("workflowroles")" data-key="workflowroles" data-permission="WorkflowRoles:Read">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 11l2 2 4-4"/></svg>
+        <span>Workflow Roles</span>
       </a>
       <a href="@Url.Action("Index", "Settings")" class="@NavCls("settings")" data-key="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>

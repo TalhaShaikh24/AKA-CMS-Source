@@ -27,6 +27,7 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowStep_Save]
     @StepCode         VARCHAR(100),
     @StepTitle        NVARCHAR(200),
     @ResponsibleRoleID INT = NULL,
+    @ResponsibleWorkflowRoleID INT = NULL,
     @IsStart          BIT = 0,
     @IsEnd            BIT = 0,
     @SLA              INT = NULL,
@@ -48,6 +49,8 @@ BEGIN
         THROW 50000, 'A step with this code already exists in the workflow.', 1;
     IF @ResponsibleRoleID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [dbo].[ROLES] WHERE [ROLEID] = @ResponsibleRoleID)
         THROW 50000, 'Role not found.', 1;
+    IF @ResponsibleWorkflowRoleID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [dbo].[CMS_WorkflowRoles] WHERE [WorkflowRoleId] = @ResponsibleWorkflowRoleID AND [IsActive] = 1)
+        THROW 50000, 'Workflow role not found.', 1;
     IF @SLA IS NOT NULL AND @SLA < 0
         THROW 50000, 'SLA days must be 0 or more.', 1;
     IF @DisplayOrder < 0
@@ -62,8 +65,10 @@ BEGIN
         BEGIN
             INSERT INTO [dbo].[CMS_WorkflowSteps]
                 ([WorkflowId], [StepCode], [StepTitle], [ResponsibleRoleID],
+                 [ResponsibleWorkflowRoleID],
                  [IsStart], [IsEnd], [SLA], [DisplayOrder], [CreatedBy])
             VALUES (@WorkflowId, @StepCode, @StepTitle, @ResponsibleRoleID,
+                    @ResponsibleWorkflowRoleID,
                     @IsStart, @IsEnd, @SLA, @DisplayOrder, @PerformedBy);
             SET @WorkflowStepId = SCOPE_IDENTITY();
         END
@@ -72,6 +77,7 @@ BEGIN
             UPDATE [dbo].[CMS_WorkflowSteps]
             SET [StepCode] = @StepCode, [StepTitle] = @StepTitle,
                 [ResponsibleRoleID] = @ResponsibleRoleID,
+                [ResponsibleWorkflowRoleID] = @ResponsibleWorkflowRoleID,
                 [IsStart] = @IsStart, [IsEnd] = @IsEnd, [SLA] = @SLA,
                 [DisplayOrder] = @DisplayOrder, [UpdatedAt] = SYSUTCDATETIME()
             WHERE [WorkflowStepId] = @WorkflowStepId;
@@ -108,6 +114,7 @@ BEGIN
 
     SELECT s.[WorkflowStepId], s.[WorkflowId], s.[StepCode], s.[StepTitle],
            s.[ResponsibleRoleID], r.[DESCRIPTION] AS [ResponsibleRoleName],
+           s.[ResponsibleWorkflowRoleID], wr.[Title] AS [ResponsibleWorkflowRoleName],
            s.[IsStart], s.[IsEnd], s.[SLA], s.[DisplayOrder], s.[IsActive],
            s.[CreatedAt], s.[UpdatedAt],
            (SELECT COUNT(*) FROM [dbo].[CMS_WorkflowStepActions] a
@@ -116,6 +123,7 @@ BEGIN
              WHERE ss.[WorkflowStepId] = s.[WorkflowStepId]) AS [StepSectionCount]
     FROM [dbo].[CMS_WorkflowSteps] s
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = s.[ResponsibleRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = s.[ResponsibleWorkflowRoleID]
     WHERE s.[WorkflowId] = @WorkflowId
     ORDER BY s.[DisplayOrder], s.[WorkflowStepId];
 END
@@ -130,6 +138,7 @@ BEGIN
 
     SELECT s.[WorkflowStepId], s.[WorkflowId], s.[StepCode], s.[StepTitle],
            s.[ResponsibleRoleID], r.[DESCRIPTION] AS [ResponsibleRoleName],
+           s.[ResponsibleWorkflowRoleID], wr.[Title] AS [ResponsibleWorkflowRoleName],
            s.[IsStart], s.[IsEnd], s.[SLA], s.[DisplayOrder], s.[IsActive],
            s.[CreatedAt], s.[UpdatedAt],
            (SELECT COUNT(*) FROM [dbo].[CMS_WorkflowStepActions] a
@@ -138,6 +147,7 @@ BEGIN
              WHERE ss.[WorkflowStepId] = s.[WorkflowStepId]) AS [StepSectionCount]
     FROM [dbo].[CMS_WorkflowSteps] s
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = s.[ResponsibleRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = s.[ResponsibleWorkflowRoleID]
     WHERE s.[WorkflowStepId] = @WorkflowStepId;
 END
 GO
@@ -280,6 +290,13 @@ BEGIN
           AND NOT EXISTS (SELECT 1 FROM [dbo].[ROLES] WHERE [ROLEID] = a.[NextRoleID])
     )
         THROW 50000, 'A button''s next role is not a real role.', 1;
+    IF EXISTS (
+        SELECT 1 FROM OPENJSON(@ActionsJson)
+        WITH ([NextWorkflowRoleID] INT '$.nextWorkflowRoleId') AS a
+        WHERE a.[NextWorkflowRoleID] IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [dbo].[CMS_WorkflowRoles] WHERE [WorkflowRoleId] = a.[NextWorkflowRoleID] AND [IsActive] = 1)
+    )
+        THROW 50000, 'A button''s next workflow role is not a real workflow role.', 1;
 
     BEGIN TRY
         BEGIN TRAN;
@@ -288,9 +305,9 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowStepActions]
             ([WorkflowStepId], [ActionCode], [ActionTitle], [NextStepCode],
-             [NextAssignmentType], [NextRoleID], [SaveOrMove], [IsSendEmail], [DisplayOrder])
+             [NextAssignmentType], [NextRoleID], [NextWorkflowRoleID], [SaveOrMove], [IsSendEmail], [DisplayOrder])
         SELECT @WorkflowStepId, a.[ActionCode], a.[ActionTitle], a.[NextStepCode],
-               ISNULL(a.[NextAssignmentType], 'Static'), a.[NextRoleID],
+               ISNULL(a.[NextAssignmentType], 'Static'), a.[NextRoleID], a.[NextWorkflowRoleID],
                ISNULL(a.[SaveOrMove], 1), ISNULL(a.[IsSendEmail], 0), a.[DisplayOrder]
         FROM OPENJSON(@ActionsJson)
         WITH (
@@ -299,6 +316,7 @@ BEGIN
             [NextStepCode]       VARCHAR(100)  '$.nextStepCode',
             [NextAssignmentType] VARCHAR(20)   '$.nextAssignmentType',
             [NextRoleID]         INT           '$.nextRoleId',
+            [NextWorkflowRoleID] INT           '$.nextWorkflowRoleId',
             [SaveOrMove]         BIT           '$.saveOrMove',
             [IsSendEmail]        BIT           '$.isSendEmail',
             [DisplayOrder]       INT           '$.displayOrder'
@@ -324,12 +342,14 @@ BEGIN
     SELECT a.[WorkflowStepActionId], a.[WorkflowStepId], a.[ActionCode], a.[ActionTitle],
            a.[NextStepCode], ns.[StepTitle] AS [NextStepTitle],
            a.[NextAssignmentType], a.[NextRoleID], r.[DESCRIPTION] AS [NextRoleName],
+           a.[NextWorkflowRoleID], wr.[Title] AS [NextWorkflowRoleName],
            a.[SaveOrMove], a.[IsSendEmail], a.[DisplayOrder], a.[IsActive]
     FROM [dbo].[CMS_WorkflowStepActions] a
     INNER JOIN [dbo].[CMS_WorkflowSteps] s ON s.[WorkflowStepId] = a.[WorkflowStepId]
     LEFT JOIN [dbo].[CMS_WorkflowSteps] ns
         ON ns.[WorkflowId] = s.[WorkflowId] AND ns.[StepCode] = a.[NextStepCode]
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = a.[NextRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = a.[NextWorkflowRoleID]
     WHERE a.[WorkflowStepId] = @WorkflowStepId AND a.[IsActive] = 1
     ORDER BY a.[DisplayOrder], a.[WorkflowStepActionId];
 END
@@ -348,7 +368,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @FormId INT, @StartStepCode VARCHAR(100), @StartRoleID INT, @StartSLA INT, @StartCount INT;
+    DECLARE @FormId INT, @StartStepCode VARCHAR(100), @StartRoleID INT, @StartWorkflowRoleID INT, @StartSLA INT, @StartCount INT;
     SELECT @FormId = [FormId] FROM [dbo].[CMS_Workflows]
     WHERE [WorkflowId] = @WorkflowId AND [IsActive] = 1;
     IF @FormId IS NULL
@@ -364,7 +384,7 @@ BEGIN
     WHERE [WorkflowId] = @WorkflowId AND [IsStart] = 1 AND [IsActive] = 1;
     IF @StartCount <> 1
         THROW 50000, 'The workflow must have exactly one start step.', 1;
-    SELECT TOP 1 @StartStepCode = [StepCode], @StartRoleID = [ResponsibleRoleID], @StartSLA = [SLA]
+    SELECT TOP 1 @StartStepCode = [StepCode], @StartRoleID = [ResponsibleRoleID], @StartWorkflowRoleID = [ResponsibleWorkflowRoleID], @StartSLA = [SLA]
     FROM [dbo].[CMS_WorkflowSteps]
     WHERE [WorkflowId] = @WorkflowId AND [IsStart] = 1 AND [IsActive] = 1;
 
@@ -374,8 +394,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstances]
             ([WorkflowId], [SubmissionId], [CurrentStepCode], [CurrentRoleID],
+             [CurrentWorkflowRoleID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [CreatedBy])
         VALUES (@WorkflowId, @SubmissionId, @StartStepCode, @StartRoleID,
+                @StartWorkflowRoleID,
                 @StartSLA,
                 CASE WHEN @StartSLA IS NOT NULL
                      THEN DATEADD(DAY, @StartSLA, CAST(SYSUTCDATETIME() AS DATE)) ELSE NULL END,
@@ -384,8 +406,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstanceLogs]
             ([WorkflowInstanceId], [WorkflowId], [CurrentStepCode], [CurrentRoleID],
+             [CurrentWorkflowRoleID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [Status])
         VALUES (@InstanceId, @WorkflowId, @StartStepCode, @StartRoleID,
+                @StartWorkflowRoleID,
                 @StartSLA,
                 CASE WHEN @StartSLA IS NOT NULL
                      THEN DATEADD(DAY, @StartSLA, CAST(SYSUTCDATETIME() AS DATE)) ELSE NULL END,
@@ -414,6 +438,7 @@ BEGIN
            i.[SubmissionId], i.[CurrentStepCode], s.[StepTitle] AS [CurrentStepTitle],
            CAST(ISNULL(s.[IsEnd], 0) AS BIT) AS [IsEndStep],
            i.[CurrentRoleID], r.[DESCRIPTION] AS [CurrentRoleName],
+           i.[CurrentWorkflowRoleID], wr.[Title] AS [CurrentWorkflowRoleName],
            i.[CurrentUserID], i.[SLA_NoOfDays], i.[SLA_Date], i.[Stage], i.[Comments],
            i.[CreatedAt], i.[UpdatedAt]
     FROM [dbo].[CMS_WorkflowInstances] i
@@ -422,6 +447,7 @@ BEGIN
     LEFT JOIN [dbo].[CMS_WorkflowSteps] s
         ON s.[WorkflowId] = i.[WorkflowId] AND s.[StepCode] = i.[CurrentStepCode]
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = i.[CurrentRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = i.[CurrentWorkflowRoleID]
     WHERE i.[WorkflowInstanceId] = @WorkflowInstanceId;
 END
 GO
@@ -444,6 +470,7 @@ BEGIN
            i.[SubmissionId], i.[CurrentStepCode], s.[StepTitle] AS [CurrentStepTitle],
            CAST(ISNULL(s.[IsEnd], 0) AS BIT) AS [IsEndStep],
            i.[CurrentRoleID], r.[DESCRIPTION] AS [CurrentRoleName],
+           i.[CurrentWorkflowRoleID], wr.[Title] AS [CurrentWorkflowRoleName],
            i.[CurrentUserID], i.[SLA_NoOfDays], i.[SLA_Date], i.[Stage], i.[Comments],
            i.[CreatedAt], i.[UpdatedAt]
     FROM [dbo].[CMS_WorkflowInstances] i
@@ -452,6 +479,7 @@ BEGIN
     LEFT JOIN [dbo].[CMS_WorkflowSteps] s
         ON s.[WorkflowId] = i.[WorkflowId] AND s.[StepCode] = i.[CurrentStepCode]
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = i.[CurrentRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = i.[CurrentWorkflowRoleID]
     WHERE ISNULL(s.[IsEnd], 0) = 0
       AND (
           @IsAdmin = 1
@@ -459,6 +487,11 @@ BEGIN
           OR i.[CurrentRoleID] IN (
               SELECT [ROLEID] FROM [dbo].[USER_ROLE]
               WHERE [USERID] = @UserId AND [ACTIVE] = 1)
+          OR i.[CurrentWorkflowRoleID] IN (
+              SELECT m.[WorkflowRoleId] FROM [dbo].[CMS_UserWorkflowRoles] m
+              INNER JOIN [dbo].[CMS_WorkflowRoles] wfr
+                  ON wfr.[WorkflowRoleId] = m.[WorkflowRoleId] AND wfr.[IsActive] = 1
+              WHERE m.[UserId] = @UserId AND m.[IsActive] = 1)
       )
     ORDER BY CASE WHEN i.[SLA_Date] IS NULL THEN 1 ELSE 0 END, i.[SLA_Date], i.[CreatedAt] DESC;
 END
@@ -466,7 +499,8 @@ GO
 
 /* ---- sp_CMS_WorkflowInstance_GetUserAccess ----
    What the service needs for the assignment check: is the user an
-   admin, and which roles do they hold. Two result sets. */
+   admin, which user roles do they hold, and which workflow roles
+   (optional). Three result sets. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_GetUserAccess]
     @UserId INT
 AS
@@ -479,6 +513,12 @@ BEGIN
     SELECT [ROLEID] AS [RoleId]
     FROM [dbo].[USER_ROLE]
     WHERE [USERID] = @UserId AND [ACTIVE] = 1;
+
+    SELECT m.[WorkflowRoleId] AS [WorkflowRoleId]
+    FROM [dbo].[CMS_UserWorkflowRoles] m
+    INNER JOIN [dbo].[CMS_WorkflowRoles] wr
+        ON wr.[WorkflowRoleId] = m.[WorkflowRoleId] AND wr.[IsActive] = 1
+    WHERE m.[UserId] = @UserId AND m.[IsActive] = 1;
 END
 GO
 
@@ -505,11 +545,13 @@ BEGIN
     SELECT a.[WorkflowStepActionId], a.[WorkflowStepId], a.[ActionCode], a.[ActionTitle],
            a.[NextStepCode], ns.[StepTitle] AS [NextStepTitle],
            a.[NextAssignmentType], a.[NextRoleID], r.[DESCRIPTION] AS [NextRoleName],
+           a.[NextWorkflowRoleID], wr.[Title] AS [NextWorkflowRoleName],
            a.[SaveOrMove], a.[IsSendEmail], a.[DisplayOrder], a.[IsActive]
     FROM [dbo].[CMS_WorkflowStepActions] a
     LEFT JOIN [dbo].[CMS_WorkflowSteps] ns
         ON ns.[WorkflowId] = @WorkflowId AND ns.[StepCode] = a.[NextStepCode]
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = a.[NextRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = a.[NextWorkflowRoleID]
     WHERE a.[WorkflowStepId] = @StepId AND a.[IsActive] = 1
     ORDER BY a.[DisplayOrder], a.[WorkflowStepActionId];
 END
@@ -519,7 +561,8 @@ GO
    Press a button: the instance moves to the button's next step and
    next role, the SLA is set for the new step, and the move is logged.
    Next role: the button's role, else the next step's responsible role,
-   else the role it already had. No email is sent (IsSendEmail is
+   else the role it already had — the same rule, separately, for the
+   user role and the workflow role. No email is sent (IsSendEmail is
    only stored). */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_ExecuteAction]
     @WorkflowInstanceId INT,
@@ -530,9 +573,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @WorkflowId INT, @CurrentStepCode VARCHAR(100), @CurrentRoleID INT, @Stage INT;
+    DECLARE @WorkflowId INT, @CurrentStepCode VARCHAR(100), @CurrentRoleID INT, @CurrentWorkflowRoleID INT, @Stage INT;
     SELECT @WorkflowId = [WorkflowId], @CurrentStepCode = [CurrentStepCode],
-           @CurrentRoleID = [CurrentRoleID], @Stage = [Stage]
+           @CurrentRoleID = [CurrentRoleID], @CurrentWorkflowRoleID = [CurrentWorkflowRoleID], @Stage = [Stage]
     FROM [dbo].[CMS_WorkflowInstances] WHERE [WorkflowInstanceId] = @WorkflowInstanceId;
     IF @WorkflowId IS NULL
         THROW 50000, 'Instance not found.', 1;
@@ -546,22 +589,24 @@ BEGIN
     IF @IsEnd = 1
         THROW 50000, 'This request is already at an end step.', 1;
 
-    DECLARE @ActionId INT, @NextStepCode VARCHAR(100), @NextRoleID INT;
+    DECLARE @ActionId INT, @NextStepCode VARCHAR(100), @NextRoleID INT, @NextWorkflowRoleID INT;
     SELECT @ActionId = [WorkflowStepActionId], @NextStepCode = [NextStepCode],
-           @NextRoleID = [NextRoleID]
+           @NextRoleID = [NextRoleID], @NextWorkflowRoleID = [NextWorkflowRoleID]
     FROM [dbo].[CMS_WorkflowStepActions]
     WHERE [WorkflowStepId] = @StepId AND [ActionCode] = @ActionCode AND [IsActive] = 1;
     IF @ActionId IS NULL
         THROW 50000, 'This button is not available at the current step.', 1;
 
-    DECLARE @NextStepId INT, @NextStepSLA INT, @NextStepRoleID INT;
-    SELECT @NextStepId = [WorkflowStepId], @NextStepSLA = [SLA], @NextStepRoleID = [ResponsibleRoleID]
+    DECLARE @NextStepId INT, @NextStepSLA INT, @NextStepRoleID INT, @NextStepWorkflowRoleID INT;
+    SELECT @NextStepId = [WorkflowStepId], @NextStepSLA = [SLA], @NextStepRoleID = [ResponsibleRoleID],
+           @NextStepWorkflowRoleID = [ResponsibleWorkflowRoleID]
     FROM [dbo].[CMS_WorkflowSteps]
     WHERE [WorkflowId] = @WorkflowId AND [StepCode] = @NextStepCode;
     IF @NextStepId IS NULL
         THROW 50000, 'The button''s next step no longer exists.', 1;
 
     DECLARE @NewRoleID INT = ISNULL(@NextRoleID, ISNULL(@NextStepRoleID, @CurrentRoleID));
+    DECLARE @NewWorkflowRoleID INT = ISNULL(@NextWorkflowRoleID, ISNULL(@NextStepWorkflowRoleID, @CurrentWorkflowRoleID));
     DECLARE @NewSLADate DATETIME2 = CASE WHEN @NextStepSLA IS NOT NULL
         THEN DATEADD(DAY, @NextStepSLA, CAST(SYSUTCDATETIME() AS DATE)) ELSE NULL END;
 
@@ -571,6 +616,7 @@ BEGIN
         UPDATE [dbo].[CMS_WorkflowInstances]
         SET [CurrentStepCode] = @NextStepCode,
             [CurrentRoleID] = @NewRoleID,
+            [CurrentWorkflowRoleID] = @NewWorkflowRoleID,
             [SLA_NoOfDays] = @NextStepSLA,
             [SLA_Date] = @NewSLADate,
             [Comments] = ISNULL(@Comments, [Comments]),
@@ -579,8 +625,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstanceLogs]
             ([WorkflowInstanceId], [WorkflowId], [CurrentStepCode], [CurrentRoleID],
+             [CurrentWorkflowRoleID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [Status])
         VALUES (@WorkflowInstanceId, @WorkflowId, @NextStepCode, @NewRoleID,
+                @NewWorkflowRoleID,
                 @NextStepSLA, @NewSLADate, @Stage, @Comments, @ActionCode);
 
         COMMIT TRAN;
@@ -604,6 +652,7 @@ BEGIN
     SELECT l.[WorkflowInstanceLogId], l.[WorkflowInstanceId],
            l.[CurrentStepCode], s.[StepTitle] AS [CurrentStepTitle],
            l.[CurrentRoleID], r.[DESCRIPTION] AS [CurrentRoleName],
+           l.[CurrentWorkflowRoleID], wr.[Title] AS [CurrentWorkflowRoleName],
            l.[CurrentUserID], l.[SLA_NoOfDays], l.[SLA_Date], l.[Stage],
            l.[Comments], l.[LogDate], l.[Status]
     FROM [dbo].[CMS_WorkflowInstanceLogs] l
@@ -611,6 +660,7 @@ BEGIN
     LEFT JOIN [dbo].[CMS_WorkflowSteps] s
         ON s.[WorkflowId] = l.[WorkflowId] AND s.[StepCode] = l.[CurrentStepCode]
     LEFT JOIN [dbo].[ROLES] r ON r.[ROLEID] = l.[CurrentRoleID]
+    LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = l.[CurrentWorkflowRoleID]
     WHERE l.[WorkflowInstanceId] = @WorkflowInstanceId
     ORDER BY l.[LogDate] DESC, l.[WorkflowInstanceLogId] DESC;
 END

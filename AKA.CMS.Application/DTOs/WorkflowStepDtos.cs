@@ -14,6 +14,8 @@ public sealed class WorkflowStepDto
     public string StepTitle { get; set; } = string.Empty;
     public int? ResponsibleRoleID { get; set; }
     public string? ResponsibleRoleName { get; set; }
+    public int? ResponsibleWorkflowRoleID { get; set; }
+    public string? ResponsibleWorkflowRoleName { get; set; }
     public bool IsStart { get; set; }
     public bool IsEnd { get; set; }
     public int? SLA { get; set; }
@@ -28,6 +30,7 @@ public sealed class SaveWorkflowStepRequest
     public string StepCode { get; set; } = string.Empty;
     public string StepTitle { get; set; } = string.Empty;
     public int? ResponsibleRoleID { get; set; }
+    public int? ResponsibleWorkflowRoleID { get; set; }
     public bool IsStart { get; set; }
     public bool IsEnd { get; set; }
     public int? SLA { get; set; }
@@ -70,6 +73,8 @@ public sealed class WorkflowStepActionDto
     public string NextAssignmentType { get; set; } = "Static";
     public int? NextRoleID { get; set; }
     public string? NextRoleName { get; set; }
+    public int? NextWorkflowRoleID { get; set; }
+    public string? NextWorkflowRoleName { get; set; }
     public bool SaveOrMove { get; set; }
     public bool IsSendEmail { get; set; }
     public int DisplayOrder { get; set; }
@@ -82,6 +87,7 @@ public sealed class SaveWorkflowStepActionRequest
     public string NextStepCode { get; set; } = string.Empty;
     public string NextAssignmentType { get; set; } = "Static";
     public int? NextRoleID { get; set; }
+    public int? NextWorkflowRoleID { get; set; }
     public bool SaveOrMove { get; set; } = true;
     public bool IsSendEmail { get; set; }
     public int DisplayOrder { get; set; }
@@ -106,6 +112,8 @@ public sealed class WorkflowInstanceDto
     public bool IsEndStep { get; set; }
     public int? CurrentRoleID { get; set; }
     public string? CurrentRoleName { get; set; }
+    public int? CurrentWorkflowRoleID { get; set; }
+    public string? CurrentWorkflowRoleName { get; set; }
     public int? CurrentUserID { get; set; }
     // STJ camelCases "SLA_Date" to "slA_Date"; the JS reads "sla_Date".
     // Pin the wire name so the My Tasks SLA column is not blank.
@@ -141,6 +149,8 @@ public sealed class WorkflowInstanceLogDto
     public string? CurrentStepTitle { get; set; }
     public int? CurrentRoleID { get; set; }
     public string? CurrentRoleName { get; set; }
+    public int? CurrentWorkflowRoleID { get; set; }
+    public string? CurrentWorkflowRoleName { get; set; }
     public int? CurrentUserID { get; set; }
     // STJ camelCases "SLA_Date" to "slA_Date"; the JS reads "sla_Date".
     // Pin the wire name so the My Tasks SLA column is not blank.

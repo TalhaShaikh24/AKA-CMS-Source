@@ -33,6 +33,15 @@ public sealed class WorkflowInstancesController(IWorkflowInstanceService service
     public async Task<ActionResult<IReadOnlyList<WorkflowInstanceDto>>> GetMyTasks()
         => Ok(await service.GetMyTasksAsync(currentUser.UserId));
 
+    /// <summary>Requests the user started themselves (CreatedBy =
+    /// the user). Finished instances are included — a request stays
+    /// visible after it completes.</summary>
+    [HttpGet("my-requests")]
+    [Authorize(Policy = PermissionPolicies.WorkflowInstancesRead)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<WorkflowInstanceDto>))]
+    public async Task<ActionResult<IReadOnlyList<WorkflowInstanceDto>>> GetMyRequests()
+        => Ok(await service.GetMyRequestsAsync(currentUser.UserId));
+
     [HttpGet("{id:int}")]
     [Authorize(Policy = PermissionPolicies.WorkflowInstancesRead)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WorkflowInstanceDto))]

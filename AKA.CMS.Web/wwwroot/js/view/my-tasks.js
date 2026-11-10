@@ -16,12 +16,6 @@ $(function () {
     return isNaN(d) ? '—' : d.toLocaleDateString();
   }
 
-  function fmtDateTime(v) {
-    if (!v) return '—';
-    var d = new Date(v);
-    return isNaN(d) ? '—' : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
   function load() {
     cmsAjax({
       url: '/api/workflow-instances/my-tasks', method: 'GET',
@@ -36,7 +30,7 @@ $(function () {
               (t.workflowCode ? '<br><span class="hint"><code>' + esc(t.workflowCode) + '</code></span>' : '') + '</td>' +
             '<td>' + esc(t.formTitle) + '<br><span class="hint">Entry #' + t.submissionId + '</span></td>' +
             '<td>' + esc(t.currentStepTitle || t.currentStepCode) + '</td>' +
-            '<td>' + esc(t.currentRoleName || '—') + '</td>' +
+            '<td>' + esc(t.currentWorkflowRoleName || t.currentRoleName || '—') + '</td>' +
             '<td>' + (overdue ? '<span style="color:#b3261e"><strong>' + fmtDate(t.sla_Date) + '</strong></span>' : fmtDate(t.sla_Date)) + '</td>' +
             '<td class="row-actions" style="white-space:nowrap">' +
               '<a class="btn btn-primary btn-sm" href="/DynamicForms/Render/' + t.formId + '?instanceId=' + t.workflowInstanceId + '">Open</a> ' +
@@ -48,24 +42,10 @@ $(function () {
   }
 
   $(document).on('click', '[data-log]', function () {
-    var id = $(this).data('log');
-    $('#mtLogTitle').text('History — ' + $(this).data('title'));
-    $('#mtLogBody').html('<div class="hint">Loading&hellip;</div>');
-    $('#mtLogModal').addClass('open');
-    cmsAjax({
-      url: '/api/workflow-instances/' + id + '/log', method: 'GET',
-      fallbackMsg: 'Could not load history.',
-      success: function (res) {
-        var rows = res || [];
-        $('#mtLogBody').html(rows.length ? rows.map(function (l) {
-          return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">' +
-            '<strong>' + esc(l.status || l.currentStepTitle || l.currentStepCode) + '</strong> — ' +
-            esc(l.currentStepTitle || l.currentStepCode) +
-            ' <span class="hint">(' + esc(l.currentRoleName || 'no role') + ')</span><br>' +
-            '<span class="hint">' + fmtDateTime(l.logDate) +
-            (l.comments ? ' · ' + esc(l.comments) : '') + '</span></div>';
-        }).join('') : '<div class="hint">No history yet.</div>');
-      }
+    window.WorkflowHistory.open({
+      modal: '#mtLogModal', titleEl: '#mtLogTitle', bodyEl: '#mtLogBody',
+      instanceId: $(this).data('log'),
+      title: 'History — ' + $(this).data('title')
     });
   });
 

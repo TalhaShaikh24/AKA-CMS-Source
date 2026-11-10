@@ -1,0 +1,46 @@
+@{
+    ViewData["Title"] = "My Requests";
+    ViewData["Breadcrumb"] = "Workflows";
+    ViewData["ActivePage"] = "myrequests";
+    ViewData["RequiredPermission"] = "WorkflowInstances:Read";
+}
+
+<div class="page-head">
+  <div class="page-title">
+    <h1>My Requests</h1>
+    <p class="sub">Workflow requests you started — whoever they are waiting on now</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>Your requests</h3>
+    <span class="hint" id="mrCount"></span>
+  </div>
+  <div class="card-body">
+    <table class="table" id="mrTable">
+      <thead>
+        <tr><th>Workflow</th><th>Form</th><th>Current step</th><th>Waiting on</th><th>SLA date</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="mrTbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mrLogModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="mrLogTitle">History</h3>
+      <button class="modal-x" data-close type="button">&times;</button>
+    </div>
+    <div class="modal-body" id="mrLogBody"><div class="hint">Loading&hellip;</div></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="~/js/view/workflow-history.js" asp-append-version="true"></script>
+<script src="~/js/view/my-requests.js" asp-append-version="true"></script>
+}
