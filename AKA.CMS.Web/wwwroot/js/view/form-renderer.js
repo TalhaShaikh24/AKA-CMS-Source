@@ -302,7 +302,7 @@ window.CMSFormRenderer = (function () {
         return itemHtml(g.section, fields, preview);
       }).join('');
     }
-    return '<section class="dfb-section' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') +
+    return '<section class="dfb-section card' + (sf.cssClass ? ' ' + esc(sf.cssClass) : '') +
       (secShow(sf, 'border') ? '' : ' dfb-noborder') + (secShow(sf, 'divider') ? '' : ' dfb-nodivider') + '"' +
       (sf.customId ? ' id="' + esc(sf.customId) + '"' : '') + customAttrs(sf) +
       ' data-fkey="' + esc(sf.fieldKey) + '">' +

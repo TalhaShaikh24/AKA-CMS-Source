@@ -43,6 +43,7 @@ public interface IWorkflowStepService
 public interface IWorkflowInstanceService
 {
     Task<WorkflowInstanceDto> StartAsync(StartWorkflowInstanceRequest request, int performedBy);
+    Task<WorkflowInstanceDto> StartByCodeAsync(string code, int performedBy);
     Task<WorkflowInstanceDto> LinkSubmissionAsync(int instanceId, int submissionId);
     Task<WorkflowInstanceDto> GetByIdAsync(int instanceId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId);

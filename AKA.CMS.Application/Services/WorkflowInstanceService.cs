@@ -32,6 +32,19 @@ public sealed class WorkflowInstanceService(
         return await GetByIdAsync(id);
     }
 
+    public async Task<WorkflowInstanceDto> StartByCodeAsync(string code, int performedBy)
+    {
+        // Reusable start for module buttons (2026-11-10): the button only
+        // knows the workflow code (e.g. TEST1). The workflow's form comes
+        // from the workflow itself; the instance starts with no entry.
+        // No new SP: the workflow list is a handful of rows.
+        var workflow = (await workflows.GetAllAsync())
+            .FirstOrDefault(w => string.Equals(w.WorkflowCode, code, StringComparison.OrdinalIgnoreCase) && w.IsActive)
+            ?? throw new NotFoundException($"Workflow '{code}' not found or inactive.");
+        var id = await instances.StartAsync(workflow.WorkflowId, null, null, performedBy);
+        return await GetByIdAsync(id);
+    }
+
     public async Task<WorkflowInstanceDto> LinkSubmissionAsync(int instanceId, int submissionId)
     {
         // 404 first, so a bad id reads as not-found; the SP then

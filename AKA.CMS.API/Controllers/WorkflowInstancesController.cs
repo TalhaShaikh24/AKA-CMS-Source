@@ -27,6 +27,20 @@ public sealed class WorkflowInstancesController(IWorkflowInstanceService service
         return CreatedAtAction(nameof(GetById), new { id = created.WorkflowInstanceId }, created);
     }
 
+    /// <summary>Start a workflow by its code (e.g. TEST1) — for module
+    /// buttons that only know the code. The instance starts with no
+    /// entry; the form opens on it and the first button press attaches
+    /// the entry.</summary>
+    [HttpPost("by-code/{code}")]
+    [Authorize(Policy = PermissionPolicies.WorkflowInstancesRead)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(WorkflowInstanceDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<WorkflowInstanceDto>> StartByCode(string code)
+    {
+        var created = await service.StartByCodeAsync(code, currentUser.UserId);
+        return CreatedAtAction(nameof(GetById), new { id = created.WorkflowInstanceId }, created);
+    }
+
     /// <summary>Attach the entry created after an instance-first start
     /// (2026-11-10) to its request. The request must not have an entry
     /// yet and the entry must belong to the workflow's form.</summary>

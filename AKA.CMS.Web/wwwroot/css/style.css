@@ -884,6 +884,7 @@ textarea.input{min-height:90px;resize:vertical;line-height:1.55}
 /* Section display options: border / divider toggles (per section).
    Child (nested) sections get these classes by default. */
 .dfb-section.dfb-noborder{border-color:transparent;background:transparent}
+.dfb-section.card.dfb-noborder{box-shadow:none}
 .dfb-section.dfb-nodivider .dfb-section-head{border-bottom:none;padding-bottom:0;margin-bottom:10px}
 .dfb-section-box.dfb-noborder{border-color:transparent}
 .dfb-section-box.dfb-nodivider .dfb-section-bar{border-bottom:none}

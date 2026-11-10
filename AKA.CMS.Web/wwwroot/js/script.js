@@ -213,6 +213,27 @@ CMS.bindLayout = function(){
     }
   });
 
+  // Workflow start buttons (2026-11-10): any button with
+  // data-workflow-code starts that workflow's request and opens its
+  // form — the same pattern for every module, no per-page JS needed:
+  //   <button type="button" data-workflow-code="TEST1">Register New Case</button>
+  $(document).off('click.cmswfstart').on('click.cmswfstart', '[data-workflow-code]', function(){
+    var $btn = $(this).prop('disabled', true);
+    var code = String($(this).data('workflow-code') || '').trim();
+    if (!code || typeof cmsAjax !== 'function') { $btn.prop('disabled', false); return; }
+    cmsAjax({
+      url: '/api/workflow-instances/by-code/' + encodeURIComponent(code), method: 'POST', json: true,
+      data: {},
+      fallbackMsg: 'Could not start the workflow.',
+      success: function(inst){
+        window.location.href = '/DynamicForms/Render/' + inst.formId + '?instanceId=' + inst.workflowInstanceId;
+      },
+      // Return false: cmsAjax then shows the server's message (or the
+      // fallback) — a failed Start must not fail silently.
+      error: function(){ $btn.prop('disabled', false); return false; }
+    });
+  });
+
   // Clear stale validation errors whenever a modal closes, so reopening starts fresh.
   function clearModalValidation(modal){
     var $m = $(modal);
