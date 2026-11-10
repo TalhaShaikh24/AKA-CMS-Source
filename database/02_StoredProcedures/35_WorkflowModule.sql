@@ -74,9 +74,14 @@ BEGIN
         END
         ELSE
         BEGIN
+            /* A NULL user role means "keep the stored one", not "clear
+               it" (2026-11-10 fix): the Manage page no longer sends a
+               user role, so an unconditional overwrite silently wiped
+               the step's stored role on every edit — and instances on
+               that step then lost their CurrentRoleID. */
             UPDATE [dbo].[CMS_WorkflowSteps]
             SET [StepCode] = @StepCode, [StepTitle] = @StepTitle,
-                [ResponsibleRoleID] = @ResponsibleRoleID,
+                [ResponsibleRoleID] = ISNULL(@ResponsibleRoleID, [ResponsibleRoleID]),
                 [ResponsibleWorkflowRoleID] = @ResponsibleWorkflowRoleID,
                 [IsStart] = @IsStart, [IsEnd] = @IsEnd, [SLA] = @SLA,
                 [DisplayOrder] = @DisplayOrder, [UpdatedAt] = SYSUTCDATETIME()
@@ -301,13 +306,22 @@ BEGIN
     BEGIN TRY
         BEGIN TRAN;
 
+        /* Keep a stored button user role when the save carries none
+           (2026-11-10 fix): the Manage page no longer sends one, so
+           NULL here means "unchanged", not "clear" — the same rule as
+           the step save. Buttons are matched by ActionCode. */
+        SELECT [ActionCode], [NextRoleID]
+        INTO #OldRoles
+        FROM [dbo].[CMS_WorkflowStepActions]
+        WHERE [WorkflowStepId] = @WorkflowStepId;
+
         DELETE FROM [dbo].[CMS_WorkflowStepActions] WHERE [WorkflowStepId] = @WorkflowStepId;
 
         INSERT INTO [dbo].[CMS_WorkflowStepActions]
             ([WorkflowStepId], [ActionCode], [ActionTitle], [NextStepCode],
              [NextAssignmentType], [NextRoleID], [NextWorkflowRoleID], [SaveOrMove], [IsSendEmail], [DisplayOrder])
         SELECT @WorkflowStepId, a.[ActionCode], a.[ActionTitle], a.[NextStepCode],
-               ISNULL(a.[NextAssignmentType], 'Static'), a.[NextRoleID], a.[NextWorkflowRoleID],
+               ISNULL(a.[NextAssignmentType], 'Static'), ISNULL(a.[NextRoleID], o.[NextRoleID]), a.[NextWorkflowRoleID],
                ISNULL(a.[SaveOrMove], 1), ISNULL(a.[IsSendEmail], 0), a.[DisplayOrder]
         FROM OPENJSON(@ActionsJson)
         WITH (
@@ -321,6 +335,7 @@ BEGIN
             [IsSendEmail]        BIT           '$.isSendEmail',
             [DisplayOrder]       INT           '$.displayOrder'
         ) AS a
+        LEFT JOIN #OldRoles o ON o.[ActionCode] = a.[ActionCode]
         WHERE a.[ActionCode] IS NOT NULL AND a.[NextStepCode] IS NOT NULL;
 
         COMMIT TRAN;
@@ -365,7 +380,10 @@ GO
    Instance-first dedupe (2026-11-10): IsStart = 1 AND SubmissionId
    NULL = empty draft. If the user already has one for this workflow,
    return it instead of creating a duplicate (Start, back, Start
-   again). Oldest first: resume the first draft they abandoned. */
+   again). Oldest first: resume the first draft they abandoned.
+   CurrentUserID (2026-11-10 fix): the user who started the request
+   (@PerformedBy). It was never written before, so every instance
+   and log row showed NULL. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_Start]
     @WorkflowId    INT,
     @SubmissionId  INT = NULL,
@@ -420,10 +438,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstances]
             ([WorkflowId], [SubmissionId], [CurrentStepCode], [CurrentRoleID],
-             [CurrentWorkflowRoleID],
+             [CurrentWorkflowRoleID], [CurrentUserID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [CreatedBy])
         VALUES (@WorkflowId, @SubmissionId, @StartStepCode, @StartRoleID,
-                @StartWorkflowRoleID,
+                @StartWorkflowRoleID, @PerformedBy,
                 @StartSLA,
                 CASE WHEN @StartSLA IS NOT NULL
                      THEN DATEADD(DAY, @StartSLA, CAST(SYSUTCDATETIME() AS DATE)) ELSE NULL END,
@@ -432,10 +450,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstanceLogs]
             ([WorkflowInstanceId], [WorkflowId], [CurrentStepCode], [CurrentRoleID],
-             [CurrentWorkflowRoleID],
+             [CurrentWorkflowRoleID], [CurrentUserID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [Status])
         VALUES (@InstanceId, @WorkflowId, @StartStepCode, @StartRoleID,
-                @StartWorkflowRoleID,
+                @StartWorkflowRoleID, @PerformedBy,
                 @StartSLA,
                 CASE WHEN @StartSLA IS NOT NULL
                      THEN DATEADD(DAY, @StartSLA, CAST(SYSUTCDATETIME() AS DATE)) ELSE NULL END,
@@ -596,7 +614,9 @@ GO
    Next role: the button's role, else the next step's responsible role,
    else the role it already had — the same rule, separately, for the
    user role and the workflow role. No email is sent (IsSendEmail is
-   only stored). */
+   only stored). CurrentUserID (2026-11-10 fix): the user who pressed
+   the button (@PerformedBy) — the instance and the log row both
+   record them, so the history shows who did each step. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_ExecuteAction]
     @WorkflowInstanceId INT,
     @ActionCode         VARCHAR(100),
@@ -650,6 +670,7 @@ BEGIN
         SET [CurrentStepCode] = @NextStepCode,
             [CurrentRoleID] = @NewRoleID,
             [CurrentWorkflowRoleID] = @NewWorkflowRoleID,
+            [CurrentUserID] = @PerformedBy,
             [SLA_NoOfDays] = @NextStepSLA,
             [SLA_Date] = @NewSLADate,
             [Comments] = ISNULL(@Comments, [Comments]),
@@ -658,10 +679,10 @@ BEGIN
 
         INSERT INTO [dbo].[CMS_WorkflowInstanceLogs]
             ([WorkflowInstanceId], [WorkflowId], [CurrentStepCode], [CurrentRoleID],
-             [CurrentWorkflowRoleID],
+             [CurrentWorkflowRoleID], [CurrentUserID],
              [SLA_NoOfDays], [SLA_Date], [Stage], [Comments], [Status])
         VALUES (@WorkflowInstanceId, @WorkflowId, @NextStepCode, @NewRoleID,
-                @NewWorkflowRoleID,
+                @NewWorkflowRoleID, @PerformedBy,
                 @NextStepSLA, @NewSLADate, @Stage, @Comments, @ActionCode);
 
         COMMIT TRAN;
