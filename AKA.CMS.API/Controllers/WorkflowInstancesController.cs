@@ -27,7 +27,7 @@ public sealed class WorkflowInstancesController(IWorkflowInstanceService service
         return CreatedAtAction(nameof(GetById), new { id = created.WorkflowInstanceId }, created);
     }
 
-    /// <summary>Start a workflow by its code (e.g. TEST1) — for module
+    /// <summary>Start a workflow by its code (e.g. TEST2) — for module
     /// buttons that only know the code. The instance starts with no
     /// entry; the form opens on it and the first button press attaches
     /// the entry.</summary>
