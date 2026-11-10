@@ -81,7 +81,7 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
         public int DisplayOrder { get; set; }
     }
 
-    public async Task<int> StartAsync(int workflowId, int submissionId, string? comments, int performedBy)
+    public async Task<int> StartAsync(int workflowId, int? submissionId, string? comments, int performedBy)
     {
         using var connection = context.CreateConnection();
         var p = new DynamicParameters();
@@ -101,6 +101,23 @@ public sealed class WorkflowInstanceRepository(DapperContext context) : IWorkflo
             throw new InvalidDomainValueException(ex.Message);
         }
 
+    }
+
+    public async Task<WorkflowInstanceDto?> LinkSubmissionAsync(int instanceId, int submissionId)
+    {
+        using var connection = context.CreateConnection();
+        try
+        {
+            var row = await connection.QuerySingleOrDefaultAsync<InstanceRow>(
+                StoredProcedures.WorkflowInstanceLinkSubmission,
+                new { WorkflowInstanceId = instanceId, SubmissionId = submissionId },
+                commandType: CommandType.StoredProcedure);
+            return row is null ? null : ToDto(row);
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            throw new InvalidDomainValueException(ex.Message);
+        }
     }
 
     public async Task<WorkflowInstanceDto?> GetByIdAsync(int instanceId)

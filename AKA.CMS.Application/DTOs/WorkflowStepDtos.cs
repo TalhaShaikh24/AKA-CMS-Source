@@ -130,8 +130,15 @@ public sealed class WorkflowInstanceDto
 public sealed class StartWorkflowInstanceRequest
 {
     public int WorkflowId { get; set; }
-    public int SubmissionId { get; set; }
+    public int? SubmissionId { get; set; }
     public string? Comments { get; set; }
+}
+
+/// <summary>Attach the entry created after an instance-first start
+/// (2026-11-10) to its request.</summary>
+public sealed class LinkWorkflowSubmissionRequest
+{
+    public int SubmissionId { get; set; }
 }
 
 public sealed class ExecuteWorkflowActionRequest

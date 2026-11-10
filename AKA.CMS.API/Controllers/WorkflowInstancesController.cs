@@ -27,6 +27,17 @@ public sealed class WorkflowInstancesController(IWorkflowInstanceService service
         return CreatedAtAction(nameof(GetById), new { id = created.WorkflowInstanceId }, created);
     }
 
+    /// <summary>Attach the entry created after an instance-first start
+    /// (2026-11-10) to its request. The request must not have an entry
+    /// yet and the entry must belong to the workflow's form.</summary>
+    [HttpPost("{id:int}/link-submission")]
+    [Authorize(Policy = PermissionPolicies.WorkflowInstancesRead)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WorkflowInstanceDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public async Task<ActionResult<WorkflowInstanceDto>> LinkSubmission(int id, [FromBody] LinkWorkflowSubmissionRequest request)
+        => Ok(await service.LinkSubmissionAsync(id, request.SubmissionId));
+
     [HttpGet("my-tasks")]
     [Authorize(Policy = PermissionPolicies.WorkflowInstancesRead)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<WorkflowInstanceDto>))]

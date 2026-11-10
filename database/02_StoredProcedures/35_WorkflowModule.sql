@@ -358,10 +358,13 @@ GO
 /* ---- sp_CMS_WorkflowInstance_Start ----
    One instance per (workflow, submission): a form entry travels its
    route once. The instance starts on the workflow's start step
-   (IsStart = 1); its role and SLA come from that step. */
+   (IsStart = 1); its role and SLA come from that step.
+   @SubmissionId may be NULL (instance-first start, 2026-11-10): the
+   request is created by pressing Start and the entry is attached
+   later via sp_CMS_WorkflowInstance_LinkSubmission. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_Start]
     @WorkflowId    INT,
-    @SubmissionId  INT,
+    @SubmissionId  INT = NULL,
     @Comments      NVARCHAR(MAX) = NULL,
     @PerformedBy   INT
 AS
@@ -373,12 +376,15 @@ BEGIN
     WHERE [WorkflowId] = @WorkflowId AND [IsActive] = 1;
     IF @FormId IS NULL
         THROW 50000, 'Workflow not found or inactive.', 1;
-    IF NOT EXISTS (SELECT 1 FROM [dbo].[CMS_DynamicFormSubmissions]
-                   WHERE [SubmissionId] = @SubmissionId AND [FormId] = @FormId)
-        THROW 50000, 'Submission not found for this workflow''s form.', 1;
-    IF EXISTS (SELECT 1 FROM [dbo].[CMS_WorkflowInstances]
-               WHERE [WorkflowId] = @WorkflowId AND [SubmissionId] = @SubmissionId)
-        THROW 50000, 'This entry already has a workflow instance.', 1;
+    IF @SubmissionId IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CMS_DynamicFormSubmissions]
+                       WHERE [SubmissionId] = @SubmissionId AND [FormId] = @FormId)
+            THROW 50000, 'Submission not found for this workflow''s form.', 1;
+        IF EXISTS (SELECT 1 FROM [dbo].[CMS_WorkflowInstances]
+                   WHERE [WorkflowId] = @WorkflowId AND [SubmissionId] = @SubmissionId)
+            THROW 50000, 'This entry already has a workflow instance.', 1;
+    END
 
     SELECT @StartCount = COUNT(*) FROM [dbo].[CMS_WorkflowSteps]
     WHERE [WorkflowId] = @WorkflowId AND [IsStart] = 1 AND [IsActive] = 1;
@@ -663,5 +669,44 @@ BEGIN
     LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = l.[CurrentWorkflowRoleID]
     WHERE l.[WorkflowInstanceId] = @WorkflowInstanceId
     ORDER BY l.[LogDate] DESC, l.[WorkflowInstanceLogId] DESC;
+END
+GO
+
+/* ---- sp_CMS_WorkflowInstance_LinkSubmission ----
+   Instance-first start (2026-11-10): attach the form entry that was
+   created after the request. The instance must not have an entry yet,
+   and the entry must belong to the workflow's form and to no other
+   request. */
+CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_LinkSubmission]
+    @WorkflowInstanceId INT,
+    @SubmissionId       INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @WorkflowId INT, @FormId INT, @ExistingSubmissionId INT;
+    SELECT @WorkflowId = [WorkflowId], @ExistingSubmissionId = [SubmissionId]
+    FROM [dbo].[CMS_WorkflowInstances]
+    WHERE [WorkflowInstanceId] = @WorkflowInstanceId;
+    IF @WorkflowId IS NULL
+        THROW 50000, 'Workflow instance not found.', 1;
+    IF @ExistingSubmissionId IS NOT NULL
+        THROW 50000, 'This request already has a form entry.', 1;
+    SELECT @FormId = [FormId] FROM [dbo].[CMS_Workflows]
+    WHERE [WorkflowId] = @WorkflowId AND [IsActive] = 1;
+    IF @FormId IS NULL
+        THROW 50000, 'Workflow not found or inactive.', 1;
+    IF NOT EXISTS (SELECT 1 FROM [dbo].[CMS_DynamicFormSubmissions]
+                   WHERE [SubmissionId] = @SubmissionId AND [FormId] = @FormId)
+        THROW 50000, 'Submission not found for this workflow''s form.', 1;
+    IF EXISTS (SELECT 1 FROM [dbo].[CMS_WorkflowInstances]
+               WHERE [SubmissionId] = @SubmissionId AND [WorkflowInstanceId] <> @WorkflowInstanceId)
+        THROW 50000, 'This entry already belongs to another request.', 1;
+
+    UPDATE [dbo].[CMS_WorkflowInstances]
+    SET [SubmissionId] = @SubmissionId, [UpdatedAt] = SYSUTCDATETIME()
+    WHERE [WorkflowInstanceId] = @WorkflowInstanceId;
+
+    EXEC [dbo].[sp_CMS_WorkflowInstance_GetById] @WorkflowInstanceId = @WorkflowInstanceId;
 END
 GO

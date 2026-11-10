@@ -128,12 +128,43 @@ BEGIN
         [Comments]           NVARCHAR(MAX) NULL,
         [CreatedBy]          INT NULL,
         [CreatedAt]          DATETIME2 NOT NULL CONSTRAINT [DF_CMS_WorkflowInstances_CreatedAt] DEFAULT (SYSUTCDATETIME()),
-        [UpdatedAt]          DATETIME2 NULL,
-        CONSTRAINT [UQ_CMS_WorkflowInstances_Workflow_Submission] UNIQUE ([WorkflowId], [SubmissionId])
+        [UpdatedAt]          DATETIME2 NULL
     );
+    -- One instance per (workflow, entry) — but only when an entry
+    -- exists. Instance-first start (2026-11-10) creates requests with
+    -- SubmissionId NULL, and a plain UNIQUE constraint treats NULL as
+    -- a value, so it would allow only ONE unfilled request per
+    -- workflow. A filtered index enforces uniqueness only for linked
+    -- entries and lets unfilled requests repeat. Filtered indexes
+    -- need QUOTED_IDENTIFIER ON (Msg 1934 otherwise).
+    SET QUOTED_IDENTIFIER ON;
+    CREATE UNIQUE NONCLUSTERED INDEX [UQ_CMS_WorkflowInstances_Workflow_Submission]
+        ON [dbo].[CMS_WorkflowInstances] ([WorkflowId], [SubmissionId])
+        WHERE [SubmissionId] IS NOT NULL;
     CREATE NONCLUSTERED INDEX [IX_CMS_WorkflowInstances_CurrentRole] ON [dbo].[CMS_WorkflowInstances] ([CurrentRoleID], [CurrentStepCode]);
     CREATE NONCLUSTERED INDEX [IX_CMS_WorkflowInstances_Submission] ON [dbo].[CMS_WorkflowInstances] ([SubmissionId]);
 END
+GO
+
+-- Existing databases (2026-11-10): replace the plain UNIQUE constraint
+-- with the filtered index above, so several unfilled requests per
+-- workflow are allowed. Safe: the old constraint already enforced the
+-- same rule for linked entries. Filtered indexes need
+-- QUOTED_IDENTIFIER ON (Msg 1934 otherwise).
+SET QUOTED_IDENTIFIER ON;
+GO
+IF EXISTS (SELECT 1 FROM sys.key_constraints
+           WHERE [name] = 'UQ_CMS_WorkflowInstances_Workflow_Submission'
+             AND [parent_object_id] = OBJECT_ID('dbo.CMS_WorkflowInstances'))
+    ALTER TABLE [dbo].[CMS_WorkflowInstances]
+        DROP CONSTRAINT [UQ_CMS_WorkflowInstances_Workflow_Submission];
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+               WHERE [name] = 'UQ_CMS_WorkflowInstances_Workflow_Submission'
+                 AND [object_id] = OBJECT_ID('dbo.CMS_WorkflowInstances'))
+    CREATE UNIQUE NONCLUSTERED INDEX [UQ_CMS_WorkflowInstances_Workflow_Submission]
+        ON [dbo].[CMS_WorkflowInstances] ([WorkflowId], [SubmissionId])
+        WHERE [SubmissionId] IS NOT NULL;
 GO
 
 /* ---- CMS_WorkflowInstanceLogs (one row per move) ---- */

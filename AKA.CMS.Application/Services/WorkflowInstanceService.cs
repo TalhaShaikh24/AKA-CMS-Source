@@ -19,12 +19,28 @@ public sealed class WorkflowInstanceService(
             ?? throw new NotFoundException($"Workflow {request.WorkflowId} not found.");
         if (!workflow.IsActive)
             throw new InvalidDomainValueException("This workflow is inactive.");
-        var submission = await forms.GetSubmissionByIdAsync(request.SubmissionId)
-            ?? throw new NotFoundException($"Submission {request.SubmissionId} not found.");
-        if (submission.FormId != workflow.FormId)
-            throw new InvalidDomainValueException("This entry belongs to another form.");
+        // Instance-first start (2026-11-10): no entry yet — the
+        // submission is attached later via LinkSubmissionAsync.
+        if (request.SubmissionId.HasValue)
+        {
+            var submission = await forms.GetSubmissionByIdAsync(request.SubmissionId.Value)
+                ?? throw new NotFoundException($"Submission {request.SubmissionId} not found.");
+            if (submission.FormId != workflow.FormId)
+                throw new InvalidDomainValueException("This entry belongs to another form.");
+        }
         var id = await instances.StartAsync(request.WorkflowId, request.SubmissionId, request.Comments, performedBy);
         return await GetByIdAsync(id);
+    }
+
+    public async Task<WorkflowInstanceDto> LinkSubmissionAsync(int instanceId, int submissionId)
+    {
+        // 404 first, so a bad id reads as not-found; the SP then
+        // validates the entry (no entry yet, right form, no other
+        // request) and THROWs 50000 -> 400.
+        await GetByIdAsync(instanceId);
+        var linked = await instances.LinkSubmissionAsync(instanceId, submissionId)
+            ?? throw new NotFoundException($"Workflow instance {instanceId} not found.");
+        return linked;
     }
 
     public async Task<WorkflowInstanceDto> GetByIdAsync(int instanceId)

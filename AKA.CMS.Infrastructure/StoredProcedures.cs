@@ -207,6 +207,7 @@ public static class StoredProcedures
     public const string WorkflowInstanceGetActions = "sp_CMS_WorkflowInstance_GetActions";
     public const string WorkflowInstanceExecuteAction = "sp_CMS_WorkflowInstance_ExecuteAction";
     public const string WorkflowInstanceGetLog = "sp_CMS_WorkflowInstance_GetLog";
+    public const string WorkflowInstanceLinkSubmission = "sp_CMS_WorkflowInstance_LinkSubmission";
     public const string WorkflowInstanceGetMyRequests = "sp_CMS_WorkflowInstance_GetMyRequests";
     public const string WorkflowRoleSave = "sp_CMS_WorkflowRole_Save";
     public const string WorkflowRoleGetAll = "sp_CMS_WorkflowRole_GetAll";

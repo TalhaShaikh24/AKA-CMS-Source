@@ -327,7 +327,21 @@ $(function () {
         wfInstance = inst;
         wfSubmissionId = inst.submissionId;
         $('#dfTitle').text(formDef.title + ' — ' + (inst.currentStepTitle || inst.currentStepCode));
-        if (!inst.submissionId) { $('#dfRenderBody').html('<div class="hint">This task has no form entry.</div>'); return; }
+        if (!inst.submissionId) {
+          // Instance-first start (2026-11-10): the request exists but
+          // the form has not been filled yet — render it empty at the
+          // current step; the first button press creates the entry and
+          // attaches it to this request.
+          wfEntryValues = {};
+          loadWorkflowStep(
+            '/api/workflows/by-form/' + formId + '/sections?instanceId=' + instanceId,
+            '/api/workflow-instances/' + instanceId + '/actions',
+            function () {
+              CMSFormRenderer.render($('#dfRenderBody'), formDef);
+              applyDisabledFields($('#dfRenderBody'), wfDisabledKeys);
+            });
+          return;
+        }
         cmsAjax({
           url: '/api/dynamic-forms/submissions/' + inst.submissionId, method: 'GET',
           fallbackMsg: 'Could not load entry.',
@@ -444,7 +458,9 @@ $(function () {
 
   // One step button press: validate, save the entry, then move the
   // instance. In start mode the entry and the instance are created
-  // by this press, in that order.
+  // by this press, in that order. In continue mode the instance
+  // already exists; if it has no entry yet (instance-first start),
+  // this press creates the entry and attaches it to the request.
   function executeStepAction(actionCode) {
     if (!formDef || !wfStepActions.length) return;
     var errors = CMSFormRenderer.validate($('#dfRenderForm'), formDef);
@@ -463,9 +479,18 @@ $(function () {
     }
     var fd = buildSubmissionFormData(data);
     var $btns = $('#dfStepActions button').prop('disabled', true);
-    var saveReq = wfMode === 'continue'
-      ? { url: '/api/dynamic-forms/submissions/' + wfSubmissionId + '?instanceId=' + instanceId, method: 'PUT' }
-      : { url: '/api/dynamic-forms/' + formId + '/submissions', method: 'POST' };
+    // Continue mode with an entry: update it. Continue mode without
+    // one (instance-first start): create it under this instance, so
+    // server validation uses the step's rules. Start mode: create it
+    // with no instance yet.
+    var saveReq;
+    if (wfMode === 'continue' && wfSubmissionId) {
+      saveReq = { url: '/api/dynamic-forms/submissions/' + wfSubmissionId + '?instanceId=' + instanceId, method: 'PUT' };
+    } else if (wfMode === 'continue') {
+      saveReq = { url: '/api/dynamic-forms/' + formId + '/submissions?instanceId=' + instanceId, method: 'POST' };
+    } else {
+      saveReq = { url: '/api/dynamic-forms/' + formId + '/submissions', method: 'POST' };
+    }
     cmsAjax({
       url: saveReq.url, method: saveReq.method, data: fd,
       fallbackMsg: 'Could not save form.',
@@ -478,6 +503,18 @@ $(function () {
             fallbackMsg: 'Entry saved, but the workflow could not start.',
             success: function (inst) { moveInstance(inst.workflowInstanceId, actionCode, $btns); },
             error: function () { $btns.prop('disabled', false); return true; }
+          });
+        } else if (!wfSubmissionId) {
+          // Instance-first: attach the new entry to the request, then move.
+          wfSubmissionId = saved.submissionId;
+          cmsAjax({
+            url: '/api/workflow-instances/' + instanceId + '/link-submission', method: 'POST', json: true,
+            data: { submissionId: wfSubmissionId },
+            fallbackMsg: 'Entry saved, but it could not be attached to the request.',
+            success: function () { moveInstance(Number(instanceId), actionCode, $btns); },
+            // Return false: cmsAjax then shows the server's message (or
+            // the fallback) — a failed attach must not fail silently.
+            error: function () { $btns.prop('disabled', false); return false; }
           });
         } else {
           moveInstance(Number(instanceId), actionCode, $btns);

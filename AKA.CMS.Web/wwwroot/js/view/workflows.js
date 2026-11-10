@@ -50,7 +50,7 @@ $(function () {
               : '<span class="pill">Inactive</span>') + '</td>' +
             '<td class="row-actions" style="white-space:nowrap">' +
               '<a class="btn btn-ghost btn-sm" href="/Workflows/Manage/' + w.workflowId + '" data-permission="Workflows:Write">Manage</a> ' +
-              (w.isActive ? '<a class="btn btn-ghost btn-sm" href="/DynamicForms/Render/' + w.formId + '?workflowId=' + w.workflowId + '" data-permission="DynamicForms:Submit">Start</a> ' : '') +
+              (w.isActive ? '<button class="btn btn-ghost btn-sm" data-start="' + w.workflowId + '" data-form="' + w.formId + '" type="button" data-permission="WorkflowInstances:Read">Start</button> ' : '') +
               '<button class="btn btn-ghost btn-sm" data-edit="' + w.workflowId + '" type="button" data-permission="Workflows:Write">Edit</button> ' +
               '<button class="btn btn-ghost btn-sm" data-del="' + w.workflowId + '" type="button" data-permission="Workflows:Write">Delete</button>' +
             '</td></tr>';
@@ -234,6 +234,27 @@ $(function () {
     if (!formsLoaded) loadForms();
     $('#wfFormSel').val(null).trigger('change');
     openModal('New Workflow');
+  });
+
+  // Instance-first start (2026-11-10): pressing Start creates the
+  // request first (POST /api/workflow-instances, no entry yet) and
+  // the form then opens on that instance (?instanceId=), where the
+  // first button press saves the entry and attaches it.
+  $(document).on('click', '[data-start]', function () {
+    var $btn = $(this).prop('disabled', true);
+    var workflowId = Number($(this).data('start'));
+    var formId = Number($(this).data('form'));
+    cmsAjax({
+      url: '/api/workflow-instances', method: 'POST', json: true,
+      data: { workflowId: workflowId },
+      fallbackMsg: 'Could not start the workflow.',
+      success: function (inst) {
+        window.location.href = '/DynamicForms/Render/' + formId + '?instanceId=' + inst.workflowInstanceId;
+      },
+      // Return false: cmsAjax then shows the server's message (or the
+      // fallback) — a failed Start must not fail silently.
+      error: function () { $btn.prop('disabled', false); return false; }
+    });
   });
 
   $(document).on('click', '[data-edit]', function () {

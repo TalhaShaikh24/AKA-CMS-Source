@@ -16,7 +16,8 @@ public interface IWorkflowStepRepository
 
 public interface IWorkflowInstanceRepository
 {
-    Task<int> StartAsync(int workflowId, int submissionId, string? comments, int performedBy);
+    Task<int> StartAsync(int workflowId, int? submissionId, string? comments, int performedBy);
+    Task<WorkflowInstanceDto?> LinkSubmissionAsync(int instanceId, int submissionId);
     Task<WorkflowInstanceDto?> GetByIdAsync(int instanceId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId);
@@ -42,6 +43,7 @@ public interface IWorkflowStepService
 public interface IWorkflowInstanceService
 {
     Task<WorkflowInstanceDto> StartAsync(StartWorkflowInstanceRequest request, int performedBy);
+    Task<WorkflowInstanceDto> LinkSubmissionAsync(int instanceId, int submissionId);
     Task<WorkflowInstanceDto> GetByIdAsync(int instanceId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyTasksAsync(int userId);
     Task<IReadOnlyList<WorkflowInstanceDto>> GetMyRequestsAsync(int userId);
