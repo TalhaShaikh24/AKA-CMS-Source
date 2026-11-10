@@ -216,7 +216,7 @@ CMS.bindLayout = function(){
   // Workflow start buttons (2026-11-10): any button with
   // data-workflow-code starts that workflow's request and opens its
   // form — the same pattern for every module, no per-page JS needed:
-  //   <button type="button" data-workflow-code="TEST1">Register New Case</button>
+  //   <button type="button" data-workflow-code="TEST2">Register New Case</button>
   $(document).off('click.cmswfstart').on('click.cmswfstart', '[data-workflow-code]', function(){
     var $btn = $(this).prop('disabled', true);
     var code = String($(this).data('workflow-code') || '').trim();

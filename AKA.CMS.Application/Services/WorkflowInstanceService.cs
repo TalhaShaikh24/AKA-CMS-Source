@@ -35,7 +35,7 @@ public sealed class WorkflowInstanceService(
     public async Task<WorkflowInstanceDto> StartByCodeAsync(string code, int performedBy)
     {
         // Reusable start for module buttons (2026-11-10): the button only
-        // knows the workflow code (e.g. TEST1). The workflow's form comes
+        // knows the workflow code (e.g. TEST2). The workflow's form comes
         // from the workflow itself; the instance starts with no entry.
         // No new SP: the workflow list is a handful of rows.
         var workflow = (await workflows.GetAllAsync())
