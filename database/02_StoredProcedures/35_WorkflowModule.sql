@@ -361,7 +361,11 @@ GO
    (IsStart = 1); its role and SLA come from that step.
    @SubmissionId may be NULL (instance-first start, 2026-11-10): the
    request is created by pressing Start and the entry is attached
-   later via sp_CMS_WorkflowInstance_LinkSubmission. */
+   later via sp_CMS_WorkflowInstance_LinkSubmission.
+   Instance-first dedupe (2026-11-10): IsStart = 1 AND SubmissionId
+   NULL = empty draft. If the user already has one for this workflow,
+   return it instead of creating a duplicate (Start, back, Start
+   again). Oldest first: resume the first draft they abandoned. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_Start]
     @WorkflowId    INT,
     @SubmissionId  INT = NULL,
@@ -395,6 +399,22 @@ BEGIN
     WHERE [WorkflowId] = @WorkflowId AND [IsStart] = 1 AND [IsActive] = 1;
 
     DECLARE @InstanceId INT;
+    -- Empty-draft dedupe (see the header): one unfilled draft per
+    -- user per workflow. Only when no entry is attached yet.
+    IF @SubmissionId IS NULL
+    BEGIN
+        SELECT TOP 1 @InstanceId = [WorkflowInstanceId]
+        FROM [dbo].[CMS_WorkflowInstances]
+        WHERE [WorkflowId] = @WorkflowId AND [CreatedBy] = @PerformedBy
+          AND [SubmissionId] IS NULL AND [CurrentStepCode] = @StartStepCode
+        ORDER BY [WorkflowInstanceId] ASC;
+        IF @InstanceId IS NOT NULL
+        BEGIN
+            SELECT @InstanceId AS [WorkflowInstanceId];
+            RETURN;
+        END
+    END
+
     BEGIN TRY
         BEGIN TRAN;
 
@@ -461,7 +481,11 @@ GO
 /* ---- sp_CMS_WorkflowInstance_GetMyTasks ----
    Pending work for a user: instances whose current role is one of
    the user's roles, or assigned to the user directly. Admins see
-   everything pending. Finished (end-step) instances are not tasks. */
+   everything pending. Finished (end-step) instances are not tasks.
+   Empty drafts (IsStart = 1 AND SubmissionId NULL) are the creator's
+   own unfinished request, not work for anyone else: they are hidden
+   from other users' My Tasks. The creator still sees their own
+   draft here and can resume it. */
 CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_GetMyTasks]
     @UserId INT
 AS
@@ -499,6 +523,9 @@ BEGIN
                   ON wfr.[WorkflowRoleId] = m.[WorkflowRoleId] AND wfr.[IsActive] = 1
               WHERE m.[UserId] = @UserId AND m.[IsActive] = 1)
       )
+      -- Empty drafts are not other people's work (see the header).
+      AND NOT (i.[SubmissionId] IS NULL AND ISNULL(s.[IsStart], 0) = 1
+               AND ISNULL(i.[CreatedBy], -1) <> @UserId)
     ORDER BY CASE WHEN i.[SLA_Date] IS NULL THEN 1 ELSE 0 END, i.[SLA_Date], i.[CreatedAt] DESC;
 END
 GO

@@ -297,7 +297,13 @@ $(function () {
       $('#dfDefaultActions').hide();
       return;
     }
-    $box.html(actions.map(function (a) {
+    // Every step action needs a comment (required, always): the
+    // history log must say why the action was taken. The box sits
+    // above the buttons, styled like a form field.
+    $box.html(
+      '<div class="field"><label for="dfStepComment">Comment <span class="req">*</span></label>' +
+      '<textarea class="input" id="dfStepComment" rows="2" placeholder="Why are you taking this action? (required)"></textarea></div>' +
+      actions.map(function (a) {
       return '<button type="button" class="btn btn-primary" data-wfaction="' + esc(a.actionCode) + '">' + esc(a.actionTitle) + '</button>';
     }).join('') + ' <a class="btn btn-ghost" href="/MyTasks">Back to My Tasks</a>' + histBtn).show();
     $('#dfDefaultActions').hide();
@@ -463,6 +469,15 @@ $(function () {
   // this press creates the entry and attaches it to the request.
   function executeStepAction(actionCode) {
     if (!formDef || !wfStepActions.length) return;
+    // The comment comes first: the action cannot run without it, so
+    // the form is not saved (and no server call is made) until the
+    // user has said why they are taking this action.
+    var comment = $.trim($('#dfStepComment').val() || '');
+    if (!comment) {
+      CMS.toast('A comment is required to perform this action.', 'error');
+      $('#dfStepComment').focus();
+      return;
+    }
     var errors = CMSFormRenderer.validate($('#dfRenderForm'), formDef);
     CMSFormRenderer.clearErrors($('#dfRenderBody'));
     if (errors.length) {
@@ -501,7 +516,7 @@ $(function () {
             url: '/api/workflow-instances', method: 'POST', json: true,
             data: { workflowId: Number(workflowId), submissionId: wfSubmissionId },
             fallbackMsg: 'Entry saved, but the workflow could not start.',
-            success: function (inst) { moveInstance(inst.workflowInstanceId, actionCode, $btns); },
+            success: function (inst) { moveInstance(inst.workflowInstanceId, actionCode, $btns, comment); },
             error: function () { $btns.prop('disabled', false); return true; }
           });
         } else if (!wfSubmissionId) {
@@ -511,13 +526,13 @@ $(function () {
             url: '/api/workflow-instances/' + instanceId + '/link-submission', method: 'POST', json: true,
             data: { submissionId: wfSubmissionId },
             fallbackMsg: 'Entry saved, but it could not be attached to the request.',
-            success: function () { moveInstance(Number(instanceId), actionCode, $btns); },
+            success: function () { moveInstance(Number(instanceId), actionCode, $btns, comment); },
             // Return false: cmsAjax then shows the server's message (or
             // the fallback) — a failed attach must not fail silently.
             error: function () { $btns.prop('disabled', false); return false; }
           });
         } else {
-          moveInstance(Number(instanceId), actionCode, $btns);
+          moveInstance(Number(instanceId), actionCode, $btns, comment);
         }
       },
       error: function (xhr) {
@@ -543,10 +558,10 @@ $(function () {
     });
   }
 
-  function moveInstance(id, actionCode, $btns) {
+  function moveInstance(id, actionCode, $btns, comment) {
     cmsAjax({
       url: '/api/workflow-instances/' + id + '/actions/' + encodeURIComponent(actionCode),
-      method: 'POST', json: true, data: {},
+      method: 'POST', json: true, data: { comments: comment },
       fallbackMsg: 'Could not move the request.',
       success: function () {
         CMS.toast('Moved to the next step.', 'success');

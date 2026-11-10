@@ -69,6 +69,11 @@ public sealed class WorkflowInstanceService(
     public async Task<WorkflowInstanceDto> ExecuteActionAsync(int instanceId, string actionCode, string? comments, int userId)
     {
         var instance = await GetByIdAsync(instanceId);
+        // A comment is required on every step, always: the history log
+        // must say why the action was taken. Enforced here so no client
+        // (web, mobile, direct API) can move a request silently.
+        if (string.IsNullOrWhiteSpace(comments))
+            throw new InvalidDomainValueException("A comment is required to perform this action.");
         // The assignment check: only a role the instance is waiting
         // on — user role OR workflow role — or an admin may press its
         // buttons. A workflow role is optional: if the instance waits
