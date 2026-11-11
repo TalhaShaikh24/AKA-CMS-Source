@@ -498,8 +498,12 @@ GO
 
 /* ---- sp_CMS_WorkflowInstance_GetMyTasks ----
    Pending work for a user: instances whose current role is one of
-   the user's roles, or assigned to the user directly. Admins see
-   everything pending. Finished (end-step) instances are not tasks.
+   the user's roles (user role or workflow role). Finished (end-step)
+   instances are not tasks. There is NO admin bypass here: an admin
+   sees the same list as everyone else, so work that moved on to
+   another role leaves the previous actor's My Tasks (they still see
+   requests they started under My Requests). The one exception is my
+   own unfilled draft, so I can resume it.
    Empty drafts (IsStart = 1 AND SubmissionId NULL) are the creator's
    own unfinished request, not work for anyone else: they are hidden
    from other users' My Tasks. The creator still sees their own
@@ -509,9 +513,6 @@ CREATE OR ALTER PROCEDURE [dbo].[sp_CMS_WorkflowInstance_GetMyTasks]
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    DECLARE @IsAdmin BIT = CASE WHEN EXISTS (SELECT 1 FROM [dbo].[USERS] WHERE [USERID] = @UserId AND [ADMIN] = 1)
-                                THEN 1 ELSE 0 END;
 
     SELECT i.[WorkflowInstanceId], i.[WorkflowId], w.[WorkflowName], w.[WorkflowCode],
            w.[FormId], f.[FormKey], f.[Title] AS [FormTitle],
@@ -530,9 +531,7 @@ BEGIN
     LEFT JOIN [dbo].[CMS_WorkflowRoles] wr ON wr.[WorkflowRoleId] = i.[CurrentWorkflowRoleID]
     WHERE ISNULL(s.[IsEnd], 0) = 0
       AND (
-          @IsAdmin = 1
-          OR i.[CurrentUserID] = @UserId
-          OR i.[CurrentRoleID] IN (
+          i.[CurrentRoleID] IN (
               SELECT [ROLEID] FROM [dbo].[USER_ROLE]
               WHERE [USERID] = @UserId AND [ACTIVE] = 1)
           OR i.[CurrentWorkflowRoleID] IN (
@@ -540,6 +539,12 @@ BEGIN
               INNER JOIN [dbo].[CMS_WorkflowRoles] wfr
                   ON wfr.[WorkflowRoleId] = m.[WorkflowRoleId] AND wfr.[IsActive] = 1
               WHERE m.[UserId] = @UserId AND m.[IsActive] = 1)
+          -- My own unfilled draft (see the header): I started it and
+          -- have not filled it in yet, so I can resume it here even
+          -- though no role is waiting on me.
+          OR (ISNULL(i.[CreatedBy], -1) = @UserId
+              AND i.[SubmissionId] IS NULL
+              AND ISNULL(s.[IsStart], 0) = 1)
       )
       -- Empty drafts are not other people's work (see the header).
       AND NOT (i.[SubmissionId] IS NULL AND ISNULL(s.[IsStart], 0) = 1
